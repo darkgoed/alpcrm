@@ -1,11 +1,14 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { WhatsappService } from './whatsapp.service';
 import { WhatsappController } from './whatsapp.controller';
 import { GatewayModule } from '../gateway/gateway.module';
+import { WebhookSignatureGuard } from '../common/guards/webhook-signature.guard';
+import { TeamsModule } from '../teams/teams.module';
+import { AutomationModule } from '../automation/automation.module';
 
 @Module({
-  imports: [GatewayModule],
-  providers: [WhatsappService],
+  imports: [GatewayModule, forwardRef(() => TeamsModule), AutomationModule],
+  providers: [WhatsappService, WebhookSignatureGuard],
   controllers: [WhatsappController],
   exports: [WhatsappService],
 })

@@ -28,6 +28,6 @@ export class MessagesController {
 
   @Post()
   send(@Body() dto: SendMessageDto, @CurrentUser() user: any) {
-    return this.messagesService.send(dto, user.workspaceId, user.userId);
+    return this.messagesService.send(dto, user.workspaceId, user.userId, user.permissions);
   }
 }

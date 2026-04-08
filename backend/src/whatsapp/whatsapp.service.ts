@@ -1,6 +1,8 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, forwardRef, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { TeamsService } from '../teams/teams.service';
+import { FlowExecutorService } from '../automation/flow-executor.service';
 import {
   WhatsappWebhookPayload,
   WhatsappMessage,
@@ -16,6 +18,9 @@ export class WhatsappService {
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
+    @Inject(forwardRef(() => TeamsService))
+    private teamsService: TeamsService,
+    private flowExecutor: FlowExecutorService,
   ) {}
 
   // ─── Verificação do webhook (GET) ───────────────────────────────────────────
@@ -92,7 +97,7 @@ export class WhatsappService {
     });
 
     // 3. Buscar ou criar conversa ativa
-    let conversation = await this.prisma.conversation.findFirst({
+    const existingConversation = await this.prisma.conversation.findFirst({
       where: {
         workspaceId,
         contactId: contact.id,
@@ -101,7 +106,22 @@ export class WhatsappService {
       },
     });
 
+    let conversation = existingConversation;
+
     if (!conversation) {
+      // Round-robin: buscar equipe padrão do workspace e distribuir para membro com menor carga
+      const defaultTeam = await this.prisma.team.findFirst({ where: { workspaceId } });
+      let assignedUserId: string | null = null;
+      let teamId: string | null = null;
+
+      if (defaultTeam) {
+        teamId = defaultTeam.id;
+        assignedUserId = await this.teamsService.getNextMember(defaultTeam.id);
+        if (assignedUserId) {
+          this.logger.log(`Conversa atribuída via round-robin ao usuário ${assignedUserId}`);
+        }
+      }
+
       conversation = await this.prisma.conversation.create({
         data: {
           workspaceId,
@@ -109,6 +129,8 @@ export class WhatsappService {
           whatsappAccountId: account.id,
           status: 'open',
           isBotActive: true,
+          teamId,
+          assignedUserId,
         },
       });
     }
@@ -147,6 +169,19 @@ export class WhatsappService {
       message,
       contact,
     });
+
+    // 7. Disparar automação (flows)
+    const isNewConv = !existingConversation;
+    this.flowExecutor
+      .triggerForConversation(
+        conversation.id,
+        workspaceId,
+        contact.id,
+        msg.text?.body ?? null,
+        isNewConv,
+        this.sendTextMessage.bind(this),
+      )
+      .catch((err) => this.logger.error(`[Bot] Erro ao disparar flow: ${err}`));
   }
 
   // ─── Atualização de status ───────────────────────────────────────────────────

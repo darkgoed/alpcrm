@@ -15,53 +15,66 @@
 
 ---
 
-## Fase 2 — Chat 🔲
+## Fase 2 — Chat ✅
 > Integração com WhatsApp Cloud API e mensagens em tempo real
 
-- [ ] Webhook para receber mensagens do WhatsApp (`POST /api/whatsapp/webhook`)
-- [ ] Identificar workspace + conta WhatsApp pelo número
-- [ ] Criar ou buscar contato pelo telefone
-- [ ] Criar ou reutilizar conversa ativa
-- [ ] Salvar mensagens (texto, imagem, áudio, vídeo, documento)
-- [ ] Enviar mensagens pela API do WhatsApp (`POST /api/messages`)
-- [ ] Atualizar status da mensagem (sent → delivered → read)
-- [ ] WebSocket (Socket.io) para inbox em tempo real
+- [x] Webhook para receber mensagens do WhatsApp (`POST /api/whatsapp/webhook`)
+- [x] Identificar workspace + conta WhatsApp pelo número (via `meta_account_id`)
+- [x] Criar ou buscar contato pelo telefone (upsert por workspace+phone)
+- [x] Criar ou reutilizar conversa ativa (status open)
+- [x] Salvar mensagens (texto, imagem, áudio, vídeo, documento)
+- [x] Enviar mensagens pela API do WhatsApp (`POST /api/messages`)
+- [x] Atualizar status da mensagem via webhook de status (sent → delivered → read)
+- [x] WebSocket (Socket.io) em `/ws` — rooms por workspace + conversa
+- [x] `GET /api/conversations` com filtros (status, team, operador) + RBAC
+- [x] `GET /api/conversations/:id` com todas as mensagens
+- [x] `PATCH /api/conversations/:id/assign|close|reopen`
+- [x] `GET /api/messages?conversationId=` com paginação por cursor
 
 ---
 
-## Fase 3 — Operadores 🔲
+## Fase 3 — Operadores ✅
 > Controle de acesso, atribuição e travamento de conversas
 
-- [ ] CRUD de usuários por workspace
-- [ ] CRUD de roles e permissões (RBAC customizável)
-- [ ] Atribuição de conversa a operador (`assigned_user_id`)
-- [ ] Lock de conversa: só operador atribuído responde
-- [ ] Admin/Supervisor pode ver todas as conversas
-- [ ] Seed de permissões padrão (`view_all_conversations`, `assign_conversation`, `respond_conversation`)
+- [x] CRUD de usuários por workspace (`GET/POST/PATCH /api/users`)
+- [x] Convidar operador com role opcional, desativar conta
+- [x] Atribuir/remover role de usuário (`POST/DELETE /api/users/:id/roles/:roleId`)
+- [x] CRUD de roles por workspace (`GET/POST/DELETE /api/roles`)
+- [x] Atualizar permissões da role em lote (`PATCH /api/roles/:id/permissions`)
+- [x] Listar permissões do sistema (`GET /api/permissions`)
+- [x] 12 permissões padrão seedadas automaticamente
+- [x] Role **admin** criada automaticamente no registro com todas as permissões
+- [x] Lock de conversa: só operador atribuído responde (ou quem tem `view_all_conversations`)
+- [x] Admin/Supervisor vê e responde qualquer conversa
+- [x] JWT retorna array `permissions` para o frontend usar
 
 ---
 
-## Fase 4 — Teams 🔲
+## Fase 4 — Teams ✅
 > Organização de operadores em equipes
 
-- [ ] CRUD de equipes por workspace
-- [ ] Adicionar/remover usuários de equipes
-- [ ] Atribuição de conversa a equipe (`team_id`)
-- [ ] Regras de distribuição automática (round-robin)
+- [x] CRUD de equipes por workspace (`GET/POST/PATCH/DELETE /api/teams`)
+- [x] Adicionar/remover membros (`POST/DELETE /api/teams/:id/members/:userId`)
+- [x] Atribuição de conversa a equipe via round-robin na chegada do webhook
+- [x] Round-robin por menor carga: operador com menos conversas abertas recebe a próxima
+- [x] Validação de assinatura `X-Hub-Signature-256` com `WHATSAPP_APP_SECRET`
+- [x] Credenciais do app Meta configuradas no `.env`
 
 ---
 
-## Fase 5 — Automação 🔲
-> Bot com fluxos IF/ELSE, mensagens e delays
+## Fase 5 — Automação ✅
+> Bot com fluxos de mensagens e delays
 
-- [ ] CRUD de flows por workspace
-- [ ] Engine de execução de nós (message → delay → condition)
-- [ ] Nó de mensagem: envia texto para o contato
-- [ ] Nó de delay: aguarda N segundos antes do próximo nó
-- [ ] Nó de condição (IF/ELSE): bifurca o fluxo
-- [ ] Bot pausa quando operador humano responde
-- [ ] Bot retoma quando conversa é reaberta
-- [ ] Estado do contato no flow (`contact_flow_state`)
+- [x] CRUD de flows por workspace (`GET/POST/PUT/DELETE /api/automation/flows`)
+- [x] Toggle ativo/inativo por flow (`PATCH /api/automation/flows/:id/toggle`)
+- [x] 3 tipos de gatilho: `new_conversation`, `keyword`, `always`
+- [x] Engine de execução de nós encadeados via `next_id`
+- [x] Nó de mensagem: envia texto via WhatsApp Cloud API e salva no banco
+- [x] Nó de delay: aguarda N segundos antes do próximo nó
+- [x] Bot para automaticamente quando operador humano responde
+- [x] Estado do contato no flow (`contact_flow_state`) com upsert
+- [x] Frontend: página `/automation` com criação/edição/toggle/exclusão de flows
+- [x] Sidebar com navegação Inbox ↔ Automação
 
 ---
 
@@ -136,6 +149,15 @@
 
 ---
 
+## Infraestrutura de Produção
+
+| Serviço       | Endereço                        |
+|---------------|---------------------------------|
+| Frontend      | https://crm.alpdash.com.br      |
+| Backend API   | https://crm.alpdash.com.br/api  |
+| WebSocket     | https://crm.alpdash.com.br/socket.io |
+| SSL           | Let's Encrypt (auto-renova)     |
+
 ## Comandos rápidos
 
 ```bash
@@ -150,4 +172,10 @@ cd /var/www/crm-whatsapp/backend && npx prisma migrate dev --name descricao
 
 # Visualizar banco no browser
 cd /var/www/crm-whatsapp/backend && npx prisma studio
+
+# PM2 — gerenciar processos de produção
+pm2 list                    # status dos processos
+pm2 restart crm-backend     # reiniciar backend
+pm2 restart crm-frontend    # reiniciar frontend
+pm2 logs crm-backend        # ver logs do backend
 ```

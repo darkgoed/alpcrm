@@ -1,17 +1,12 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Query,
-  Body,
-  Res,
-  HttpCode,
-  HttpStatus,
+  Controller, Get, Post, Query, Body,
+  Res, HttpCode, HttpStatus, UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { WhatsappService } from './whatsapp.service';
 import type { WhatsappWebhookPayload } from './dto/webhook.dto';
 import { EventsGateway } from '../gateway/events.gateway';
+import { WebhookSignatureGuard } from '../common/guards/webhook-signature.guard';
 
 @Controller('whatsapp')
 export class WhatsappController {
@@ -20,7 +15,7 @@ export class WhatsappController {
     private readonly eventsGateway: EventsGateway,
   ) {}
 
-  // Verificação do webhook pela Meta (GET)
+  // Verificação do webhook pela Meta (GET) — sem assinatura
   @Get('webhook')
   verify(
     @Query('hub.mode') mode: string,
@@ -32,8 +27,9 @@ export class WhatsappController {
     res.status(200).send(result);
   }
 
-  // Recebimento de mensagens/status (POST)
+  // Recebimento de mensagens/status (POST) — valida assinatura da Meta
   @Post('webhook')
+  @UseGuards(WebhookSignatureGuard)
   @HttpCode(HttpStatus.OK)
   async receive(@Body() payload: WhatsappWebhookPayload) {
     await this.whatsappService.processWebhook(payload, (data) => {

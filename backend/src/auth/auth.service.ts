@@ -13,29 +13,48 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    // Cria workspace + usuário admin em uma transação
     const existing = await this.prisma.workspace.findUnique({ where: { slug: dto.workspaceSlug } });
     if (existing) throw new ConflictException('Workspace slug já está em uso');
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    const workspace = await this.prisma.workspace.create({
-      data: {
-        name: dto.workspaceName,
-        slug: dto.workspaceSlug,
-        users: {
-          create: {
-            name: dto.name,
-            email: dto.email,
-            password: hashedPassword,
+    // Buscar todas as permissões do sistema para dar ao admin
+    const allPermissions = await this.prisma.permission.findMany();
+
+    // Tudo em uma transação: workspace → role admin → usuário → vínculo role
+    const result = await this.prisma.$transaction(async (tx) => {
+      // 1. Criar workspace
+      const workspace = await tx.workspace.create({
+        data: { name: dto.workspaceName, slug: dto.workspaceSlug },
+      });
+
+      // 2. Criar role "admin" com todas as permissões
+      const adminRole = await tx.role.create({
+        data: {
+          workspaceId: workspace.id,
+          name: 'admin',
+          rolePermissions: {
+            create: allPermissions.map((p) => ({ permissionId: p.id })),
           },
         },
-      },
-      include: { users: true },
+      });
+
+      // 3. Criar usuário e associar role admin
+      const user = await tx.user.create({
+        data: {
+          workspaceId: workspace.id,
+          name: dto.name,
+          email: dto.email,
+          password: hashedPassword,
+          userRoles: { create: { roleId: adminRole.id } },
+        },
+      });
+
+      return { workspace, user };
     });
 
-    const user = workspace.users[0];
-    return this.signToken(user.id, user.email, workspace.id);
+    const permissions = allPermissions.map((p) => p.key);
+    return this.signToken(result.user.id, result.user.email, result.workspace.id, permissions);
   }
 
   async login(dto: LoginDto) {
@@ -62,9 +81,14 @@ export class AuthService {
     const valid = await bcrypt.compare(dto.password, user.password);
     if (!valid) throw new UnauthorizedException('Credenciais inválidas');
 
-    const permissions = user.userRoles.flatMap((ur) =>
-      ur.role.rolePermissions.map((rp) => rp.permission.key),
-    );
+    // Deduplica permissões caso o usuário tenha múltiplas roles
+    const permissions = [
+      ...new Set(
+        user.userRoles.flatMap((ur) =>
+          ur.role.rolePermissions.map((rp) => rp.permission.key),
+        ),
+      ),
+    ];
 
     return this.signToken(user.id, user.email, user.workspaceId, permissions);
   }
@@ -74,6 +98,7 @@ export class AuthService {
     return {
       access_token: this.jwt.sign(payload),
       workspaceId,
+      permissions,
     };
   }
 }

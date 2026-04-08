@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { EventsGateway } from '../gateway/events.gateway';
+import { FlowExecutorService } from '../automation/flow-executor.service';
 import { SendMessageDto } from './dto/send-message.dto';
 
 @Injectable()
@@ -15,6 +16,7 @@ export class MessagesService {
     private prisma: PrismaService,
     private whatsappService: WhatsappService,
     private eventsGateway: EventsGateway,
+    private flowExecutor: FlowExecutorService,
   ) {}
 
   // ─── Listar mensagens de uma conversa ────────────────────────────────────────
@@ -49,7 +51,7 @@ export class MessagesService {
 
   // ─── Enviar mensagem (operador → contato) ───────────────────────────────────
 
-  async send(dto: SendMessageDto, workspaceId: string, userId: string) {
+  async send(dto: SendMessageDto, workspaceId: string, userId: string, permissions: string[] = []) {
     if (!dto.content && !dto.mediaUrl) {
       throw new BadRequestException('Mensagem deve ter conteúdo ou mídia');
     }
@@ -66,6 +68,19 @@ export class MessagesService {
     if (!conversation) throw new NotFoundException('Conversa não encontrada');
     if (conversation.status === 'closed') {
       throw new BadRequestException('Não é possível enviar mensagem em conversa fechada');
+    }
+
+    // ── Lock de conversa ──────────────────────────────────────────────────────
+    // Apenas o operador atribuído pode responder.
+    // Quem tem view_all_conversations (admin/supervisor) pode responder qualquer uma.
+    const canViewAll = permissions.includes('view_all_conversations');
+    if (!canViewAll && conversation.assignedUserId && conversation.assignedUserId !== userId) {
+      throw new ForbiddenException('Conversa atribuída a outro operador');
+    }
+
+    // Parar bot se estiver ativo — operador assumiu
+    if (conversation.isBotActive) {
+      await this.flowExecutor.stopBotForConversation(dto.conversationId, conversation.contactId);
     }
 
     // Salvar mensagem no banco com status "sent" (otimista)
