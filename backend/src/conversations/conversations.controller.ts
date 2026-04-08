@@ -1,0 +1,59 @@
+import {
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Body,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { ConversationsService } from './conversations.service';
+import { AssignConversationDto } from './dto/assign-conversation.dto';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { ConversationStatus } from '@prisma/client';
+
+@UseGuards(JwtAuthGuard)
+@Controller('conversations')
+export class ConversationsController {
+  constructor(private readonly conversationsService: ConversationsService) {}
+
+  @Get()
+  findAll(
+    @CurrentUser() user: any,
+    @Query('status') status?: ConversationStatus,
+    @Query('teamId') teamId?: string,
+    @Query('assignedUserId') assignedUserId?: string,
+  ) {
+    return this.conversationsService.findAll(
+      user.workspaceId,
+      user.userId,
+      user.permissions,
+      { status, teamId, assignedUserId },
+    );
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.conversationsService.findOne(id, user.workspaceId, user.userId, user.permissions);
+  }
+
+  @Patch(':id/assign')
+  assign(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+    @Body() dto: AssignConversationDto,
+  ) {
+    return this.conversationsService.assign(id, user.workspaceId, dto);
+  }
+
+  @Patch(':id/close')
+  close(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.conversationsService.close(id, user.workspaceId);
+  }
+
+  @Patch(':id/reopen')
+  reopen(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.conversationsService.reopen(id, user.workspaceId);
+  }
+}

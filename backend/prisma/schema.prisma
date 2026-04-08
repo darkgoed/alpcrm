@@ -1,0 +1,403 @@
+// ─────────────────────────────────────────────────────────
+// CRM WhatsApp SaaS — Prisma Schema
+// Multi-tenant: todos os dados isolados por workspace_id
+// ─────────────────────────────────────────────────────────
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────
+// WORKSPACE (Tenant)
+// ─────────────────────────────────────────────────────────
+
+model Workspace {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users            User[]
+  roles            Role[]
+  teams            Team[]
+  whatsappAccounts WhatsappAccount[]
+  contacts         Contact[]
+  conversations    Conversation[]
+  tags             Tag[]
+  pipelines        Pipeline[]
+  flows            Flow[]
+  auditLogs        AuditLog[]
+
+  @@map("workspaces")
+}
+
+// ─────────────────────────────────────────────────────────
+// USERS
+// ─────────────────────────────────────────────────────────
+
+model User {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  email       String
+  password    String
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userRoles     UserRole[]
+  teamUsers     TeamUser[]
+  assignedConvs Conversation[] @relation("AssignedUser")
+  auditLogs     AuditLog[]
+
+  @@unique([workspaceId, email])
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────
+// ROLES & PERMISSIONS (RBAC)
+// ─────────────────────────────────────────────────────────
+
+model Role {
+  id          String @id @default(uuid())
+  workspaceId String @map("workspace_id")
+  name        String
+
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@unique([workspaceId, name])
+  @@map("roles")
+}
+
+model Permission {
+  id  String @id @default(uuid())
+  key String @unique // ex: view_all_conversations, assign_conversation
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId String @map("user_id")
+  roleId String @map("role_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+// ─────────────────────────────────────────────────────────
+// TEAMS
+// ─────────────────────────────────────────────────────────
+
+model Team {
+  id          String @id @default(uuid())
+  workspaceId String @map("workspace_id")
+  name        String
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  teamUsers     TeamUser[]
+  conversations Conversation[]
+
+  @@unique([workspaceId, name])
+  @@map("teams")
+}
+
+model TeamUser {
+  teamId String @map("team_id")
+  userId String @map("user_id")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, userId])
+  @@map("team_users")
+}
+
+// ─────────────────────────────────────────────────────────
+// WHATSAPP ACCOUNTS
+// ─────────────────────────────────────────────────────────
+
+model WhatsappAccount {
+  id            String  @id @default(uuid())
+  workspaceId   String  @map("workspace_id")
+  phoneNumber   String  @map("phone_number")
+  metaAccountId String  @map("meta_account_id")
+  token         String
+  isActive      Boolean @default(true) @map("is_active")
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+
+  @@unique([workspaceId, phoneNumber])
+  @@map("whatsapp_accounts")
+}
+
+// ─────────────────────────────────────────────────────────
+// CONTACTS
+// ─────────────────────────────────────────────────────────
+
+model Contact {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  phone       String
+  name        String?
+  email       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  conversations    Conversation[]
+  contactTags      ContactTag[]
+  contactPipelines ContactPipeline[]
+  flowStates       ContactFlowState[]
+
+  @@unique([workspaceId, phone])
+  @@map("contacts")
+}
+
+// ─────────────────────────────────────────────────────────
+// CONVERSATIONS
+// ─────────────────────────────────────────────────────────
+
+enum ConversationStatus {
+  open
+  closed
+  pending
+}
+
+model Conversation {
+  id                String             @id @default(uuid())
+  workspaceId       String             @map("workspace_id")
+  contactId         String             @map("contact_id")
+  whatsappAccountId String             @map("whatsapp_account_id")
+  assignedUserId    String?            @map("assigned_user_id")
+  teamId            String?            @map("team_id")
+  status            ConversationStatus @default(open)
+  isBotActive       Boolean            @default(false) @map("is_bot_active")
+  lastMessageAt     DateTime?          @map("last_message_at")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+
+  workspace       Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact         Contact         @relation(fields: [contactId], references: [id])
+  whatsappAccount WhatsappAccount @relation(fields: [whatsappAccountId], references: [id])
+  assignedUser    User?           @relation("AssignedUser", fields: [assignedUserId], references: [id])
+  team            Team?           @relation(fields: [teamId], references: [id])
+  messages        Message[]
+
+  @@map("conversations")
+}
+
+// ─────────────────────────────────────────────────────────
+// MESSAGES
+// ─────────────────────────────────────────────────────────
+
+enum MessageSenderType {
+  user
+  contact
+  system
+}
+
+enum MessageType {
+  text
+  image
+  audio
+  video
+  document
+  link
+}
+
+enum MessageStatus {
+  sent
+  delivered
+  read
+  failed
+}
+
+model Message {
+  id             String            @id @default(uuid())
+  conversationId String            @map("conversation_id")
+  senderType     MessageSenderType @map("sender_type")
+  senderId       String?           @map("sender_id")
+  type           MessageType       @default(text)
+  content        String?
+  mediaUrl       String?           @map("media_url")
+  status         MessageStatus     @default(sent)
+  externalId     String?           @map("external_id") // ID na API do WhatsApp
+  createdAt      DateTime          @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+// ─────────────────────────────────────────────────────────
+// TAGS
+// ─────────────────────────────────────────────────────────
+
+model Tag {
+  id          String @id @default(uuid())
+  workspaceId String @map("workspace_id")
+  name        String
+  color       String @default("#6366f1")
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contactTags ContactTag[]
+
+  @@unique([workspaceId, name])
+  @@map("tags")
+}
+
+model ContactTag {
+  contactId String @map("contact_id")
+  tagId     String @map("tag_id")
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, tagId])
+  @@map("contact_tags")
+}
+
+// ─────────────────────────────────────────────────────────
+// PIPELINES (CRM Kanban)
+// ─────────────────────────────────────────────────────────
+
+model Pipeline {
+  id          String @id @default(uuid())
+  workspaceId String @map("workspace_id")
+  name        String
+
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  stages           Stage[]
+  contactPipelines ContactPipeline[]
+
+  @@map("pipelines")
+}
+
+model Stage {
+  id         String @id @default(uuid())
+  pipelineId String @map("pipeline_id")
+  name       String
+  order      Int    @default(0)
+  color      String @default("#6366f1")
+
+  pipeline         Pipeline          @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  contactPipelines ContactPipeline[]
+
+  @@map("stages")
+}
+
+model ContactPipeline {
+  id         String   @id @default(uuid())
+  contactId  String   @map("contact_id")
+  pipelineId String   @map("pipeline_id")
+  stageId    String   @map("stage_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  stage    Stage    @relation(fields: [stageId], references: [id])
+
+  @@unique([contactId, pipelineId])
+  @@map("contact_pipeline")
+}
+
+// ─────────────────────────────────────────────────────────
+// AUTOMATION (Flows)
+// ─────────────────────────────────────────────────────────
+
+enum FlowNodeType {
+  message
+  condition
+  delay
+}
+
+model Flow {
+  id          String  @id @default(uuid())
+  workspaceId String  @map("workspace_id")
+  name        String
+  isActive    Boolean @default(false) @map("is_active")
+
+  workspace  Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  nodes      FlowNode[]
+  flowStates ContactFlowState[]
+
+  @@map("flows")
+}
+
+model FlowNode {
+  id     String       @id @default(uuid())
+  flowId String       @map("flow_id")
+  type   FlowNodeType
+  config Json         // conteúdo do nó (mensagem, condição, delay em ms)
+  nextId String?      @map("next_id") // próximo nó
+  order  Int          @default(0)
+
+  flow       Flow               @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  flowStates ContactFlowState[]
+
+  @@map("flow_nodes")
+}
+
+model ContactFlowState {
+  id            String   @id @default(uuid())
+  contactId     String   @map("contact_id")
+  flowId        String   @map("flow_id")
+  currentNodeId String?  @map("current_node_id")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  flow        Flow      @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  currentNode FlowNode? @relation(fields: [currentNodeId], references: [id])
+
+  @@unique([contactId, flowId])
+  @@map("contact_flow_state")
+}
+
+// ─────────────────────────────────────────────────────────
+// AUDIT LOGS
+// ─────────────────────────────────────────────────────────
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  userId      String?  @map("user_id")
+  action      String   // ex: create, update, delete
+  entity      String   // ex: conversation, contact
+  entityId    String   @map("entity_id")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
