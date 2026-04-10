@@ -1,369 +1,206 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  useFlows, createFlow, updateFlow, deleteFlow, toggleFlow,
-  Flow, FlowNode,
-} from '@/hooks/useAutomation';
-import {
-  Zap, Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronUp,
-  MessageSquare, Clock, Save, X,
-} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Bot, LoaderCircle, Plus, Sparkles } from 'lucide-react';
+import { createFlow, type Flow, useFlows } from '@/hooks/useAutomation';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { FlowCard } from '@/features/automation/components/flow-card';
 
-// ─── Flow Editor Modal ────────────────────────────────────────────────────────
+// ─── Create flow dialog (name + trigger only) ──────────────────────────────────
 
-interface NodeDraft {
-  type: 'message' | 'delay';
-  config: Record<string, any>;
-  order: number;
-}
-
-function FlowModal({
-  flow,
-  onClose,
-  onSaved,
-}: {
-  flow?: Flow;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [name, setName] = useState(flow?.name ?? '');
-  const [triggerType, setTriggerType] = useState<Flow['triggerType']>(flow?.triggerType ?? 'new_conversation');
-  const [triggerValue, setTriggerValue] = useState(flow?.triggerValue ?? '');
-  const [nodes, setNodes] = useState<NodeDraft[]>(
-    flow?.nodes.map((n) => ({ type: n.type as 'message' | 'delay', config: n.config, order: n.order })) ?? [],
-  );
+function CreateFlowDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const router = useRouter();
+  const [name, setName] = useState('');
+  const [triggerType, setTriggerType] = useState<Flow['triggerType']>('new_conversation');
+  const [triggerValue, setTriggerValue] = useState('');
   const [saving, setSaving] = useState(false);
 
-  function addNode(type: 'message' | 'delay') {
-    setNodes((prev) => [
-      ...prev,
-      {
-        type,
-        config: type === 'message' ? { content: '' } : { ms: 5000 },
-        order: prev.length,
-      },
-    ]);
-  }
-
-  function updateNode(idx: number, config: Record<string, any>) {
-    setNodes((prev) => prev.map((n, i) => (i === idx ? { ...n, config } : n)));
-  }
-
-  function removeNode(idx: number) {
-    setNodes((prev) => prev.filter((_, i) => i !== idx).map((n, i) => ({ ...n, order: i })));
-  }
-
-  async function handleSave() {
-    if (!name.trim()) return;
+  async function handleCreate() {
+    if (!name.trim() || saving) return;
     setSaving(true);
     try {
-      const payload: any = {
-        name,
+      const flow = await createFlow({
+        name: name.trim(),
         triggerType,
-        triggerValue: triggerType === 'keyword' ? triggerValue : undefined,
-        nodes,
-      };
-      if (flow) {
-        await updateFlow(flow.id, payload);
-      } else {
-        await createFlow(payload);
-      }
-      onSaved();
-      onClose();
+        triggerValue: triggerType === 'keyword' ? triggerValue.trim() : undefined,
+        nodes: [],
+      });
+      onOpenChange(false);
+      router.push(`/automation/${flow.id}`);
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">{flow ? 'Editar Flow' : 'Novo Flow'}</h2>
-          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-            <X size={16} />
-          </button>
-        </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Novo flow</DialogTitle>
+          <DialogDescription>
+            Defina o nome e o gatilho. As etapas são adicionadas no editor canvas.
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-          {/* Nome */}
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Nome do Flow</label>
-            <input
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="flow-name">Nome do flow</Label>
+            <Input
+              id="flow-name"
+              autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Boas-vindas"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              onKeyDown={(e) => { if (e.key === 'Enter') void handleCreate(); }}
+              placeholder="Ex: Boas-vindas, Suporte técnico"
             />
           </div>
-
-          {/* Trigger */}
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Gatilho</label>
-            <select
-              value={triggerType}
-              onChange={(e) => setTriggerType(e.target.value as Flow['triggerType'])}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              <option value="new_conversation">Nova conversa</option>
-              <option value="keyword">Palavra-chave</option>
-              <option value="always">Sempre (toda mensagem)</option>
-            </select>
-            {triggerType === 'keyword' && (
-              <input
+          <div className="space-y-2">
+            <Label>Gatilho</Label>
+            <Select value={triggerType} onValueChange={(v) => setTriggerType(v as Flow['triggerType'])}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="new_conversation">Nova conversa</SelectItem>
+                <SelectItem value="keyword">Palavra-chave</SelectItem>
+                <SelectItem value="always">Toda mensagem</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {triggerType === 'keyword' && (
+            <div className="space-y-2">
+              <Label htmlFor="trigger-value">Palavra-chave</Label>
+              <Input
+                id="trigger-value"
                 value={triggerValue}
                 onChange={(e) => setTriggerValue(e.target.value)}
-                placeholder="Ex: oi, olá, info"
-                className="mt-2 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Ex: oi, catálogo, suporte"
               />
-            )}
-          </div>
-
-          {/* Nós */}
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-2 block">Mensagens e delays</label>
-
-            {nodes.length === 0 && (
-              <p className="text-xs text-gray-400 py-3 text-center border border-dashed border-gray-200 rounded-lg">
-                Adicione nós abaixo
-              </p>
-            )}
-
-            <div className="space-y-2">
-              {nodes.map((node, idx) => (
-                <div key={idx} className="border border-gray-200 rounded-xl p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      {node.type === 'message' ? (
-                        <MessageSquare size={14} className="text-green-500" />
-                      ) : (
-                        <Clock size={14} className="text-blue-500" />
-                      )}
-                      <span className="text-xs font-medium text-gray-700">
-                        {node.type === 'message' ? `Mensagem ${idx + 1}` : `Delay ${idx + 1}`}
-                      </span>
-                    </div>
-                    <button onClick={() => removeNode(idx)} className="p-1 text-gray-400 hover:text-red-500 rounded">
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-
-                  {node.type === 'message' ? (
-                    <textarea
-                      value={node.config.content ?? ''}
-                      onChange={(e) => updateNode(idx, { content: e.target.value })}
-                      placeholder="Texto da mensagem..."
-                      rows={2}
-                      className="w-full text-sm border border-gray-100 rounded-lg px-2.5 py-1.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
-                    />
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min={1}
-                        value={Math.round((node.config.ms ?? 5000) / 1000)}
-                        onChange={(e) => updateNode(idx, { ms: Number(e.target.value) * 1000 })}
-                        className="w-20 text-sm border border-gray-100 rounded-lg px-2.5 py-1.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
-                      />
-                      <span className="text-xs text-gray-500">segundos</span>
-                    </div>
-                  )}
-                </div>
-              ))}
             </div>
-
-            <div className="flex gap-2 mt-3">
-              <button
-                onClick={() => addNode('message')}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 border border-dashed border-green-300 text-green-600 text-xs font-medium rounded-xl hover:bg-green-50 transition-colors"
-              >
-                <MessageSquare size={13} /> Mensagem
-              </button>
-              <button
-                onClick={() => addNode('delay')}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 border border-dashed border-blue-300 text-blue-600 text-xs font-medium rounded-xl hover:bg-blue-50 transition-colors"
-              >
-                <Clock size={13} /> Delay
-              </button>
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-100 flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 rounded-lg">
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !name.trim()}
-            className="flex items-center gap-1.5 px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-200 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            <Save size={14} />
-            {saving ? 'Salvando...' : 'Salvar'}
-          </button>
-        </div>
-      </div>
-    </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={() => void handleCreate()} disabled={saving || !name.trim()}>
+            {saving ? <LoaderCircle className="size-4 animate-spin" /> : null}
+            {saving ? 'Criando...' : 'Criar e editar'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-// ─── Flow Card ────────────────────────────────────────────────────────────────
-
-function FlowCard({ flow, onEdit, onRefresh }: { flow: Flow; onEdit: () => void; onRefresh: () => void }) {
-  const [expanded, setExpanded] = useState(false);
-  const [toggling, setToggling] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-
-  const triggerLabel: Record<Flow['triggerType'], string> = {
-    new_conversation: 'Nova conversa',
-    keyword: `Keyword: "${flow.triggerValue}"`,
-    always: 'Sempre',
-  };
-
-  async function handleToggle() {
-    setToggling(true);
-    try { await toggleFlow(flow.id); onRefresh(); } finally { setToggling(false); }
-  }
-
-  async function handleDelete() {
-    if (!confirm(`Excluir flow "${flow.name}"?`)) return;
-    setDeleting(true);
-    try { await deleteFlow(flow.id); onRefresh(); } finally { setDeleting(false); }
-  }
-
-  return (
-    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm">
-      <div className="flex items-center gap-3 px-4 py-3">
-        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${flow.isActive ? 'bg-green-100' : 'bg-gray-100'}`}>
-          <Zap size={14} className={flow.isActive ? 'text-green-600' : 'text-gray-400'} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 truncate">{flow.name}</p>
-          <p className="text-xs text-gray-400">{triggerLabel[flow.triggerType]} · {flow.nodes.length} nó{flow.nodes.length !== 1 ? 's' : ''}</p>
-        </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            onClick={handleToggle}
-            disabled={toggling}
-            title={flow.isActive ? 'Desativar' : 'Ativar'}
-            className="p-1.5 rounded-lg hover:bg-gray-100"
-          >
-            {flow.isActive
-              ? <ToggleRight size={20} className="text-green-500" />
-              : <ToggleLeft size={20} className="text-gray-400" />}
-          </button>
-          <button onClick={onEdit} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg text-xs font-medium">
-            Editar
-          </button>
-          <button onClick={handleDelete} disabled={deleting} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg">
-            <Trash2 size={14} />
-          </button>
-          <button onClick={() => setExpanded((v) => !v)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg">
-            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-        </div>
-      </div>
-
-      {expanded && flow.nodes.length > 0 && (
-        <div className="px-4 pb-3 border-t border-gray-50">
-          <div className="pt-2 space-y-1.5">
-            {flow.nodes.map((node, i) => (
-              <div key={node.id} className="flex items-start gap-2">
-                <div className={`mt-0.5 w-5 h-5 rounded-lg flex items-center justify-center flex-shrink-0 ${node.type === 'message' ? 'bg-green-50' : 'bg-blue-50'}`}>
-                  {node.type === 'message'
-                    ? <MessageSquare size={11} className="text-green-500" />
-                    : <Clock size={11} className="text-blue-500" />}
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-600">
-                    {node.type === 'message' ? 'Mensagem' : 'Delay'}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    {node.type === 'message'
-                      ? (node.config.content || '(vazio)')
-                      : `${(node.config.ms ?? 0) / 1000}s`}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Página principal ─────────────────────────────────────────────────────────
+// ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AutomationPage() {
   const { flows, mutate, isLoading } = useFlows();
-  const [modal, setModal] = useState<'create' | Flow | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center">
-            <Zap size={15} className="text-green-600" />
-          </div>
-          <div>
-            <h1 className="font-semibold text-gray-900">Automação</h1>
-            <p className="text-xs text-gray-400">Flows de resposta automática</p>
-          </div>
-        </div>
-        <button
-          onClick={() => setModal('create')}
-          className="flex items-center gap-1.5 px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-xl transition-colors"
-        >
-          <Plus size={15} /> Novo Flow
-        </button>
+    <div className="mx-auto flex h-full w-full max-w-7xl flex-col gap-6 px-4 py-6 lg:px-8">
+      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <Card className="border-none bg-[linear-gradient(135deg,#0f172a_0%,#0f766e_60%,#22c55e_100%)] text-white shadow-[0_24px_70px_-32px_rgba(15,118,110,0.45)]">
+          <CardHeader className="space-y-4">
+            <Badge variant="secondary" className="w-fit bg-white/15 text-white hover:bg-white/15">
+              Studio de automação
+            </Badge>
+            <CardTitle className="text-3xl leading-tight sm:text-4xl">
+              Crie flows com regras simples, mensagens e delays sem sair do CRM.
+            </CardTitle>
+            <CardDescription className="max-w-2xl text-sm leading-6 text-emerald-50/85">
+              Combine gatilhos por palavra-chave ou nova conversa para acelerar a triagem e reduzir o tempo de primeira resposta.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="secondary" size="lg" className="bg-white text-slate-950 hover:bg-slate-100" onClick={() => setCreateOpen(true)}>
+              <Plus className="size-4" />
+              Novo flow
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/70 bg-white/70">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Sparkles className="size-4 text-primary" />
+              <CardTitle className="text-base">Indicadores rápidos</CardTitle>
+            </div>
+            <CardDescription>Resumo do parque de automações do workspace.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+            <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Flows</p>
+              <p className="mt-2 text-3xl font-semibold text-foreground">{flows.length}</p>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Ativos</p>
+              <p className="mt-2 text-3xl font-semibold text-foreground">{flows.filter((f) => f.isActive).length}</p>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Etapas totais</p>
+              <p className="mt-2 text-3xl font-semibold text-foreground">{flows.reduce((t, f) => t + f.nodes.length, 0)}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-5">
+      <div className="flex-1">
         {isLoading ? (
-          <div className="flex justify-center pt-16">
-            <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : flows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center pt-24 text-gray-400">
-            <Zap size={48} className="opacity-20 mb-4" />
-            <p className="text-lg font-medium">Nenhum flow criado</p>
-            <p className="text-sm mt-1">Crie seu primeiro flow de automação</p>
-            <button
-              onClick={() => setModal('create')}
-              className="mt-6 flex items-center gap-2 px-5 py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-xl transition-colors"
-            >
-              <Plus size={15} /> Criar Flow
-            </button>
-          </div>
-        ) : (
-          <div className="max-w-2xl mx-auto space-y-3">
-            <p className="text-xs text-gray-400 mb-1">{flows.length} flow{flows.length !== 1 ? 's' : ''}</p>
-            {flows.map((flow) => (
-              <FlowCard
-                key={flow.id}
-                flow={flow}
-                onEdit={() => setModal(flow)}
-                onRefresh={mutate}
-              />
+          <div className="grid gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={`sk-${i}`} className="border-border/70">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-5 w-1/3" />
+                      <Skeleton className="h-3.5 w-1/2" />
+                    </div>
+                    <Skeleton className="h-8 w-20 rounded-lg" />
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
+        ) : flows.length > 0 ? (
+          <div className="grid gap-4">
+            {flows.map((flow) => (
+              <FlowCard key={flow.id} flow={flow} onRefresh={mutate} />
+            ))}
+          </div>
+        ) : (
+          <Card className="border-border/70 bg-white/70">
+            <CardContent className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+              <div className="flex size-16 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+                <Bot className="size-8" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-lg font-semibold text-foreground">Nenhum flow criado</p>
+                <p className="text-sm text-muted-foreground">Crie sua primeira automação para organizar o atendimento desde o primeiro contato.</p>
+              </div>
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus className="size-4" />
+                Criar primeiro flow
+              </Button>
+            </CardContent>
+          </Card>
         )}
       </div>
 
-      {/* Modal */}
-      {modal && (
-        <FlowModal
-          flow={modal === 'create' ? undefined : modal}
-          onClose={() => setModal(null)}
-          onSaved={mutate}
-        />
-      )}
+      <CreateFlowDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );
 }

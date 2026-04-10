@@ -1,16 +1,13 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { FlowDelayProcessor } from './flow-delay.processor';
-import { FollowUpProcessor } from './follow-up.processor';
 import { AutoCloseProcessor } from './auto-close.processor';
 import { SchedulerService } from './scheduler.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { GatewayModule } from '../gateway/gateway.module';
+import { FLOW_DELAY_QUEUE, FOLLOW_UP_QUEUE, AUTO_CLOSE_QUEUE } from './queues.constants';
 
-export const FLOW_DELAY_QUEUE = 'flow-delay';
-export const FOLLOW_UP_QUEUE = 'follow-up';
-export const AUTO_CLOSE_QUEUE = 'auto-close';
+export { FLOW_DELAY_QUEUE, FOLLOW_UP_QUEUE, AUTO_CLOSE_QUEUE } from './queues.constants';
 
 @Module({
   imports: [
@@ -35,8 +32,6 @@ export const AUTO_CLOSE_QUEUE = 'auto-close';
   ],
   providers: [
     SchedulerService,
-    FlowDelayProcessor,
-    FollowUpProcessor,
     AutoCloseProcessor,
   ],
   exports: [SchedulerService, BullModule],

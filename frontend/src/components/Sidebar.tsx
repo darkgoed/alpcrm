@@ -7,7 +7,7 @@ import { useSocket } from '@/hooks/useSocket';
 import { useAuth } from '@/contexts/AuthContext';
 import { ConversationItem } from './ConversationItem';
 import { Conversation } from '@/types';
-import { MessageCircle, Search, LogOut, RefreshCw, Zap, ChevronLeft } from 'lucide-react';
+import { MessageCircle, Search, LogOut, RefreshCw, Zap } from 'lucide-react';
 
 const NAV = [
   { href: '/conversations', label: 'Inbox', icon: MessageCircle },

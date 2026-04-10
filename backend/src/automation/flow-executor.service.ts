@@ -1,4 +1,4 @@
-import { Injectable, Logger, forwardRef, Inject } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FlowTriggerType } from '@prisma/client';
 import { SchedulerService } from '../queues/scheduler.service';
@@ -9,7 +9,6 @@ export class FlowExecutorService {
 
   constructor(
     private prisma: PrismaService,
-    @Inject(forwardRef(() => SchedulerService))
     private scheduler: SchedulerService,
   ) {}
 

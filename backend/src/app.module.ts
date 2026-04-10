@@ -16,6 +16,8 @@ import { AutomationModule } from './automation/automation.module';
 import { PipelinesModule } from './pipelines/pipelines.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
 import { GatewayModule } from './gateway/gateway.module';
+import { QueuesModule } from './queues/queues.module';
+import { TemplatesModule } from './templates/templates.module';
 
 @Module({
   imports: [
@@ -34,6 +36,8 @@ import { GatewayModule } from './gateway/gateway.module';
     PipelinesModule,
     WorkspacesModule,
     GatewayModule,
+    QueuesModule,
+    TemplatesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -5,7 +5,10 @@ export interface FlowNode {
   id: string;
   flowId: string;
   type: 'message' | 'condition' | 'delay';
-  config: Record<string, any>;
+  config: {
+    content?: string;
+    ms?: number;
+  };
   order: number;
   nextId: string | null;
 }
@@ -20,19 +23,37 @@ export interface Flow {
   nodes: FlowNode[];
 }
 
+export interface FlowPayload {
+  name: string;
+  triggerType: Flow['triggerType'];
+  triggerValue?: string;
+  nodes: Array<{
+    type: 'message' | 'delay';
+    config: FlowNode['config'];
+    order: number;
+  }>;
+}
+
 const fetcher = (url: string) => api.get(url).then((r) => r.data);
+
+const EMPTY_FLOWS: Flow[] = [];
 
 export function useFlows() {
   const { data, mutate, error } = useSWR<Flow[]>('/automation/flows', fetcher);
-  return { flows: data ?? [], mutate, error, isLoading: !data && !error };
+  return { flows: data ?? EMPTY_FLOWS, mutate, error, isLoading: !data && !error };
 }
 
-export async function createFlow(payload: Partial<Flow>): Promise<Flow> {
+export function useFlow(id: string | null) {
+  const { data, mutate, error } = useSWR<Flow>(id ? `/automation/flows/${id}` : null, fetcher);
+  return { flow: data, mutate, isLoading: !data && !error };
+}
+
+export async function createFlow(payload: FlowPayload): Promise<Flow> {
   const r = await api.post('/automation/flows', payload);
   return r.data;
 }
 
-export async function updateFlow(id: string, payload: Partial<Flow>): Promise<Flow> {
+export async function updateFlow(id: string, payload: FlowPayload): Promise<Flow> {
   const r = await api.put(`/automation/flows/${id}`, payload);
   return r.data;
 }

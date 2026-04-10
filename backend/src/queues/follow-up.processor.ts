@@ -1,7 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
-import { FOLLOW_UP_QUEUE } from './queues.module';
+import { FOLLOW_UP_QUEUE } from './queues.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { EventsGateway } from '../gateway/events.gateway';

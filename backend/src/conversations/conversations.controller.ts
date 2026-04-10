@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Param,
   Patch,
   Body,
@@ -55,5 +56,14 @@ export class ConversationsController {
   @Patch(':id/reopen')
   reopen(@Param('id') id: string, @CurrentUser() user: any) {
     return this.conversationsService.reopen(id, user.workspaceId);
+  }
+
+  @Post(':id/notes')
+  addNote(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+    @Body('content') content: string,
+  ) {
+    return this.conversationsService.addNote(id, user.workspaceId, user.userId, content);
   }
 }

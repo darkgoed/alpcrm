@@ -1,11 +1,15 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventsGateway } from '../gateway/events.gateway';
 import { AssignConversationDto } from './dto/assign-conversation.dto';
 import { ConversationStatus } from '@prisma/client';
 
 @Injectable()
 export class ConversationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private eventsGateway: EventsGateway,
+  ) {}
 
   // ─── Listar conversas do workspace ──────────────────────────────────────────
 
@@ -98,6 +102,31 @@ export class ConversationsService {
       where: { id },
       data: { status: 'open', isBotActive: true },
     });
+  }
+
+  // ─── Adicionar nota interna ──────────────────────────────────────────────────
+
+  async addNote(id: string, workspaceId: string, userId: string, content: string) {
+    if (!content?.trim()) throw new BadRequestException('Conteúdo da nota é obrigatório');
+    const conv = await this.assertExists(id, workspaceId);
+
+    const note = await this.prisma.message.create({
+      data: {
+        conversationId: id,
+        senderType: 'system',
+        senderId: userId,
+        type: 'text',
+        content: content.trim(),
+        status: 'sent',
+      },
+    });
+
+    this.eventsGateway.emitToWorkspace(workspaceId, 'new_message', {
+      conversationId: id,
+      message: note,
+    });
+
+    return note;
   }
 
   // ─── Helper ──────────────────────────────────────────────────────────────────

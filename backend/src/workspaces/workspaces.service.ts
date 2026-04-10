@@ -1,4 +1,121 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { UpdateWorkspaceSettingsDto } from './dto/workspace-settings.dto';
+import { CreateFollowUpRuleDto, UpdateFollowUpRuleDto } from './dto/follow-up-rule.dto';
+import { CreateWhatsappAccountDto, UpdateWhatsappAccountDto } from './dto/whatsapp-account.dto';
 
 @Injectable()
-export class WorkspacesService {}
+export class WorkspacesService {
+  constructor(private prisma: PrismaService) {}
+
+  // ─── Configurações do workspace ──────────────────────────────────────────────
+
+  async getSettings(workspaceId: string) {
+    const settings = await this.prisma.workspaceSettings.findUnique({
+      where: { workspaceId },
+    });
+    return settings ?? { workspaceId, autoCloseHours: null };
+  }
+
+  async updateSettings(workspaceId: string, dto: UpdateWorkspaceSettingsDto) {
+    return this.prisma.workspaceSettings.upsert({
+      where: { workspaceId },
+      create: { workspaceId, autoCloseHours: dto.autoCloseHours ?? null },
+      update: { autoCloseHours: dto.autoCloseHours ?? null },
+    });
+  }
+
+  // ─── Regras de follow-up ─────────────────────────────────────────────────────
+
+  async listFollowUpRules(workspaceId: string) {
+    return this.prisma.followUpRule.findMany({
+      where: { workspaceId },
+      orderBy: { delayHours: 'asc' },
+    });
+  }
+
+  async createFollowUpRule(workspaceId: string, dto: CreateFollowUpRuleDto) {
+    return this.prisma.followUpRule.create({
+      data: { workspaceId, ...dto },
+    });
+  }
+
+  async updateFollowUpRule(workspaceId: string, id: string, dto: UpdateFollowUpRuleDto) {
+    const rule = await this.prisma.followUpRule.findFirst({ where: { id, workspaceId } });
+    if (!rule) throw new NotFoundException('Regra não encontrada');
+
+    return this.prisma.followUpRule.update({ where: { id }, data: dto });
+  }
+
+  async deleteFollowUpRule(workspaceId: string, id: string) {
+    const rule = await this.prisma.followUpRule.findFirst({ where: { id, workspaceId } });
+    if (!rule) throw new NotFoundException('Regra não encontrada');
+
+    await this.prisma.followUpRule.delete({ where: { id } });
+  }
+
+  // ─── Contas WhatsApp ─────────────────────────────────────────────────────────
+
+  async listWhatsappAccounts(workspaceId: string) {
+    return this.prisma.whatsappAccount.findMany({
+      where: { workspaceId },
+      orderBy: { phoneNumber: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        phoneNumber: true,
+        metaAccountId: true,
+        wabaId: true,
+        verifyToken: true,
+        isActive: true,
+        // token e appSecret não são retornados por padrão (sensíveis)
+      },
+    });
+  }
+
+  async createWhatsappAccount(workspaceId: string, dto: CreateWhatsappAccountDto) {
+    const existing = await this.prisma.whatsappAccount.findFirst({
+      where: { workspaceId, phoneNumber: dto.phoneNumber },
+    });
+    if (existing) throw new ConflictException('Já existe uma conta com esse número neste workspace');
+
+    return this.prisma.whatsappAccount.create({
+      data: { workspaceId, ...dto },
+      select: {
+        id: true,
+        name: true,
+        phoneNumber: true,
+        metaAccountId: true,
+        wabaId: true,
+        verifyToken: true,
+        isActive: true,
+      },
+    });
+  }
+
+  async updateWhatsappAccount(workspaceId: string, id: string, dto: UpdateWhatsappAccountDto) {
+    const account = await this.prisma.whatsappAccount.findFirst({ where: { id, workspaceId } });
+    if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
+
+    return this.prisma.whatsappAccount.update({
+      where: { id },
+      data: dto,
+      select: {
+        id: true,
+        name: true,
+        phoneNumber: true,
+        metaAccountId: true,
+        wabaId: true,
+        verifyToken: true,
+        isActive: true,
+      },
+    });
+  }
+
+  async deleteWhatsappAccount(workspaceId: string, id: string) {
+    const account = await this.prisma.whatsappAccount.findFirst({ where: { id, workspaceId } });
+    if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
+
+    await this.prisma.whatsappAccount.delete({ where: { id } });
+  }
+}

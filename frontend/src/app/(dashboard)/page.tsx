@@ -1,11 +1,12 @@
-import { MessageCircle } from 'lucide-react';
+'use client';
+
+import { DashboardOverview } from '@/features/dashboard/components/dashboard-overview';
+import { useFlows } from '@/hooks/useAutomation';
+import { useConversations } from '@/hooks/useConversations';
 
 export default function DashboardHome() {
-  return (
-    <div className="h-full flex flex-col items-center justify-center text-gray-400">
-      <MessageCircle size={48} className="mb-4 opacity-20" />
-      <p className="text-lg font-medium">Selecione uma conversa</p>
-      <p className="text-sm mt-1">Escolha uma conversa na lista ao lado</p>
-    </div>
-  );
+  const { conversations } = useConversations();
+  const { flows } = useFlows();
+
+  return <DashboardOverview conversations={conversations} flows={flows} />;
 }

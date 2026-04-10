@@ -1,0 +1,500 @@
+'use client';
+
+import { useDeferredValue, useState } from 'react';
+import { CheckCircle2, Loader2, Plus, Search, Phone, Mail, Trash2, Tag as TagIcon, Upload, UserPlus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  useContacts,
+  useTags,
+  createContact,
+  deleteContact,
+  addTag,
+  removeTag,
+  createTag,
+  importPreview,
+  importConfirm,
+  type Contact,
+  type Tag,
+  type ImportPreviewResult,
+} from '@/hooks/useContacts';
+
+const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899'];
+
+// ─── Tag Badge ───────────────────────────────────────────────────────────────
+
+function TagBadge({ tag, onRemove }: { tag: Tag; onRemove?: () => void }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
+      style={{ borderColor: tag.color + '55', background: tag.color + '18', color: tag.color }}
+    >
+      {tag.name}
+      {onRemove && (
+        <button onClick={onRemove} className="ml-0.5 opacity-60 hover:opacity-100">×</button>
+      )}
+    </span>
+  );
+}
+
+// ─── Create Contact Dialog ────────────────────────────────────────────────────
+
+function CreateContactForm({ onCreated }: { onCreated: () => void }) {
+  const [form, setForm] = useState({ phone: '', name: '', email: '' });
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.phone) return;
+    setLoading(true);
+    try {
+      await createContact({ phone: form.phone, name: form.name || undefined, email: form.email || undefined });
+      onCreated();
+      setForm({ phone: '', name: '', email: '' });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-xl border border-border/70 bg-muted/30 p-4 space-y-3">
+      <p className="text-sm font-medium text-foreground">Novo contato</p>
+      <Input placeholder="Telefone (obrigatório)" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
+      <Input placeholder="Nome" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+      <Input placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+      <Button type="submit" size="sm" disabled={loading || !form.phone}>
+        {loading ? 'Criando...' : 'Criar contato'}
+      </Button>
+    </form>
+  );
+}
+
+// ─── Import CSV Section ───────────────────────────────────────────────────────
+
+function ImportCsvSection({ onImported, onCancel }: { onImported: () => void; onCancel: () => void }) {
+  const [preview, setPreview] = useState<ImportPreviewResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [done, setDone] = useState(false);
+  const [importedCount, setImportedCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError(null);
+    setPreview(null);
+    setLoading(true);
+    try {
+      const result = await importPreview(file);
+      setPreview(result);
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'Erro ao processar o arquivo');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleConfirm() {
+    if (!preview) return;
+    setConfirming(true);
+    try {
+      const { count } = await importConfirm(preview.toCreate);
+      setImportedCount(count);
+      setDone(true);
+      setTimeout(() => onImported(), 600);
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'Erro ao importar contatos');
+    } finally {
+      setConfirming(false);
+    }
+  }
+
+  if (done) {
+    return (
+      <div className="rounded-xl border border-border/70 bg-muted/30 p-6 text-center space-y-3">
+        <CheckCircle2 className="mx-auto size-8 text-green-500" />
+        <p className="text-sm font-semibold text-foreground">Importação enviada!</p>
+        <p className="text-xs text-muted-foreground">
+          {importedCount} contato{importedCount !== 1 ? 's' : ''} sendo processados em segundo plano.
+        </p>
+        <Button size="sm" variant="ghost" onClick={onCancel}>Fechar</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-border/70 bg-muted/30 p-5 space-y-4">
+      <p className="text-sm font-semibold text-foreground">Importar contatos via CSV</p>
+
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-muted-foreground">
+          Arquivo CSV — colunas: <code className="font-mono text-foreground">phone</code> (obrigatório),{' '}
+          <code className="font-mono text-foreground">name</code>,{' '}
+          <code className="font-mono text-foreground">email</code>
+        </label>
+        <input
+          type="file"
+          accept=".csv,text/csv"
+          onChange={handleFileChange}
+          className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-background file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-foreground hover:file:bg-accent cursor-pointer"
+        />
+        <p className="text-xs text-muted-foreground">Separador: vírgula ou ponto-e-vírgula. Telefone no formato E.164 (ex: +5511999999999)</p>
+      </div>
+
+      {loading && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          Analisando arquivo...
+        </div>
+      )}
+
+      {preview && !loading && (
+        <div className="space-y-3">
+          {/* Estatísticas */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-lg border border-border/70 bg-background px-3 py-2 text-center">
+              <p className="text-lg font-bold text-foreground">{preview.toCreate.length}</p>
+              <p className="text-xs text-muted-foreground">para importar</p>
+            </div>
+            <div className="rounded-lg border border-border/70 bg-background px-3 py-2 text-center">
+              <p className="text-lg font-bold text-amber-500">{preview.duplicates.length}</p>
+              <p className="text-xs text-muted-foreground">duplicados</p>
+            </div>
+            <div className="rounded-lg border border-border/70 bg-background px-3 py-2 text-center">
+              <p className="text-lg font-bold text-destructive">{preview.invalid.length}</p>
+              <p className="text-xs text-muted-foreground">inválidos</p>
+            </div>
+          </div>
+
+          {/* Prévia da tabela */}
+          {preview.toCreate.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">
+                Prévia — primeiros {Math.min(5, preview.toCreate.length)} de {preview.toCreate.length}
+              </p>
+              <div className="rounded-lg border border-border/70 overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Telefone</th>
+                      <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Nome</th>
+                      <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Email</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.toCreate.slice(0, 5).map((row, i) => (
+                      <tr key={i} className="border-t border-border/50">
+                        <td className="px-3 py-1.5 font-mono">{row.phone}</td>
+                        <td className="px-3 py-1.5 text-muted-foreground">{row.name ?? '—'}</td>
+                        <td className="px-3 py-1.5 text-muted-foreground">{row.email ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Linhas inválidas */}
+          {preview.invalid.length > 0 && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-1">
+              <p className="text-xs font-semibold text-destructive">
+                Linhas inválidas (serão ignoradas)
+              </p>
+              {preview.invalid.slice(0, 3).map((inv, i) => (
+                <p key={i} className="text-xs text-muted-foreground">
+                  Linha {inv.row}:{' '}
+                  <span className="font-mono">{inv.phone || '(vazio)'}</span> — {inv.reason}
+                </p>
+              ))}
+              {preview.invalid.length > 3 && (
+                <p className="text-xs text-muted-foreground">
+                  ... e mais {preview.invalid.length - 3} linha(s)
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {error && <p className="text-xs text-destructive">{error}</p>}
+
+      <div className="flex items-center gap-2 pt-1">
+        {preview && preview.toCreate.length > 0 && (
+          <Button size="sm" onClick={handleConfirm} disabled={confirming}>
+            {confirming && <Loader2 className="size-4 animate-spin" />}
+            {confirming
+              ? 'Importando...'
+              : `Importar ${preview.toCreate.length} contato${preview.toCreate.length !== 1 ? 's' : ''}`}
+          </Button>
+        )}
+        <Button size="sm" variant="ghost" onClick={onCancel}>
+          Cancelar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Contact Row ─────────────────────────────────────────────────────────────
+
+function ContactRow({
+  contact,
+  tags,
+  onDelete,
+  onTagAdded,
+  onTagRemoved,
+}: {
+  contact: Contact;
+  tags: Tag[];
+  onDelete: () => void;
+  onTagAdded: () => void;
+  onTagRemoved: () => void;
+}) {
+  const name = contact.name ?? contact.phone;
+  const initials = name.slice(0, 2).toUpperCase();
+  const [showTagPicker, setShowTagPicker] = useState(false);
+  const appliedTagIds = new Set(contact.contactTags.map((ct) => ct.tag.id));
+
+  async function handleAddTag(tagId: string) {
+    await addTag(contact.id, tagId);
+    onTagAdded();
+    setShowTagPicker(false);
+  }
+
+  async function handleRemoveTag(tagId: string) {
+    await removeTag(contact.id, tagId);
+    onTagRemoved();
+  }
+
+  return (
+    <div className="flex items-start gap-4 rounded-xl border border-border/70 bg-background px-4 py-3 hover:border-primary/30 hover:bg-accent/30 transition-colors">
+      <Avatar className="size-10 shrink-0 border border-border/70">
+        <AvatarFallback className="bg-primary/10 text-primary text-xs">{initials}</AvatarFallback>
+      </Avatar>
+
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="text-sm font-medium text-foreground">{name}</p>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1"><Phone className="size-3" />{contact.phone}</span>
+          {contact.email && <span className="flex items-center gap-1"><Mail className="size-3" />{contact.email}</span>}
+        </div>
+        <div className="flex flex-wrap items-center gap-1 pt-0.5">
+          {contact.contactTags.map(({ tag }) => (
+            <TagBadge key={tag.id} tag={tag} onRemove={() => handleRemoveTag(tag.id)} />
+          ))}
+          <div className="relative">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-6"
+              onClick={() => setShowTagPicker((v) => !v)}
+              title="Adicionar tag"
+            >
+              <TagIcon className="size-3" />
+            </Button>
+            {showTagPicker && (
+              <div className="absolute left-0 top-7 z-10 min-w-40 rounded-xl border border-border/70 bg-background p-2 shadow-lg">
+                {tags.filter((t) => !appliedTagIds.has(t.id)).length === 0 ? (
+                  <p className="text-xs text-muted-foreground px-2 py-1">Todas as tags aplicadas</p>
+                ) : (
+                  tags
+                    .filter((t) => !appliedTagIds.has(t.id))
+                    .map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => handleAddTag(t.id)}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-accent"
+                      >
+                        <span className="size-2 rounded-full" style={{ background: t.color }} />
+                        {t.name}
+                      </button>
+                    ))
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <Button
+        size="icon"
+        variant="ghost"
+        className="size-8 text-destructive hover:text-destructive shrink-0"
+        onClick={onDelete}
+        title="Excluir"
+      >
+        <Trash2 className="size-4" />
+      </Button>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export function ContactsPage() {
+  const [search, setSearch] = useState('');
+  const [selectedTag, setSelectedTag] = useState<string | undefined>();
+  const [showCreate, setShowCreate] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [showCreateTag, setShowCreateTag] = useState(false);
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState(COLORS[0]);
+  const deferredSearch = useDeferredValue(search);
+
+  const { contacts, mutate, isLoading } = useContacts({ search: deferredSearch || undefined, tagId: selectedTag });
+  const { tags, mutate: mutateTags } = useTags();
+
+  async function handleDeleteContact(id: string) {
+    await deleteContact(id);
+    void mutate();
+  }
+
+  async function handleCreateTag(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newTagName) return;
+    await createTag(newTagName, newTagColor);
+    await mutateTags();
+    setNewTagName('');
+    setShowCreateTag(false);
+  }
+
+  return (
+    <div className="flex h-full overflow-hidden">
+      {/* Sidebar de filtros */}
+      <aside className="w-56 shrink-0 border-r border-border/70 bg-muted/20 flex flex-col">
+        <div className="p-4 border-b border-border/70">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filtrar por tag</p>
+        </div>
+        <div className="flex-1 overflow-y-auto p-3 space-y-1">
+          <button
+            onClick={() => setSelectedTag(undefined)}
+            className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors ${!selectedTag ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-accent'}`}
+          >
+            Todos os contatos
+          </button>
+          {tags.map((tag) => (
+            <button
+              key={tag.id}
+              onClick={() => setSelectedTag(selectedTag === tag.id ? undefined : tag.id)}
+              className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors ${selectedTag === tag.id ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-accent'}`}
+            >
+              <span className="size-2 rounded-full" style={{ background: tag.color }} />
+              {tag.name}
+            </button>
+          ))}
+          <button
+            onClick={() => setShowCreateTag((v) => !v)}
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent mt-2 border border-dashed border-border"
+          >
+            <Plus className="size-3" /> Nova tag
+          </button>
+          {showCreateTag && (
+            <form onSubmit={handleCreateTag} className="mt-2 space-y-2">
+              <Input
+                placeholder="Nome da tag"
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                className="text-xs h-8"
+              />
+              <div className="flex gap-1 flex-wrap">
+                {COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setNewTagColor(c)}
+                    className="size-5 rounded-full border-2 transition-transform hover:scale-110"
+                    style={{ background: c, borderColor: newTagColor === c ? '#000' : 'transparent' }}
+                  />
+                ))}
+              </div>
+              <Button size="sm" type="submit" className="w-full h-7 text-xs" disabled={!newTagName}>
+                Criar
+              </Button>
+            </form>
+          )}
+        </div>
+      </aside>
+
+      {/* Lista principal */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="border-b border-border/70 px-6 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por nome ou telefone"
+                className="pl-9"
+              />
+            </div>
+            <span className="text-sm text-muted-foreground">{contacts.length} contato{contacts.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { setShowImport((v) => !v); setShowCreate(false); }}
+            >
+              <Upload className="size-4" />
+              Importar CSV
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => { setShowCreate((v) => !v); setShowImport(false); }}
+            >
+              <UserPlus className="size-4" />
+              Novo contato
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+          {showImport && (
+            <ImportCsvSection
+              onImported={() => { setShowImport(false); void mutate(); }}
+              onCancel={() => setShowImport(false)}
+            />
+          )}
+          {showCreate && (
+            <CreateContactForm onCreated={() => { setShowCreate(false); void mutate(); }} />
+          )}
+
+          {isLoading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-start gap-4 rounded-xl border border-border/70 p-3">
+                <Skeleton className="size-10 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+            ))
+          ) : contacts.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-10 text-center">
+              <UserPlus className="mx-auto mb-3 size-10 text-muted-foreground opacity-40" />
+              <p className="text-sm font-medium text-foreground">Nenhum contato encontrado</p>
+              <p className="mt-1 text-xs text-muted-foreground">Crie um novo contato ou ajuste os filtros.</p>
+            </div>
+          ) : (
+            contacts.map((contact) => (
+              <ContactRow
+                key={contact.id}
+                contact={contact}
+                tags={tags}
+                onDelete={() => handleDeleteContact(contact.id)}
+                onTagAdded={() => void mutate()}
+                onTagRemoved={() => void mutate()}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

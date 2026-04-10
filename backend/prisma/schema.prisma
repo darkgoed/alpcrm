@@ -35,6 +35,7 @@ model Workspace {
   followUpRules    FollowUpRule[]
   settings         WorkspaceSettings?
   auditLogs        AuditLog[]
+  messageTemplates MessageTemplate[]
 
   @@map("workspaces")
 }
@@ -146,13 +147,18 @@ model TeamUser {
 model WhatsappAccount {
   id            String  @id @default(uuid())
   workspaceId   String  @map("workspace_id")
+  name          String  @default("")
   phoneNumber   String  @map("phone_number")
-  metaAccountId String  @map("meta_account_id")
+  metaAccountId String  @map("meta_account_id") // phone_number_id usado no webhook
+  wabaId        String  @default("") @map("waba_id") // WhatsApp Business Account ID
   token         String
+  appSecret     String  @default("") @map("app_secret")
+  verifyToken   String  @default("") @map("verify_token")
   isActive      Boolean @default(true) @map("is_active")
 
-  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  conversations Conversation[]
+  workspace         Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  conversations     Conversation[]
+  messageTemplates  MessageTemplate[]
 
   @@unique([workspaceId, phoneNumber])
   @@map("whatsapp_accounts")
@@ -421,6 +427,43 @@ model WorkspaceSettings {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@map("workspace_settings")
+}
+
+// ─────────────────────────────────────────────────────────
+// MESSAGE TEMPLATES (HSM)
+// ─────────────────────────────────────────────────────────
+
+enum TemplateCategory {
+  MARKETING
+  UTILITY
+  AUTHENTICATION
+}
+
+enum TemplateStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model MessageTemplate {
+  id                String           @id @default(uuid())
+  workspaceId       String           @map("workspace_id")
+  whatsappAccountId String           @map("whatsapp_account_id")
+  name              String           // snake_case, enviado à Meta
+  category          TemplateCategory @default(MARKETING)
+  language          String           @default("pt_BR")
+  body              String           // texto com {{1}}, {{2}}
+  status            TemplateStatus   @default(PENDING)
+  metaId            String?          @map("meta_id")       // ID retornado pela Meta
+  rejectedReason    String?          @map("rejected_reason")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  workspace       Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  whatsappAccount WhatsappAccount @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, name, language])
+  @@map("message_templates")
 }
 
 // ─────────────────────────────────────────────────────────

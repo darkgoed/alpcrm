@@ -6,7 +6,7 @@ import {
   FOLLOW_UP_QUEUE,
   AUTO_CLOSE_QUEUE,
   FLOW_DELAY_QUEUE,
-} from './queues.module';
+} from './queues.constants';
 import type { FollowUpJobData } from './follow-up.processor';
 import type { AutoCloseJobData } from './auto-close.processor';
 import type { FlowDelayJobData } from './flow-delay.processor';

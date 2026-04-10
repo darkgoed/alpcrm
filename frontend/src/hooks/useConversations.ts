@@ -1,8 +1,11 @@
 import useSWR from 'swr';
 import { api } from '@/lib/api';
-import { Conversation } from '@/types';
+import { Conversation, Message } from '@/types';
 
 const fetcher = (url: string) => api.get(url).then((r) => r.data);
+
+// Array vazio estável — evita referência nova a cada render quando data=undefined
+const EMPTY_CONVERSATIONS: Conversation[] = [];
 
 export function useConversations(status?: string) {
   const url = status ? `/conversations?status=${status}` : '/conversations';
@@ -11,7 +14,7 @@ export function useConversations(status?: string) {
   });
 
   return {
-    conversations: data ?? [],
+    conversations: data ?? EMPTY_CONVERSATIONS,
     isLoading: !data && !error,
     mutate,
   };
@@ -48,4 +51,25 @@ export async function closeConversation(id: string) {
 export async function reopenConversation(id: string) {
   const { data } = await api.patch(`/conversations/${id}/reopen`);
   return data;
+}
+
+export async function sendNote(conversationId: string, content: string) {
+  const { data } = await api.post(`/conversations/${conversationId}/notes`, { content });
+  return data as Message;
+}
+
+export interface MessageSearchResult extends Message {
+  conversation: {
+    id: string;
+    status: string;
+    contact: { id: string; name: string | null; phone: string };
+  };
+}
+
+export function useMessageSearch(q: string) {
+  const { data, error, isLoading } = useSWR<MessageSearchResult[]>(
+    q.trim() ? `/messages/search?q=${encodeURIComponent(q.trim())}` : null,
+    (url: string) => api.get(url).then((r) => r.data),
+  );
+  return { results: data ?? [], isLoading, error };
 }

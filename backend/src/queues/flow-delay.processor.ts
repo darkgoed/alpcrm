@@ -1,7 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
-import { FLOW_DELAY_QUEUE } from './queues.module';
+import { FLOW_DELAY_QUEUE } from './queues.constants';
 import { FlowExecutorService } from '../automation/flow-executor.service';
 
 export interface FlowDelayJobData {

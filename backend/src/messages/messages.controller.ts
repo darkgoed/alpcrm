@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, BadRequestException } from '@nestjs/common';
 import { MessagesService } from './messages.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -8,6 +8,15 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 @Controller('messages')
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
+
+  @Get('search')
+  search(
+    @CurrentUser() user: any,
+    @Query('q') q: string,
+  ) {
+    if (!q?.trim()) throw new BadRequestException('Parâmetro q é obrigatório');
+    return this.messagesService.search(q, user.workspaceId, user.userId, user.permissions);
+  }
 
   @Get()
   findByConversation(

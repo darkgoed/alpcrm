@@ -1,0 +1,48 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  ParseUUIDPipe,
+  Patch,
+} from '@nestjs/common';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermissions } from '../common/decorators/permissions.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { TemplatesService } from './templates.service';
+import { CreateTemplateDto } from './dto/create-template.dto';
+
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('manage_workspace')
+@Controller('templates')
+export class TemplatesController {
+  constructor(private templatesService: TemplatesService) {}
+
+  @Get()
+  list(@CurrentUser() user: any) {
+    return this.templatesService.list(user.workspaceId);
+  }
+
+  @Post()
+  create(@CurrentUser() user: any, @Body() dto: CreateTemplateDto) {
+    return this.templatesService.create(user.workspaceId, dto);
+  }
+
+  @Patch(':id/refresh')
+  @HttpCode(HttpStatus.OK)
+  refresh(@CurrentUser() user: any, @Param('id', ParseUUIDPipe) id: string) {
+    return this.templatesService.refreshOne(user.workspaceId, id);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@CurrentUser() user: any, @Param('id', ParseUUIDPipe) id: string) {
+    await this.templatesService.delete(user.workspaceId, id);
+  }
+}

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { TeamsService } from '../teams/teams.service';
 import { FlowExecutorService } from '../automation/flow-executor.service';
+import { SchedulerService } from '../queues/scheduler.service';
 import {
   WhatsappWebhookPayload,
   WhatsappMessage,
@@ -21,6 +22,7 @@ export class WhatsappService {
     @Inject(forwardRef(() => TeamsService))
     private teamsService: TeamsService,
     private flowExecutor: FlowExecutorService,
+    private scheduler: SchedulerService,
   ) {}
 
   // ─── Verificação do webhook (GET) ───────────────────────────────────────────
@@ -160,6 +162,11 @@ export class WhatsappService {
     });
 
     this.logger.log(`Mensagem recebida de ${msg.from} → conversa ${conversation.id}`);
+
+    // 5a. Agendar follow-up e auto-close (reinicia timers a cada mensagem do contato)
+    this.scheduler.cancelFollowUps(conversation.id, workspaceId).catch(() => null);
+    this.scheduler.scheduleFollowUps(conversation.id, workspaceId, contact.id).catch(() => null);
+    this.scheduler.scheduleAutoClose(conversation.id, workspaceId).catch(() => null);
 
     // 6. Emitir evento para o WebSocket
     onMessage({

@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { EventsGateway } from '../gateway/events.gateway';
 import { FlowExecutorService } from '../automation/flow-executor.service';
+import { SchedulerService } from '../queues/scheduler.service';
 import { SendMessageDto } from './dto/send-message.dto';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class MessagesService {
     private whatsappService: WhatsappService,
     private eventsGateway: EventsGateway,
     private flowExecutor: FlowExecutorService,
+    private scheduler: SchedulerService,
   ) {}
 
   // ─── Listar mensagens de uma conversa ────────────────────────────────────────
@@ -46,6 +48,32 @@ export class MessagesService {
       orderBy: { createdAt: 'asc' },
       take,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    });
+  }
+
+  // ─── Busca full-text em mensagens do workspace ──────────────────────────────
+
+  async search(q: string, workspaceId: string, userId: string, permissions: string[]) {
+    if (!q?.trim()) return [];
+    const canViewAll = permissions.includes('view_all_conversations');
+
+    return this.prisma.message.findMany({
+      where: {
+        content: { contains: q.trim(), mode: 'insensitive' },
+        conversation: {
+          workspaceId,
+          ...(canViewAll ? {} : { assignedUserId: userId }),
+        },
+      },
+      include: {
+        conversation: {
+          include: {
+            contact: { select: { id: true, name: true, phone: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
     });
   }
 
@@ -82,6 +110,9 @@ export class MessagesService {
     if (conversation.isBotActive) {
       await this.flowExecutor.stopBotForConversation(dto.conversationId, conversation.contactId);
     }
+
+    // Cancelar follow-ups pendentes — operador respondeu
+    this.scheduler.cancelFollowUps(dto.conversationId, workspaceId).catch(() => null);
 
     // Salvar mensagem no banco com status "sent" (otimista)
     const message = await this.prisma.message.create({
