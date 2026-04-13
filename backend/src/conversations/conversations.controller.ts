@@ -64,6 +64,16 @@ export class ConversationsController {
     return this.conversationsService.reopen(id, user.workspaceId);
   }
 
+  @Patch(':id/read')
+  markAsRead(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.conversationsService.markAsRead(
+      id,
+      user.workspaceId,
+      user.userId,
+      user.permissions,
+    );
+  }
+
   @Post(':id/notes')
   addNote(
     @Param('id') id: string,

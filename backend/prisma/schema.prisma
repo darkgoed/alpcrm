@@ -208,6 +208,7 @@ model Conversation {
   teamId            String?            @map("team_id")
   status            ConversationStatus @default(open)
   isBotActive              Boolean            @default(false) @map("is_bot_active")
+  unreadCount              Int                @default(0) @map("unread_count")
   lastMessageAt            DateTime?          @map("last_message_at")
   lastContactMessageAt     DateTime?          @map("last_contact_message_at")
   createdAt                DateTime           @default(now()) @map("created_at")

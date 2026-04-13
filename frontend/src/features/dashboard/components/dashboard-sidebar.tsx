@@ -261,9 +261,16 @@ function ConversationListItem({
       <div className="min-w-0 flex-1 space-y-0.5">
         <div className="flex items-center justify-between gap-1">
           <p className="truncate text-sm font-medium text-foreground">{name}</p>
-          {conversation.lastMessageAt ? (
-            <span className="shrink-0 text-[10px] text-muted-foreground">{formatDistanceToNow(conversation.lastMessageAt)}</span>
-          ) : null}
+          <div className="flex items-center gap-1.5">
+            {conversation.unreadCount > 0 ? (
+              <Badge variant="default" className="h-5 min-w-5 justify-center rounded-full px-1.5 text-[10px]">
+                {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
+              </Badge>
+            ) : null}
+            {conversation.lastMessageAt ? (
+              <span className="shrink-0 text-[10px] text-muted-foreground">{formatDistanceToNow(conversation.lastMessageAt)}</span>
+            ) : null}
+          </div>
         </div>
         <p className="truncate text-xs text-muted-foreground">{preview}</p>
         <div className="flex items-center gap-1.5 pt-0.5">
@@ -494,7 +501,7 @@ function InboxRail() {
   }, [conversations]);
 
   useSocket({
-    onNewMessage: ({ conversationId, message }) => {
+    onNewMessage: ({ conversationId, message, unreadCount }) => {
       setLiveConversations((current) => {
         const targetIndex = current.findIndex((item) => item.id === conversationId);
         if (targetIndex === -1) {
@@ -506,11 +513,24 @@ function InboxRail() {
         updated[targetIndex] = {
           ...conv,
           lastMessageAt: message.createdAt,
+          unreadCount:
+            typeof unreadCount === 'number'
+              ? unreadCount
+              : message.senderType === 'contact' && conversationId !== activeConversationId
+                ? conv.unreadCount + 1
+                : conv.unreadCount,
           messages: [message, ...conv.messages.filter((m) => m.id !== message.id)],
         };
         const [moved] = updated.splice(targetIndex, 1);
         return [moved, ...updated];
       });
+    },
+    onConversationUpdated: ({ conversationId, conversation }) => {
+      setLiveConversations((current) =>
+        current.map((item) =>
+          item.id === conversationId ? { ...item, ...conversation } : item,
+        ),
+      );
     },
   });
 

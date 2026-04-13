@@ -116,7 +116,7 @@ Meta: dar ao operador um CRM realmente utilizável no dia a dia.
 - [x] Adicionar modal ou drawer de atribuição
 - [x] Mostrar fila/estado da mensagem no composer
 - [x] Exibir erro operacional claro em falha de envio
-- [ ] Adicionar contador de não lidas
+- [x] Adicionar contador de não lidas
 - [ ] Adicionar presença do operador na conversa
 - [ ] Adicionar prevenção de colisão entre agentes
 

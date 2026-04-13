@@ -58,6 +58,11 @@ export async function reopenConversation(id: string) {
   return data;
 }
 
+export async function markConversationAsRead(id: string) {
+  const { data } = await api.patch(`/conversations/${id}/read`);
+  return data as Conversation;
+}
+
 export async function sendNote(conversationId: string, content: string) {
   const { data } = await api.post(`/conversations/${conversationId}/notes`, { content });
   return data as Message;

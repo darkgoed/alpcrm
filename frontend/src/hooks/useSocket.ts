@@ -5,9 +5,16 @@ import { getSocket } from '@/lib/socket';
 import { Message } from '@/types';
 
 interface SocketHandlers {
-  onNewMessage?: (data: { conversationId: string; message: Message }) => void;
+  onNewMessage?: (data: {
+    conversationId: string;
+    message: Message;
+    unreadCount?: number;
+  }) => void;
   onMessageStatus?: (data: { messageId: string; status: string; conversationId: string }) => void;
-  onConversationUpdated?: (data: any) => void;
+  onConversationUpdated?: (data: {
+    conversationId: string;
+    conversation: any;
+  }) => void;
 }
 
 export function useSocket(handlers: SocketHandlers) {

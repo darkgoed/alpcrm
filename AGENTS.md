@@ -17,7 +17,7 @@ Operational guide for AI agents. Optimize for small-scope work, preserve tenant 
 Read in this order:
 
 1. `AGENTS.md`
-2. `CLAUDE.MD`
+2. `CLAUDE.md`
 3. `graphify-out/GRAPH_REPORT.md`
 4. `graphify-out/wiki/index.md` if it exists
 5. Only the files on the execution path you will touch

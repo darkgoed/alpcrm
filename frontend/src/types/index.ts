@@ -68,6 +68,7 @@ export interface Conversation {
   teamId: string | null;
   status: 'open' | 'closed' | 'pending';
   isBotActive: boolean;
+  unreadCount: number;
   lastMessageAt: string | null;
   lastContactMessageAt: string | null;
   createdAt: string;

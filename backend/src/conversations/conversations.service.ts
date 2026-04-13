@@ -123,6 +123,43 @@ export class ConversationsService {
     });
   }
 
+  async markAsRead(
+    id: string,
+    workspaceId: string,
+    userId: string,
+    permissions: string[],
+  ) {
+    const conversation = await this.findOne(
+      id,
+      workspaceId,
+      userId,
+      permissions,
+    );
+
+    if (conversation.unreadCount === 0) {
+      return conversation;
+    }
+
+    const updated = await this.prisma.conversation.update({
+      where: { id },
+      data: { unreadCount: 0 },
+      include: {
+        contact: true,
+        whatsappAccount: { select: { id: true, phoneNumber: true } },
+        assignedUser: { select: { id: true, name: true } },
+        team: { select: { id: true, name: true } },
+        messages: { orderBy: { createdAt: 'asc' } },
+      },
+    });
+
+    this.eventsGateway.emitToWorkspace(workspaceId, 'conversation_updated', {
+      conversationId: id,
+      conversation: updated,
+    });
+
+    return updated;
+  }
+
   // ─── Adicionar nota interna ──────────────────────────────────────────────────
 
   async addNote(

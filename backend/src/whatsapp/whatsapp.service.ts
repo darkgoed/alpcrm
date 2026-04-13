@@ -263,7 +263,11 @@ export class WhatsappService {
     // 5. Atualizar lastMessageAt e lastContactMessageAt da conversa
     await this.prisma.conversation.update({
       where: { id: conversation.id },
-      data: { lastMessageAt: new Date(), lastContactMessageAt: new Date() },
+      data: {
+        lastMessageAt: new Date(),
+        lastContactMessageAt: new Date(),
+        unreadCount: { increment: 1 },
+      },
     });
 
     this.logger.log(
@@ -288,6 +292,7 @@ export class WhatsappService {
       conversationId: conversation.id,
       message,
       contact,
+      unreadCount: (conversation.unreadCount ?? 0) + 1,
     });
 
     // 7. Disparar automação (flows)

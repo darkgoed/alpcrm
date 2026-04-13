@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, use } from 'react';
+import { useEffect, useEffectEvent, useRef, useState, use } from 'react';
 import {
   Kanban,
   LoaderCircle,
@@ -18,6 +18,7 @@ import {
 import {
   assignConversation,
   closeConversation,
+  markConversationAsRead,
   reopenConversation,
   sendMessage,
   type SendMessageInput,
@@ -351,10 +352,23 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
     return () => leaveConversation(id);
   }, [id]);
 
+  const syncReadState = useEffectEvent(async () => {
+    if (!conversation || conversation.unreadCount === 0) return;
+    const updated = await markConversationAsRead(id);
+    await mutate(updated, false);
+  });
+
+  useEffect(() => {
+    void syncReadState();
+  }, [conversation?.id, conversation?.unreadCount]);
+
   useSocket({
     onNewMessage: ({ conversationId, message }) => {
       if (conversationId !== id) return;
       setMessages((current) => (current.some((item) => item.id === message.id) ? current : [...current, message]));
+      if (message.senderType === 'contact') {
+        void syncReadState();
+      }
     },
     onMessageStatus: ({ conversationId, messageId, status }) => {
       if (conversationId !== id) return;

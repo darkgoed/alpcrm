@@ -190,13 +190,14 @@ export class MessagesService {
     // Atualizar lastMessageAt da conversa
     await this.prisma.conversation.update({
       where: { id: dto.conversationId },
-      data: { lastMessageAt: new Date() },
+      data: { lastMessageAt: new Date(), unreadCount: 0 },
     });
 
     // Emitir pelo WebSocket imediatamente
     this.eventsGateway.emitToWorkspace(workspaceId, 'new_message', {
       conversationId: dto.conversationId,
       message,
+      unreadCount: 0,
     });
 
     // ── Enviar pela API do WhatsApp ───────────────────────────────────────────
