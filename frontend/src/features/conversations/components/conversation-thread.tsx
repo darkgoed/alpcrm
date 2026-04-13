@@ -55,6 +55,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ConversationMessageBubble } from './message-bubble';
 import { InteractiveMessageComposer } from './interactive-message-composer';
 import { api } from '@/lib/api';
+import { setContactOptIn } from '@/hooks/useContacts';
 import { formatDistanceToNow, formatTime } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
 
@@ -1082,6 +1083,44 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                   ? `Consentimento registrado em ${formatFullDateTime(conversation.contact.optInAt)}`
                   : 'Sem data de consentimento registrada'}
               </p>
+              {conversation.contact.optInSource && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Origem: {conversation.contact.optInSource}
+                </p>
+              )}
+              {conversation.contact.optInEvidence && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Evidência: {conversation.contact.optInEvidence}
+                </p>
+              )}
+              <div className="mt-3 flex gap-2">
+                {conversation.contact.optInStatus !== 'opted_in' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={async () => {
+                      await setContactOptIn(conversation.contact.id, { status: 'opted_in', source: 'manual' });
+                      void mutate();
+                    }}
+                  >
+                    Registrar opt-in
+                  </Button>
+                )}
+                {conversation.contact.optInStatus !== 'opted_out' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs text-destructive hover:bg-destructive/10"
+                    onClick={async () => {
+                      await setContactOptIn(conversation.contact.id, { status: 'opted_out', source: 'manual' });
+                      void mutate();
+                    }}
+                  >
+                    Registrar opt-out
+                  </Button>
+                )}
+              </div>
             </div>
             <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Responsável</p>

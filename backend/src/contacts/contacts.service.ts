@@ -14,6 +14,7 @@ import {
   ContactFilterDto,
   BulkContactActionDto,
   CreateSavedSegmentDto,
+  SetOptInDto,
 } from './dto/contact.dto';
 import { CONTACT_IMPORT_QUEUE } from '../queues/queues.constants';
 import { FlowExecutorService } from '../automation/flow-executor.service';
@@ -841,6 +842,19 @@ export class ContactsService {
     return this.prisma.contactNote.create({
       data: { contactId, workspaceId, authorId, content: content.trim() },
       include: { author: { select: { id: true, name: true } } },
+    });
+  }
+
+  async setOptIn(workspaceId: string, contactId: string, dto: SetOptInDto) {
+    await this.findOne(workspaceId, contactId);
+    return this.prisma.contact.update({
+      where: { id: contactId },
+      data: {
+        optInStatus: dto.status,
+        optInAt: dto.status === 'opted_in' ? new Date() : undefined,
+        optInSource: dto.source ?? null,
+        optInEvidence: dto.evidence ?? null,
+      },
     });
   }
 

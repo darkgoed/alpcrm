@@ -206,6 +206,8 @@ model Contact {
   lifecycleStage ContactLifecycleStage @default(lead) @map("lifecycle_stage")
   optInStatus    ContactOptInStatus    @default(unknown) @map("opt_in_status")
   optInAt        DateTime?             @map("opt_in_at")
+  optInSource    String?               @map("opt_in_source")
+  optInEvidence  String?               @map("opt_in_evidence")
   createdAt      DateTime              @default(now()) @map("created_at")
   updatedAt      DateTime              @updatedAt @map("updated_at")
 

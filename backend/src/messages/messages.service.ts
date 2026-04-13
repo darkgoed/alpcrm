@@ -125,6 +125,13 @@ export class MessagesService {
       );
     }
 
+    // ── Verificar opt-out do contato ──────────────────────────────────────────
+    if (conversation.contact.optInStatus === 'opted_out') {
+      throw new ForbiddenException(
+        'Contato realizou opt-out e não pode receber mensagens outbound.',
+      );
+    }
+
     // ── Lock de conversa ──────────────────────────────────────────────────────
     // Apenas o operador atribuído pode responder.
     // Quem tem view_all_conversations (admin/supervisor) pode responder qualquer uma.

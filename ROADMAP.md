@@ -155,10 +155,10 @@ Meta: dar ao operador um CRM realmente utilizável no dia a dia.
 
 ### 2.6 — Horário comercial
 
-- [ ] Respeitar timezone do workspace
-- [ ] Detectar atendimento fora de horário
-- [ ] Enviar mensagem automática fora do horário quando configurado
-- [ ] Evitar follow-up indevido fora de horário
+- [x] Respeitar timezone do workspace
+- [x] Detectar atendimento fora de horário
+- [x] Enviar mensagem automática fora do horário quando configurado
+- [x] Evitar follow-up indevido fora de horário
 
 ### 2.7 — Opt-in e compliance de outbound
 

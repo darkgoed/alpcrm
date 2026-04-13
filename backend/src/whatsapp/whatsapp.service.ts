@@ -428,7 +428,9 @@ export class WhatsappService {
         `[OutOfHours] Mensagem automática enviada para conversa ${conversationId}`,
       );
     } catch (err) {
-      this.logger.warn(`[OutOfHours] Falha ao enviar mensagem automática: ${err}`);
+      this.logger.warn(
+        `[OutOfHours] Falha ao enviar mensagem automática: ${err}`,
+      );
     }
   }
 

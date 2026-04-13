@@ -19,6 +19,8 @@ export interface Contact {
   lifecycleStage: 'lead' | 'qualified' | 'customer' | 'inactive';
   optInStatus: 'unknown' | 'opted_in' | 'opted_out';
   optInAt: string | null;
+  optInSource: string | null;
+  optInEvidence: string | null;
   createdAt: string;
   owner: { id: string; name: string } | null;
   contactTags: Array<{ tag: Tag }>;
@@ -249,6 +251,14 @@ export async function moveContact(pipelineId: string, contactId: string, stageId
 
 export async function removeContactFromPipeline(pipelineId: string, contactId: string) {
   await api.delete(`/pipelines/${pipelineId}/contacts/${contactId}`);
+}
+
+export async function setContactOptIn(
+  contactId: string,
+  dto: { status: 'opted_in' | 'opted_out'; source?: string; evidence?: string },
+) {
+  const r = await api.patch(`/contacts/${contactId}/opt-in`, dto);
+  return r.data as Contact;
 }
 
 // ─── Notas internas ──────────────────────────────────────────────────────────

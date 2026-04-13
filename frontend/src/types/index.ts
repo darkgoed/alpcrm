@@ -13,6 +13,8 @@ export interface Contact {
   source: 'manual' | 'import_csv' | 'whatsapp_inbound';
   optInStatus: 'unknown' | 'opted_in' | 'opted_out';
   optInAt: string | null;
+  optInSource: string | null;
+  optInEvidence: string | null;
 }
 
 export interface InteractiveButtonOption {

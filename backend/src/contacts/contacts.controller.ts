@@ -25,6 +25,7 @@ import {
   BulkContactActionDto,
   CreateSavedSegmentDto,
   MergeContactDto,
+  SetOptInDto,
 } from './dto/contact.dto';
 
 @UseGuards(JwtAuthGuard)
@@ -195,6 +196,15 @@ export class ContactsController {
       user.sub,
       content,
     );
+  }
+
+  @Patch(':id/opt-in')
+  setOptIn(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: SetOptInDto,
+  ) {
+    return this.contactsService.setOptIn(user.workspaceId, id, dto);
   }
 
   @Delete(':id/notes/:noteId')

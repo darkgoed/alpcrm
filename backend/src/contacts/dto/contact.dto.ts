@@ -125,6 +125,19 @@ export class CreateSavedSegmentDto {
   conversationStatus?: 'open' | 'closed' | 'none';
 }
 
+export class SetOptInDto {
+  @IsEnum(['opted_in', 'opted_out'])
+  status: 'opted_in' | 'opted_out';
+
+  @IsOptional()
+  @IsString()
+  source?: string;
+
+  @IsOptional()
+  @IsString()
+  evidence?: string;
+}
+
 export class BulkContactActionDto {
   @IsArray()
   @ArrayNotEmpty()
