@@ -35,14 +35,10 @@ export class FlowExecutorService {
     });
 
     for (const flow of flows) {
-      const matches = this.checkTrigger(
-        flow.triggerType,
-        flow.triggerValue,
-        {
-          incomingText,
-          isNewConversation,
-        },
-      );
+      const matches = this.checkTrigger(flow.triggerType, flow.triggerValue, {
+        incomingText,
+        isNewConversation,
+      });
       if (!matches) continue;
 
       await this.startFlow(flow, conversationId, contactId, sendFn);
@@ -258,7 +254,8 @@ export class FlowExecutorService {
     triggerValue: string | null,
     context: FlowTriggerContext,
   ): boolean {
-    if (triggerType === 'new_conversation') return Boolean(context.isNewConversation);
+    if (triggerType === 'new_conversation')
+      return Boolean(context.isNewConversation);
     if (triggerType === 'always') return true;
     if (triggerType === 'keyword' && triggerValue && context.incomingText) {
       return context.incomingText
@@ -305,7 +302,13 @@ export class FlowExecutorService {
       data: { isBotActive: true },
     });
 
-    await this.executeNode(firstNode.id, conversationId, contactId, flow.id, sendFn);
+    await this.executeNode(
+      firstNode.id,
+      conversationId,
+      contactId,
+      flow.id,
+      sendFn,
+    );
   }
 
   private async findConversationForAutomation(

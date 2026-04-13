@@ -1,7 +1,7 @@
 'use client';
 
 import { useDeferredValue, useEffect, useState } from 'react';
-import { Briefcase, Building2, CheckCircle2, Layers3, Loader2, Mail, Phone, Plus, Save, Search, Tag as TagIcon, Trash2, Upload, UserPlus, X } from 'lucide-react';
+import { Briefcase, Building2, CheckCircle2, Layers3, Loader2, Mail, MessageSquare, Phone, Plus, Save, Search, Tag as TagIcon, Trash2, Upload, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAgents } from '@/hooks/useAgents';
 import {
   useContacts,
+  useContactNotes,
   usePipelines,
   useSavedSegments,
   useTags,
@@ -25,6 +26,8 @@ import {
   applyBulkContactAction,
   importPreview,
   importConfirm,
+  createContactNote,
+  deleteContactNote,
   type Contact,
   type ContactFilters,
   type Tag,
@@ -452,9 +455,13 @@ function ContactRow({
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [showMerge, setShowMerge] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
   const [saving, setSaving] = useState(false);
   const [merging, setMerging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+  const { notes, mutate: mutateNotes } = useContactNotes(showNotes ? contact.id : null);
   const [draft, setDraft] = useState({
     company: contact.company ?? '',
     ownerId: contact.owner?.id ?? '',
@@ -526,6 +533,23 @@ function ContactRow({
     } finally {
       setMerging(false);
     }
+  }
+
+  async function handleSaveNote() {
+    if (!noteDraft.trim()) return;
+    setSavingNote(true);
+    try {
+      await createContactNote(contact.id, noteDraft);
+      setNoteDraft('');
+      void mutateNotes();
+    } finally {
+      setSavingNote(false);
+    }
+  }
+
+  async function handleDeleteNote(noteId: string) {
+    await deleteContactNote(contact.id, noteId);
+    void mutateNotes();
   }
 
   return (
@@ -617,6 +641,15 @@ function ContactRow({
           >
             {showMerge ? 'Cancelar merge' : 'Mesclar'}
           </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-xs"
+            onClick={() => setShowNotes((current) => !current)}
+          >
+            <MessageSquare className="size-3 mr-1" />
+            {showNotes ? 'Fechar notas' : 'Notas'}
+          </Button>
         </div>
       </div>
 
@@ -699,6 +732,44 @@ function ContactRow({
           <p className="text-xs text-muted-foreground">
             O contato atual será removido e conversas, tags, pipelines e estado de automação serão consolidados no contato principal.
           </p>
+        </div>
+      )}
+
+      {showNotes && (
+        <div className="mt-3 space-y-3 border-t border-border/70 pt-3">
+          <div className="flex gap-2">
+            <textarea
+              className="flex-1 min-h-[72px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              placeholder="Escreva uma nota interna…"
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void handleSaveNote(); }}
+            />
+            <Button size="sm" onClick={handleSaveNote} disabled={savingNote || !noteDraft.trim()} className="self-end">
+              {savingNote ? <Loader2 className="size-3 animate-spin" /> : 'Salvar'}
+            </Button>
+          </div>
+          {notes.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhuma nota ainda.</p>
+          ) : (
+            <div className="space-y-2">
+              {notes.map((note) => (
+                <div key={note.id} className="group relative rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-sm">
+                  <p className="whitespace-pre-wrap text-foreground">{note.content}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    {note.author.name} · {new Date(note.createdAt).toLocaleString('pt-BR')}
+                  </p>
+                  <button
+                    onClick={() => handleDeleteNote(note.id)}
+                    className="absolute right-2 top-2 hidden text-muted-foreground hover:text-destructive group-hover:block"
+                    title="Excluir nota"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

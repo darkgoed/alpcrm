@@ -250,3 +250,30 @@ export async function moveContact(pipelineId: string, contactId: string, stageId
 export async function removeContactFromPipeline(pipelineId: string, contactId: string) {
   await api.delete(`/pipelines/${pipelineId}/contacts/${contactId}`);
 }
+
+// ─── Notas internas ──────────────────────────────────────────────────────────
+
+export interface ContactNote {
+  id: string;
+  contactId: string;
+  content: string;
+  createdAt: string;
+  author: { id: string; name: string };
+}
+
+export function useContactNotes(contactId: string | null) {
+  const { data, mutate, error } = useSWR<ContactNote[]>(
+    contactId ? `/contacts/${contactId}/notes` : null,
+    fetcher,
+  );
+  return { notes: data ?? [], mutate, error, isLoading: contactId ? !data && !error : false };
+}
+
+export async function createContactNote(contactId: string, content: string) {
+  const r = await api.post(`/contacts/${contactId}/notes`, { content });
+  return r.data as ContactNote;
+}
+
+export async function deleteContactNote(contactId: string, noteId: string) {
+  await api.delete(`/contacts/${contactId}/notes/${noteId}`);
+}

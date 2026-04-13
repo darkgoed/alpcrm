@@ -153,9 +153,15 @@ export class ContactsService {
     await this.prisma.contact.delete({ where: { id } });
   }
 
-  async merge(workspaceId: string, sourceContactId: string, targetContactId: string) {
+  async merge(
+    workspaceId: string,
+    sourceContactId: string,
+    targetContactId: string,
+  ) {
     if (sourceContactId === targetContactId) {
-      throw new BadRequestException('Selecione contatos diferentes para mesclar');
+      throw new BadRequestException(
+        'Selecione contatos diferentes para mesclar',
+      );
     }
 
     const contacts = await this.prisma.contact.findMany({
@@ -180,7 +186,9 @@ export class ContactsService {
     );
 
     const mergedOptInStatus =
-      target.optInStatus !== 'unknown' ? target.optInStatus : source.optInStatus;
+      target.optInStatus !== 'unknown'
+        ? target.optInStatus
+        : source.optInStatus;
     const mergedOptInAt = target.optInAt ?? source.optInAt;
     const mergedLifecycleStage = this.mergeLifecycleStage(
       source.lifecycleStage,
@@ -210,7 +218,9 @@ export class ContactsService {
 
       for (const tag of source.contactTags) {
         await tx.contactTag.upsert({
-          where: { contactId_tagId: { contactId: target.id, tagId: tag.tagId } },
+          where: {
+            contactId_tagId: { contactId: target.id, tagId: tag.tagId },
+          },
           create: { contactId: target.id, tagId: tag.tagId },
           update: {},
         });
@@ -433,7 +443,9 @@ export class ContactsService {
       });
 
       if (!stage) {
-        throw new NotFoundException('Stage não encontrado para o pipeline informado');
+        throw new NotFoundException(
+          'Stage não encontrado para o pipeline informado',
+        );
       }
     }
 
@@ -460,7 +472,7 @@ export class ContactsService {
         const contactData: Prisma.ContactUncheckedUpdateManyInput = {};
 
         if (shouldUpdateOwner) {
-          contactData.ownerId = shouldClearOwner ? null : owner?.id ?? null;
+          contactData.ownerId = shouldClearOwner ? null : (owner?.id ?? null);
         }
 
         if (shouldUpdateLifecycle && dto.lifecycleStage) {
@@ -483,7 +495,10 @@ export class ContactsService {
       if (tagPairsToRemove.length > 0) {
         await tx.contactTag.deleteMany({
           where: {
-            OR: tagPairsToRemove.map(({ contactId, tagId }) => ({ contactId, tagId })),
+            OR: tagPairsToRemove.map(({ contactId, tagId }) => ({
+              contactId,
+              tagId,
+            })),
           },
         });
       }
@@ -509,7 +524,9 @@ export class ContactsService {
     });
 
     for (const contact of contacts) {
-      const existingTagIds = new Set(contact.contactTags.map((item) => item.tagId));
+      const existingTagIds = new Set(
+        contact.contactTags.map((item) => item.tagId),
+      );
       for (const tagId of addTagIds) {
         if (existingTagIds.has(tagId)) continue;
         await this.flowExecutor.triggerForContactEvent(
@@ -753,11 +770,14 @@ export class ContactsService {
       return {};
     }
 
-    return Object.entries(value).reduce<Record<string, string>>((acc, [key, rawValue]) => {
-      if (typeof rawValue !== 'string') return acc;
-      acc[key] = rawValue;
-      return acc;
-    }, {});
+    return Object.entries(value).reduce<Record<string, string>>(
+      (acc, [key, rawValue]) => {
+        if (typeof rawValue !== 'string') return acc;
+        acc[key] = rawValue;
+        return acc;
+      },
+      {},
+    );
   }
 
   private mergeLifecycleStage(
@@ -798,6 +818,38 @@ export class ContactsService {
       });
       return row;
     });
+  }
+
+  // ─── Notas internas ──────────────────────────────────────────────────────────
+
+  async listNotes(workspaceId: string, contactId: string) {
+    await this.findOne(workspaceId, contactId);
+    return this.prisma.contactNote.findMany({
+      where: { contactId, workspaceId },
+      include: { author: { select: { id: true, name: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async createNote(
+    workspaceId: string,
+    contactId: string,
+    authorId: string,
+    content: string,
+  ) {
+    await this.findOne(workspaceId, contactId);
+    return this.prisma.contactNote.create({
+      data: { contactId, workspaceId, authorId, content: content.trim() },
+      include: { author: { select: { id: true, name: true } } },
+    });
+  }
+
+  async deleteNote(workspaceId: string, contactId: string, noteId: string) {
+    const note = await this.prisma.contactNote.findFirst({
+      where: { id: noteId, contactId, workspaceId },
+    });
+    if (!note) throw new NotFoundException('Nota não encontrada');
+    await this.prisma.contactNote.delete({ where: { id: noteId } });
   }
 
   private splitCsvLine(line: string, delimiter: string): string[] {

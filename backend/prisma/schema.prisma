@@ -38,6 +38,7 @@ model Workspace {
   messageTemplates MessageTemplate[]
   quickReplies     QuickReply[]
   savedSegments    SavedSegment[]
+  contactNotes     ContactNote[]
 
   @@map("workspaces")
 }
@@ -61,8 +62,9 @@ model User {
   userRoles     UserRole[]
   teamUsers     TeamUser[]
   assignedConvs Conversation[] @relation("AssignedUser")
-  ownedContacts Contact[]      @relation("ContactOwner")
-  auditLogs     AuditLog[]
+  ownedContacts  Contact[]      @relation("ContactOwner")
+  contactNotes   ContactNote[]  @relation("ContactNoteAuthor")
+  auditLogs      AuditLog[]
 
   @@unique([workspaceId, email])
   @@map("users")
@@ -213,6 +215,7 @@ model Contact {
   contactTags      ContactTag[]
   contactPipelines ContactPipeline[]
   flowStates       ContactFlowState[]
+  notes            ContactNote[]
 
   @@unique([workspaceId, phone])
   @@map("contacts")
@@ -451,6 +454,21 @@ model ContactFlowState {
 
   @@unique([contactId, flowId])
   @@map("contact_flow_state")
+}
+
+model ContactNote {
+  id          String   @id @default(uuid())
+  contactId   String   @map("contact_id")
+  workspaceId String   @map("workspace_id")
+  authorId    String   @map("author_id")
+  content     String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  contact   Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author    User      @relation("ContactNoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("contact_notes")
 }
 
 // ─────────────────────────────────────────────────────────

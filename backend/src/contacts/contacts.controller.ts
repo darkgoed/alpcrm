@@ -41,7 +41,8 @@ export class ContactsController {
     @Query('tagIds') tagIds?: string | string[],
     @Query('stageId') stageId?: string,
     @Query('pipelineId') pipelineId?: string,
-    @Query('conversationStatus') conversationStatus?: 'open' | 'closed' | 'none',
+    @Query('conversationStatus')
+    conversationStatus?: 'open' | 'closed' | 'none',
   ) {
     return this.contactsService.findAll(user.workspaceId, {
       search,
@@ -83,7 +84,11 @@ export class ContactsController {
     @Param('id') id: string,
     @Body() dto: MergeContactDto,
   ) {
-    return this.contactsService.merge(user.workspaceId, id, dto.targetContactId);
+    return this.contactsService.merge(
+      user.workspaceId,
+      id,
+      dto.targetContactId,
+    );
   }
 
   // ─── Importação CSV ───────────────────────────────────────────────────────────
@@ -169,6 +174,37 @@ export class ContactsController {
   @Post('/bulk/actions')
   bulkActions(@CurrentUser() user: any, @Body() dto: BulkContactActionDto) {
     return this.contactsService.applyBulkActions(user.workspaceId, dto);
+  }
+
+  // ─── Notas internas ───────────────────────────────────────────────────────────
+
+  @Get(':id/notes')
+  listNotes(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.contactsService.listNotes(user.workspaceId, id);
+  }
+
+  @Post(':id/notes')
+  createNote(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body('content') content: string,
+  ) {
+    return this.contactsService.createNote(
+      user.workspaceId,
+      id,
+      user.sub,
+      content,
+    );
+  }
+
+  @Delete(':id/notes/:noteId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteNote(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Param('noteId') noteId: string,
+  ) {
+    return this.contactsService.deleteNote(user.workspaceId, id, noteId);
   }
 
   private parseListQuery(value?: string | string[]) {
