@@ -13,10 +13,13 @@ export interface Contact {
   phone: string;
   name: string | null;
   email: string | null;
+  company: string | null;
   source: 'manual' | 'import_csv' | 'whatsapp_inbound';
+  lifecycleStage: 'lead' | 'qualified' | 'customer' | 'inactive';
   optInStatus: 'unknown' | 'opted_in' | 'opted_out';
   optInAt: string | null;
   createdAt: string;
+  owner: { id: string; name: string } | null;
   contactTags: Array<{ tag: Tag }>;
   contactPipelines: Array<{ stageId: string; pipelineId: string; stage: { name: string; color: string } }>;
   conversations: Array<{ id: string; status: string }>;
@@ -85,12 +88,28 @@ export function useKanban(pipelineId: string | null) {
 
 // ─── Mutações ────────────────────────────────────────────────────────────────
 
-export async function createContact(dto: { phone: string; name?: string; email?: string }) {
+export async function createContact(dto: {
+  phone: string;
+  name?: string;
+  email?: string;
+  company?: string;
+  ownerId?: string;
+  lifecycleStage?: 'lead' | 'qualified' | 'customer' | 'inactive';
+}) {
   const r = await api.post('/contacts', dto);
   return r.data as Contact;
 }
 
-export async function updateContact(id: string, dto: { name?: string; email?: string }) {
+export async function updateContact(
+  id: string,
+  dto: {
+    name?: string;
+    email?: string;
+    company?: string | null;
+    ownerId?: string | null;
+    lifecycleStage?: 'lead' | 'qualified' | 'customer' | 'inactive';
+  },
+) {
   const r = await api.patch(`/contacts/${id}`, dto);
   return r.data as Contact;
 }

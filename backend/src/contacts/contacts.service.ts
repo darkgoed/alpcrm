@@ -31,6 +31,7 @@ export class ContactsService {
         { name: { contains: q, mode: 'insensitive' } },
         { phone: { contains: q } },
         { email: { contains: q, mode: 'insensitive' } },
+        { company: { contains: q, mode: 'insensitive' } },
       ];
     }
 
@@ -48,6 +49,7 @@ export class ContactsService {
       where,
       orderBy: { createdAt: 'desc' },
       include: {
+        owner: { select: { id: true, name: true } },
         contactTags: { include: { tag: true } },
         contactPipelines: { include: { stage: true, pipeline: true } },
         conversations: {
@@ -65,6 +67,7 @@ export class ContactsService {
     const contact = await this.prisma.contact.findFirst({
       where: { id, workspaceId },
       include: {
+        owner: { select: { id: true, name: true } },
         contactTags: { include: { tag: true } },
         contactPipelines: { include: { stage: true, pipeline: true } },
         conversations: {
@@ -92,17 +95,19 @@ export class ContactsService {
       throw new ConflictException('Contato com esse telefone já existe');
 
     const { tagIds, ...rest } = dto;
+    const data = await this.buildContactWriteData(workspaceId, rest);
 
     return this.prisma.contact.create({
       data: {
         workspaceId,
         source: 'manual',
-        ...rest,
+        ...data,
         ...(tagIds?.length
           ? { contactTags: { create: tagIds.map((tagId) => ({ tagId })) } }
           : {}),
       },
       include: {
+        owner: { select: { id: true, name: true } },
         contactTags: { include: { tag: true } },
       },
     });
@@ -116,7 +121,22 @@ export class ContactsService {
     });
     if (!contact) throw new NotFoundException('Contato não encontrado');
 
-    return this.prisma.contact.update({ where: { id }, data: dto });
+    const data = await this.buildContactWriteData(workspaceId, dto);
+
+    return this.prisma.contact.update({
+      where: { id },
+      data,
+      include: {
+        owner: { select: { id: true, name: true } },
+        contactTags: { include: { tag: true } },
+        contactPipelines: { include: { stage: true, pipeline: true } },
+        conversations: {
+          where: { status: 'open' },
+          select: { id: true, status: true },
+          take: 1,
+        },
+      },
+    });
   }
 
   // ─── Excluir contato ──────────────────────────────────────────────────────────
@@ -260,6 +280,33 @@ export class ContactsService {
   }
 
   // ─── Helpers CSV ──────────────────────────────────────────────────────────────
+
+  private async buildContactWriteData(
+    workspaceId: string,
+    dto: Partial<CreateContactDto & UpdateContactDto>,
+  ) {
+    const data: Record<string, unknown> = { ...dto };
+
+    if ('company' in dto) {
+      data.company = dto.company?.trim() ? dto.company.trim() : null;
+    }
+
+    if ('ownerId' in dto) {
+      if (!dto.ownerId) {
+        data.ownerId = null;
+      } else {
+        const owner = await this.prisma.user.findFirst({
+          where: { id: dto.ownerId, workspaceId, isActive: true },
+          select: { id: true },
+        });
+        if (!owner)
+          throw new NotFoundException('Owner do contato não encontrado');
+        data.ownerId = owner.id;
+      }
+    }
+
+    return data;
+  }
 
   private isValidE164(phone: string): boolean {
     return /^\+[1-9]\d{7,14}$/.test(phone);

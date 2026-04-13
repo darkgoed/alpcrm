@@ -4,7 +4,15 @@ import {
   IsEmail,
   IsArray,
   IsUUID,
+  IsEnum,
 } from 'class-validator';
+
+export enum ContactLifecycleStageDto {
+  LEAD = 'lead',
+  QUALIFIED = 'qualified',
+  CUSTOMER = 'customer',
+  INACTIVE = 'inactive',
+}
 
 export class CreateContactDto {
   @IsString()
@@ -17,6 +25,18 @@ export class CreateContactDto {
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @IsOptional()
+  @IsString()
+  company?: string;
+
+  @IsOptional()
+  @IsUUID()
+  ownerId?: string;
+
+  @IsOptional()
+  @IsEnum(ContactLifecycleStageDto)
+  lifecycleStage?: ContactLifecycleStageDto;
 
   @IsOptional()
   @IsArray()
@@ -32,6 +52,18 @@ export class UpdateContactDto {
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @IsOptional()
+  @IsString()
+  company?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  ownerId?: string | null;
+
+  @IsOptional()
+  @IsEnum(ContactLifecycleStageDto)
+  lifecycleStage?: ContactLifecycleStageDto;
 }
 
 export class AddTagDto {

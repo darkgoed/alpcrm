@@ -60,6 +60,7 @@ model User {
   userRoles     UserRole[]
   teamUsers     TeamUser[]
   assignedConvs Conversation[] @relation("AssignedUser")
+  ownedContacts Contact[]      @relation("ContactOwner")
   auditLogs     AuditLog[]
 
   @@unique([workspaceId, email])
@@ -182,19 +183,30 @@ enum ContactOptInStatus {
   opted_out
 }
 
+enum ContactLifecycleStage {
+  lead
+  qualified
+  customer
+  inactive
+}
+
 model Contact {
-  id          String             @id @default(uuid())
-  workspaceId String             @map("workspace_id")
-  phone       String
-  name        String?
-  email       String?
-  source      ContactSource      @default(manual)
-  optInStatus ContactOptInStatus @default(unknown) @map("opt_in_status")
-  optInAt     DateTime?          @map("opt_in_at")
-  createdAt   DateTime           @default(now()) @map("created_at")
-  updatedAt   DateTime           @updatedAt @map("updated_at")
+  id             String                @id @default(uuid())
+  workspaceId    String                @map("workspace_id")
+  phone          String
+  name           String?
+  email          String?
+  company        String?
+  ownerId        String?               @map("owner_id")
+  source         ContactSource         @default(manual)
+  lifecycleStage ContactLifecycleStage @default(lead) @map("lifecycle_stage")
+  optInStatus    ContactOptInStatus    @default(unknown) @map("opt_in_status")
+  optInAt        DateTime?             @map("opt_in_at")
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
 
   workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  owner            User?             @relation("ContactOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   conversations    Conversation[]
   contactTags      ContactTag[]
   contactPipelines ContactPipeline[]

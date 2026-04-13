@@ -1,16 +1,18 @@
 'use client';
 
-import { useDeferredValue, useState } from 'react';
-import { CheckCircle2, Loader2, Plus, Search, Phone, Mail, Trash2, Tag as TagIcon, Upload, UserPlus } from 'lucide-react';
+import { useDeferredValue, useEffect, useState } from 'react';
+import { Briefcase, Building2, CheckCircle2, Loader2, Mail, Phone, Plus, Search, Tag as TagIcon, Trash2, Upload, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAgents } from '@/hooks/useAgents';
 import {
   useContacts,
   useTags,
   createContact,
+  updateContact,
   deleteContact,
   addTag,
   removeTag,
@@ -23,6 +25,22 @@ import {
 } from '@/hooks/useContacts';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899'];
+const LIFECYCLE_OPTIONS = [
+  { value: 'lead', label: 'Lead' },
+  { value: 'qualified', label: 'Qualificado' },
+  { value: 'customer', label: 'Cliente' },
+  { value: 'inactive', label: 'Inativo' },
+] as const;
+
+function getLifecycleLabel(stage: Contact['lifecycleStage']) {
+  return LIFECYCLE_OPTIONS.find((option) => option.value === stage)?.label ?? stage;
+}
+
+function getLifecycleBadgeVariant(stage: Contact['lifecycleStage']): React.ComponentProps<typeof Badge>['variant'] {
+  if (stage === 'customer') return 'success';
+  if (stage === 'inactive') return 'secondary';
+  return 'outline';
+}
 
 // ─── Tag Badge ───────────────────────────────────────────────────────────────
 
@@ -42,8 +60,21 @@ function TagBadge({ tag, onRemove }: { tag: Tag; onRemove?: () => void }) {
 
 // ─── Create Contact Dialog ────────────────────────────────────────────────────
 
-function CreateContactForm({ onCreated }: { onCreated: () => void }) {
-  const [form, setForm] = useState({ phone: '', name: '', email: '' });
+function CreateContactForm({
+  agents,
+  onCreated,
+}: {
+  agents: Array<{ id: string; name: string; isActive: boolean }>;
+  onCreated: () => void;
+}) {
+  const [form, setForm] = useState({
+    phone: '',
+    name: '',
+    email: '',
+    company: '',
+    ownerId: '',
+    lifecycleStage: 'lead' as Contact['lifecycleStage'],
+  });
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -51,9 +82,23 @@ function CreateContactForm({ onCreated }: { onCreated: () => void }) {
     if (!form.phone) return;
     setLoading(true);
     try {
-      await createContact({ phone: form.phone, name: form.name || undefined, email: form.email || undefined });
+      await createContact({
+        phone: form.phone,
+        name: form.name || undefined,
+        email: form.email || undefined,
+        company: form.company || undefined,
+        ownerId: form.ownerId || undefined,
+        lifecycleStage: form.lifecycleStage,
+      });
       onCreated();
-      setForm({ phone: '', name: '', email: '' });
+      setForm({
+        phone: '',
+        name: '',
+        email: '',
+        company: '',
+        ownerId: '',
+        lifecycleStage: 'lead',
+      });
     } finally {
       setLoading(false);
     }
@@ -65,6 +110,34 @@ function CreateContactForm({ onCreated }: { onCreated: () => void }) {
       <Input placeholder="Telefone (obrigatório)" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
       <Input placeholder="Nome" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
       <Input placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+      <Input placeholder="Empresa / organização" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+      <div className="grid gap-3 md:grid-cols-2">
+        <select
+          value={form.lifecycleStage}
+          onChange={(e) => setForm({ ...form, lifecycleStage: e.target.value as Contact['lifecycleStage'] })}
+          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+        >
+          {LIFECYCLE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={form.ownerId}
+          onChange={(e) => setForm({ ...form, ownerId: e.target.value })}
+          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+        >
+          <option value="">Sem owner</option>
+          {agents
+            .filter((agent) => agent.isActive)
+            .map((agent) => (
+              <option key={agent.id} value={agent.id}>
+                {agent.name}
+              </option>
+            ))}
+        </select>
+      </div>
       <Button type="submit" size="sm" disabled={loading || !form.phone}>
         {loading ? 'Criando...' : 'Criar contato'}
       </Button>
@@ -244,21 +317,41 @@ function ImportCsvSection({ onImported, onCancel }: { onImported: () => void; on
 
 function ContactRow({
   contact,
+  agents,
   tags,
   onDelete,
   onTagAdded,
   onTagRemoved,
+  onUpdated,
 }: {
   contact: Contact;
+  agents: Array<{ id: string; name: string; isActive: boolean }>;
   tags: Tag[];
   onDelete: () => void;
   onTagAdded: () => void;
   onTagRemoved: () => void;
+  onUpdated: () => void;
 }) {
   const name = contact.name ?? contact.phone;
   const initials = name.slice(0, 2).toUpperCase();
   const [showTagPicker, setShowTagPicker] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [draft, setDraft] = useState({
+    company: contact.company ?? '',
+    ownerId: contact.owner?.id ?? '',
+    lifecycleStage: contact.lifecycleStage,
+  });
   const appliedTagIds = new Set(contact.contactTags.map((ct) => ct.tag.id));
+
+  useEffect(() => {
+    setDraft({
+      company: contact.company ?? '',
+      ownerId: contact.owner?.id ?? '',
+      lifecycleStage: contact.lifecycleStage,
+    });
+  }, [contact.company, contact.lifecycleStage, contact.owner?.id]);
 
   async function handleAddTag(tagId: string) {
     await addTag(contact.id, tagId);
@@ -271,8 +364,27 @@ function ContactRow({
     onTagRemoved();
   }
 
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    try {
+      await updateContact(contact.id, {
+        company: draft.company.trim() || null,
+        ownerId: draft.ownerId || null,
+        lifecycleStage: draft.lifecycleStage,
+      });
+      onUpdated();
+      setShowEditor(false);
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'Erro ao salvar contato');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
-    <div className="flex items-start gap-4 rounded-xl border border-border/70 bg-background px-4 py-3 hover:border-primary/30 hover:bg-accent/30 transition-colors">
+    <div className="rounded-xl border border-border/70 bg-background px-4 py-3 transition-colors hover:border-primary/30 hover:bg-accent/30">
+      <div className="flex items-start gap-4">
       <Avatar className="size-10 shrink-0 border border-border/70">
         <AvatarFallback className="bg-primary/10 text-primary text-xs">{initials}</AvatarFallback>
       </Avatar>
@@ -282,6 +394,11 @@ function ContactRow({
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span className="flex items-center gap-1"><Phone className="size-3" />{contact.phone}</span>
           {contact.email && <span className="flex items-center gap-1"><Mail className="size-3" />{contact.email}</span>}
+          {contact.company && <span className="flex items-center gap-1"><Building2 className="size-3" />{contact.company}</span>}
+          <span className="flex items-center gap-1"><Briefcase className="size-3" />{contact.owner?.name ?? 'Sem owner'}</span>
+          <Badge variant={getLifecycleBadgeVariant(contact.lifecycleStage)} className="text-[10px]">
+            {getLifecycleLabel(contact.lifecycleStage)}
+          </Badge>
         </div>
         <div className="flex flex-wrap items-center gap-1 pt-0.5">
           {contact.contactTags.map(({ tag }) => (
@@ -318,18 +435,71 @@ function ContactRow({
               </div>
             )}
           </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-xs"
+            onClick={() => setShowEditor((current) => !current)}
+          >
+            {showEditor ? 'Fechar CRM' : 'Editar CRM'}
+          </Button>
         </div>
       </div>
 
-      <Button
-        size="icon"
-        variant="ghost"
-        className="size-8 text-destructive hover:text-destructive shrink-0"
-        onClick={onDelete}
-        title="Excluir"
-      >
-        <Trash2 className="size-4" />
-      </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="size-8 shrink-0 text-destructive hover:text-destructive"
+          onClick={onDelete}
+          title="Excluir"
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      </div>
+
+      {showEditor && (
+        <div className="mt-3 grid gap-3 border-t border-border/70 pt-3 md:grid-cols-[1.2fr_0.9fr_0.9fr_auto]">
+          <Input
+            placeholder="Empresa / organização"
+            value={draft.company}
+            onChange={(e) => setDraft((current) => ({ ...current, company: e.target.value }))}
+          />
+          <select
+            value={draft.lifecycleStage}
+            onChange={(e) =>
+              setDraft((current) => ({
+                ...current,
+                lifecycleStage: e.target.value as Contact['lifecycleStage'],
+              }))
+            }
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+          >
+            {LIFECYCLE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={draft.ownerId}
+            onChange={(e) => setDraft((current) => ({ ...current, ownerId: e.target.value }))}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="">Sem owner</option>
+            {agents
+              .filter((agent) => agent.isActive)
+              .map((agent) => (
+                <option key={agent.id} value={agent.id}>
+                  {agent.name}
+                </option>
+              ))}
+          </select>
+          <Button size="sm" onClick={handleSave} disabled={saving}>
+            {saving ? 'Salvando...' : 'Salvar'}
+          </Button>
+          {error && <p className="text-xs text-destructive md:col-span-4">{error}</p>}
+        </div>
+      )}
     </div>
   );
 }
@@ -348,6 +518,7 @@ export function ContactsPage() {
 
   const { contacts, mutate, isLoading } = useContacts({ search: deferredSearch || undefined, tagId: selectedTag });
   const { tags, mutate: mutateTags } = useTags();
+  const { agents } = useAgents();
 
   async function handleDeleteContact(id: string) {
     await deleteContact(id);
@@ -462,7 +633,13 @@ export function ContactsPage() {
             />
           )}
           {showCreate && (
-            <CreateContactForm onCreated={() => { setShowCreate(false); void mutate(); }} />
+            <CreateContactForm
+              agents={agents}
+              onCreated={() => {
+                setShowCreate(false);
+                void mutate();
+              }}
+            />
           )}
 
           {isLoading ? (
@@ -486,10 +663,12 @@ export function ContactsPage() {
               <ContactRow
                 key={contact.id}
                 contact={contact}
+                agents={agents}
                 tags={tags}
                 onDelete={() => handleDeleteContact(contact.id)}
                 onTagAdded={() => void mutate()}
                 onTagRemoved={() => void mutate()}
+                onUpdated={() => void mutate()}
               />
             ))
           )}
