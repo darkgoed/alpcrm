@@ -5,10 +5,12 @@ import { ContactsController } from './contacts.controller';
 import { ContactImportProcessor } from './contact-import.processor';
 import { PrismaModule } from '../prisma/prisma.module';
 import { CONTACT_IMPORT_QUEUE } from '../queues/queues.constants';
+import { AutomationModule } from '../automation/automation.module';
 
 @Module({
   imports: [
     PrismaModule,
+    AutomationModule,
     BullModule.registerQueue({ name: CONTACT_IMPORT_QUEUE }),
   ],
   providers: [ContactsService, ContactImportProcessor],

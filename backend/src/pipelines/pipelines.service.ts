@@ -12,10 +12,14 @@ import {
   ReorderStagesDto,
   MoveContactDto,
 } from './dto/pipeline.dto';
+import { FlowExecutorService } from '../automation/flow-executor.service';
 
 @Injectable()
 export class PipelinesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private flowExecutor: FlowExecutorService,
+  ) {}
 
   // ─── Pipelines ────────────────────────────────────────────────────────────────
 
@@ -180,11 +184,27 @@ export class PipelinesService {
     });
     if (!contact) throw new NotFoundException('Contato não encontrado');
 
-    return this.prisma.contactPipeline.upsert({
+    const currentPipelineState = await this.prisma.contactPipeline.findUnique({
+      where: { contactId_pipelineId: { contactId: dto.contactId, pipelineId } },
+      select: { stageId: true },
+    });
+
+    const result = await this.prisma.contactPipeline.upsert({
       where: { contactId_pipelineId: { contactId: dto.contactId, pipelineId } },
       create: { contactId: dto.contactId, pipelineId, stageId: dto.stageId },
       update: { stageId: dto.stageId },
     });
+
+    if (currentPipelineState?.stageId !== dto.stageId) {
+      await this.flowExecutor.triggerForContactEvent(
+        workspaceId,
+        dto.contactId,
+        'stage_changed',
+        dto.stageId,
+      );
+    }
+
+    return result;
   }
 
   // ─── Remover contato do pipeline ──────────────────────────────────────────────

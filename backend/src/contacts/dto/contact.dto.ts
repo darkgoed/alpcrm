@@ -6,6 +6,10 @@ import {
   IsUUID,
   IsEnum,
   IsObject,
+  ArrayNotEmpty,
+  ArrayUnique,
+  IsBoolean,
+  IsIn,
 } from 'class-validator';
 
 export enum ContactLifecycleStageDto {
@@ -80,9 +84,83 @@ export class AddTagDto {
   tagId: string;
 }
 
+export class MergeContactDto {
+  @IsUUID()
+  targetContactId: string;
+}
+
 export class ContactFilterDto {
   tagId?: string;
+  tagIds?: string[];
   stageId?: string;
   pipelineId?: string;
   search?: string;
+  conversationStatus?: 'open' | 'closed' | 'none';
+}
+
+export class CreateSavedSegmentDto {
+  @IsString()
+  name: string;
+
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @ArrayUnique()
+  tagIds?: string[];
+
+  @IsOptional()
+  @IsUUID()
+  pipelineId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  stageId?: string;
+
+  @IsOptional()
+  @IsIn(['open', 'closed', 'none'])
+  conversationStatus?: 'open' | 'closed' | 'none';
+}
+
+export class BulkContactActionDto {
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUUID('4', { each: true })
+  @ArrayUnique()
+  contactIds: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @ArrayUnique()
+  addTagIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @ArrayUnique()
+  removeTagIds?: string[];
+
+  @IsOptional()
+  @IsUUID()
+  ownerId?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  clearOwner?: boolean;
+
+  @IsOptional()
+  @IsEnum(ContactLifecycleStageDto)
+  lifecycleStage?: ContactLifecycleStageDto;
+
+  @IsOptional()
+  @IsUUID()
+  pipelineId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  stageId?: string;
 }

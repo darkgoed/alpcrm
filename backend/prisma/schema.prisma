@@ -37,6 +37,7 @@ model Workspace {
   auditLogs        AuditLog[]
   messageTemplates MessageTemplate[]
   quickReplies     QuickReply[]
+  savedSegments    SavedSegment[]
 
   @@map("workspaces")
 }
@@ -374,6 +375,20 @@ model ContactPipeline {
   @@map("contact_pipeline")
 }
 
+model SavedSegment {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  filters     Json
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, name])
+  @@map("saved_segments")
+}
+
 // ─────────────────────────────────────────────────────────
 // AUTOMATION (Flows)
 // ─────────────────────────────────────────────────────────
@@ -388,6 +403,8 @@ enum FlowTriggerType {
   new_conversation
   keyword
   always
+  tag_applied
+  stage_changed
 }
 
 model Flow {

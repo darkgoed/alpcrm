@@ -121,6 +121,11 @@ export async function deleteContact(id: string) {
   await api.delete(`/contacts/${id}`);
 }
 
+export async function mergeContact(sourceContactId: string, targetContactId: string) {
+  const r = await api.post(`/contacts/${sourceContactId}/merge`, { targetContactId });
+  return r.data as Contact;
+}
+
 export async function addTag(contactId: string, tagId: string) {
   await api.post(`/contacts/${contactId}/tags`, { tagId });
 }

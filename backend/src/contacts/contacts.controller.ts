@@ -22,6 +22,9 @@ import {
   CreateContactDto,
   UpdateContactDto,
   AddTagDto,
+  BulkContactActionDto,
+  CreateSavedSegmentDto,
+  MergeContactDto,
 } from './dto/contact.dto';
 
 @UseGuards(JwtAuthGuard)
@@ -35,15 +38,17 @@ export class ContactsController {
   findAll(
     @CurrentUser() user: any,
     @Query('search') search?: string,
-    @Query('tagId') tagId?: string,
+    @Query('tagIds') tagIds?: string | string[],
     @Query('stageId') stageId?: string,
     @Query('pipelineId') pipelineId?: string,
+    @Query('conversationStatus') conversationStatus?: 'open' | 'closed' | 'none',
   ) {
     return this.contactsService.findAll(user.workspaceId, {
       search,
-      tagId,
+      tagIds: this.parseListQuery(tagIds),
       stageId,
       pipelineId,
+      conversationStatus,
     });
   }
 
@@ -70,6 +75,15 @@ export class ContactsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@CurrentUser() user: any, @Param('id') id: string) {
     return this.contactsService.remove(user.workspaceId, id);
+  }
+
+  @Post(':id/merge')
+  merge(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: MergeContactDto,
+  ) {
+    return this.contactsService.merge(user.workspaceId, id, dto.targetContactId);
   }
 
   // ─── Importação CSV ───────────────────────────────────────────────────────────
@@ -134,5 +148,33 @@ export class ContactsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteTag(@CurrentUser() user: any, @Param('tagId') tagId: string) {
     return this.contactsService.deleteTag(user.workspaceId, tagId);
+  }
+
+  @Get('/segments')
+  listSegments(@CurrentUser() user: any) {
+    return this.contactsService.listSavedSegments(user.workspaceId);
+  }
+
+  @Post('/segments')
+  createSegment(@CurrentUser() user: any, @Body() dto: CreateSavedSegmentDto) {
+    return this.contactsService.createSavedSegment(user.workspaceId, dto);
+  }
+
+  @Delete('/segments/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteSegment(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.contactsService.deleteSavedSegment(user.workspaceId, id);
+  }
+
+  @Post('/bulk/actions')
+  bulkActions(@CurrentUser() user: any, @Body() dto: BulkContactActionDto) {
+    return this.contactsService.applyBulkActions(user.workspaceId, dto);
+  }
+
+  private parseListQuery(value?: string | string[]) {
+    if (!value) return undefined;
+    const items = Array.isArray(value) ? value : value.split(',');
+    const parsed = items.map((item) => item.trim()).filter(Boolean);
+    return parsed.length > 0 ? parsed : undefined;
   }
 }

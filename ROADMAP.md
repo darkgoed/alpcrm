@@ -134,7 +134,7 @@ Meta: dar ao operador um CRM realmente utilizável no dia a dia.
 - [x] Adicionar empresa/organização
 - [x] Adicionar owner do contato
 - [x] Adicionar lifecycle stage
-- [ ] Adicionar merge de duplicados
+- [x] Adicionar merge de duplicados
 - [ ] Adicionar notas internas no nível do contato
 
 ### 2.4 — Tags, segmentação e pipeline

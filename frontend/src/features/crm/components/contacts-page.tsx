@@ -14,6 +14,7 @@ import {
   createContact,
   updateContact,
   deleteContact,
+  mergeContact,
   addTag,
   removeTag,
   createTag,
@@ -421,6 +422,7 @@ function ContactRow({
   contact,
   agents,
   tags,
+  contacts,
   onDelete,
   onTagAdded,
   onTagRemoved,
@@ -429,6 +431,7 @@ function ContactRow({
   contact: Contact;
   agents: Array<{ id: string; name: string; isActive: boolean }>;
   tags: Tag[];
+  contacts: Contact[];
   onDelete: () => void;
   onTagAdded: () => void;
   onTagRemoved: () => void;
@@ -438,17 +441,21 @@ function ContactRow({
   const initials = name.slice(0, 2).toUpperCase();
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
+  const [showMerge, setShowMerge] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [merging, setMerging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState({
     company: contact.company ?? '',
     ownerId: contact.owner?.id ?? '',
     lifecycleStage: contact.lifecycleStage,
   });
+  const [mergeTargetId, setMergeTargetId] = useState('');
   const [customFields, setCustomFields] = useState<CustomFieldDraft[]>(
     getCustomFieldDrafts(contact.customFields),
   );
   const appliedTagIds = new Set(contact.contactTags.map((ct) => ct.tag.id));
+  const mergeCandidates = contacts.filter((candidate) => candidate.id !== contact.id);
 
   useEffect(() => {
     setDraft({
@@ -458,6 +465,12 @@ function ContactRow({
     });
     setCustomFields(getCustomFieldDrafts(contact.customFields));
   }, [contact.company, contact.customFields, contact.lifecycleStage, contact.owner?.id]);
+
+  useEffect(() => {
+    if (!mergeCandidates.some((candidate) => candidate.id === mergeTargetId)) {
+      setMergeTargetId('');
+    }
+  }, [mergeCandidates, mergeTargetId]);
 
   async function handleAddTag(tagId: string) {
     await addTag(contact.id, tagId);
@@ -486,6 +499,22 @@ function ContactRow({
       setError(err?.response?.data?.message ?? 'Erro ao salvar contato');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleMerge() {
+    if (!mergeTargetId) return;
+    setMerging(true);
+    setError(null);
+    try {
+      await mergeContact(contact.id, mergeTargetId);
+      setShowMerge(false);
+      setMergeTargetId('');
+      onUpdated();
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'Erro ao mesclar contato');
+    } finally {
+      setMerging(false);
     }
   }
 
@@ -562,6 +591,15 @@ function ContactRow({
           >
             {showEditor ? 'Fechar CRM' : 'Editar CRM'}
           </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-xs"
+            onClick={() => setShowMerge((current) => !current)}
+            disabled={mergeCandidates.length === 0}
+          >
+            {showMerge ? 'Cancelar merge' : 'Mesclar'}
+          </Button>
         </div>
       </div>
 
@@ -619,9 +657,35 @@ function ContactRow({
             </Button>
           </div>
           <CustomFieldsEditor rows={customFields} onChange={setCustomFields} />
-          {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
       )}
+
+      {showMerge && (
+        <div className="mt-3 space-y-3 border-t border-border/70 pt-3">
+          <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+            <select
+              value={mergeTargetId}
+              onChange={(e) => setMergeTargetId(e.target.value)}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Escolha o contato principal</option>
+              {mergeCandidates.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {(candidate.name ?? candidate.phone)} · {candidate.phone}
+                </option>
+              ))}
+            </select>
+            <Button size="sm" onClick={handleMerge} disabled={merging || !mergeTargetId}>
+              {merging ? 'Mesclando...' : 'Confirmar merge'}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            O contato atual será removido e conversas, tags, pipelines e estado de automação serão consolidados no contato principal.
+          </p>
+        </div>
+      )}
+
+      {error && <p className="mt-3 text-xs text-destructive">{error}</p>}
     </div>
   );
 }
@@ -787,6 +851,7 @@ export function ContactsPage() {
                 contact={contact}
                 agents={agents}
                 tags={tags}
+                contacts={contacts}
                 onDelete={() => handleDeleteContact(contact.id)}
                 onTagAdded={() => void mutate()}
                 onTagRemoved={() => void mutate()}

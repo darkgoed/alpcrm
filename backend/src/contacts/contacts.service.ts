@@ -2,8 +2,9 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { ContactLifecycleStage, Prisma } from '@prisma/client';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,40 +12,24 @@ import {
   CreateContactDto,
   UpdateContactDto,
   ContactFilterDto,
+  BulkContactActionDto,
+  CreateSavedSegmentDto,
 } from './dto/contact.dto';
 import { CONTACT_IMPORT_QUEUE } from '../queues/queues.constants';
+import { FlowExecutorService } from '../automation/flow-executor.service';
 
 @Injectable()
 export class ContactsService {
   constructor(
     private prisma: PrismaService,
     @InjectQueue(CONTACT_IMPORT_QUEUE) private importQueue: Queue,
+    private flowExecutor: FlowExecutorService,
   ) {}
 
   // ─── Listar contatos com filtros ─────────────────────────────────────────────
 
   async findAll(workspaceId: string, filters: ContactFilterDto) {
-    const where: any = { workspaceId };
-
-    if (filters.search) {
-      const q = filters.search.trim();
-      where.OR = [
-        { name: { contains: q, mode: 'insensitive' } },
-        { phone: { contains: q } },
-        { email: { contains: q, mode: 'insensitive' } },
-        { company: { contains: q, mode: 'insensitive' } },
-      ];
-    }
-
-    if (filters.tagId) {
-      where.contactTags = { some: { tagId: filters.tagId } };
-    }
-
-    if (filters.stageId) {
-      where.contactPipelines = { some: { stageId: filters.stageId } };
-    } else if (filters.pipelineId) {
-      where.contactPipelines = { some: { pipelineId: filters.pipelineId } };
-    }
+    const where = this.buildContactWhere(workspaceId, filters);
 
     return this.prisma.contact.findMany({
       where,
@@ -168,6 +153,108 @@ export class ContactsService {
     await this.prisma.contact.delete({ where: { id } });
   }
 
+  async merge(workspaceId: string, sourceContactId: string, targetContactId: string) {
+    if (sourceContactId === targetContactId) {
+      throw new BadRequestException('Selecione contatos diferentes para mesclar');
+    }
+
+    const contacts = await this.prisma.contact.findMany({
+      where: { workspaceId, id: { in: [sourceContactId, targetContactId] } },
+      include: {
+        contactTags: { select: { tagId: true } },
+        contactPipelines: true,
+        flowStates: true,
+      },
+    });
+
+    const source = contacts.find((contact) => contact.id === sourceContactId);
+    const target = contacts.find((contact) => contact.id === targetContactId);
+
+    if (!source || !target) {
+      throw new NotFoundException('Contato não encontrado');
+    }
+
+    const mergedCustomFields = this.mergeCustomFields(
+      source.customFields,
+      target.customFields,
+    );
+
+    const mergedOptInStatus =
+      target.optInStatus !== 'unknown' ? target.optInStatus : source.optInStatus;
+    const mergedOptInAt = target.optInAt ?? source.optInAt;
+    const mergedLifecycleStage = this.mergeLifecycleStage(
+      source.lifecycleStage,
+      target.lifecycleStage,
+    );
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.contact.update({
+        where: { id: target.id },
+        data: {
+          name: target.name ?? source.name,
+          email: target.email ?? source.email,
+          company: target.company ?? source.company,
+          ownerId: target.ownerId ?? source.ownerId,
+          source: target.source === 'manual' ? target.source : source.source,
+          lifecycleStage: mergedLifecycleStage,
+          optInStatus: mergedOptInStatus,
+          optInAt: mergedOptInAt,
+          customFields: mergedCustomFields,
+        },
+      });
+
+      await tx.conversation.updateMany({
+        where: { workspaceId, contactId: source.id },
+        data: { contactId: target.id },
+      });
+
+      for (const tag of source.contactTags) {
+        await tx.contactTag.upsert({
+          where: { contactId_tagId: { contactId: target.id, tagId: tag.tagId } },
+          create: { contactId: target.id, tagId: tag.tagId },
+          update: {},
+        });
+      }
+
+      for (const pipeline of source.contactPipelines) {
+        const existingPipeline = target.contactPipelines.find(
+          (item) => item.pipelineId === pipeline.pipelineId,
+        );
+
+        if (existingPipeline) continue;
+
+        await tx.contactPipeline.create({
+          data: {
+            contactId: target.id,
+            pipelineId: pipeline.pipelineId,
+            stageId: pipeline.stageId,
+          },
+        });
+      }
+
+      for (const flowState of source.flowStates) {
+        const existingFlowState = target.flowStates.find(
+          (item) => item.flowId === flowState.flowId,
+        );
+
+        if (existingFlowState) continue;
+
+        await tx.contactFlowState.create({
+          data: {
+            contactId: target.id,
+            flowId: flowState.flowId,
+            currentNodeId: flowState.currentNodeId,
+            isActive: flowState.isActive,
+          },
+        });
+      }
+
+      await tx.contact.delete({ where: { id: source.id } });
+    });
+
+    return this.findOne(workspaceId, target.id);
+  }
+
   // ─── Tags ─────────────────────────────────────────────────────────────────────
 
   async addTag(workspaceId: string, contactId: string, tagId: string) {
@@ -181,11 +268,24 @@ export class ContactsService {
     });
     if (!tag) throw new NotFoundException('Tag não encontrada');
 
+    const existing = await this.prisma.contactTag.findUnique({
+      where: { contactId_tagId: { contactId, tagId } },
+    });
+
     await this.prisma.contactTag.upsert({
       where: { contactId_tagId: { contactId, tagId } },
       create: { contactId, tagId },
       update: {},
     });
+
+    if (!existing) {
+      await this.flowExecutor.triggerForContactEvent(
+        workspaceId,
+        contactId,
+        'tag_applied',
+        tagId,
+      );
+    }
   }
 
   async removeTag(workspaceId: string, contactId: string, tagId: string) {
@@ -221,6 +321,223 @@ export class ContactsService {
     const tag = await this.prisma.tag.findFirst({ where: { id, workspaceId } });
     if (!tag) throw new NotFoundException('Tag não encontrada');
     await this.prisma.tag.delete({ where: { id } });
+  }
+
+  async listSavedSegments(workspaceId: string) {
+    return this.prisma.savedSegment.findMany({
+      where: { workspaceId },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  async createSavedSegment(workspaceId: string, dto: CreateSavedSegmentDto) {
+    const name = dto.name.trim();
+    if (!name) {
+      throw new BadRequestException('Nome da segmentação é obrigatório');
+    }
+
+    const filters = this.normalizeSegmentFilters(dto);
+
+    return this.prisma.savedSegment.upsert({
+      where: {
+        workspaceId_name: {
+          workspaceId,
+          name,
+        },
+      },
+      create: {
+        workspaceId,
+        name,
+        filters,
+      },
+      update: {
+        filters,
+      },
+    });
+  }
+
+  async deleteSavedSegment(workspaceId: string, id: string) {
+    const segment = await this.prisma.savedSegment.findFirst({
+      where: { id, workspaceId },
+      select: { id: true },
+    });
+    if (!segment) throw new NotFoundException('Segmentação não encontrada');
+    await this.prisma.savedSegment.delete({ where: { id } });
+  }
+
+  async applyBulkActions(workspaceId: string, dto: BulkContactActionDto) {
+    const contactIds = Array.from(new Set(dto.contactIds));
+    const addTagIds = Array.from(new Set(dto.addTagIds ?? []));
+    const removeTagIds = Array.from(new Set(dto.removeTagIds ?? []));
+    const shouldMoveStage = Boolean(dto.pipelineId || dto.stageId);
+    const shouldClearOwner = dto.clearOwner === true;
+    const shouldUpdateOwner = shouldClearOwner || dto.ownerId !== undefined;
+    const shouldUpdateLifecycle = dto.lifecycleStage !== undefined;
+    const hasAction =
+      addTagIds.length > 0 ||
+      removeTagIds.length > 0 ||
+      shouldMoveStage ||
+      shouldUpdateOwner ||
+      shouldUpdateLifecycle;
+
+    if (!hasAction) {
+      throw new BadRequestException('Nenhuma ação em lote foi informada');
+    }
+
+    if ((dto.pipelineId && !dto.stageId) || (!dto.pipelineId && dto.stageId)) {
+      throw new BadRequestException(
+        'Pipeline e stage devem ser enviados juntos para mover contatos',
+      );
+    }
+
+    const contacts = await this.prisma.contact.findMany({
+      where: { workspaceId, id: { in: contactIds } },
+      include: {
+        contactTags: { select: { tagId: true } },
+        contactPipelines: { select: { pipelineId: true, stageId: true } },
+      },
+    });
+
+    if (contacts.length !== contactIds.length) {
+      throw new NotFoundException('Um ou mais contatos não foram encontrados');
+    }
+
+    const owner =
+      shouldUpdateOwner && !shouldClearOwner
+        ? await this.findValidOwner(workspaceId, dto.ownerId)
+        : null;
+
+    if (addTagIds.length > 0 || removeTagIds.length > 0) {
+      const tags = await this.prisma.tag.findMany({
+        where: {
+          workspaceId,
+          id: { in: Array.from(new Set([...addTagIds, ...removeTagIds])) },
+        },
+        select: { id: true },
+      });
+
+      if (tags.length !== new Set([...addTagIds, ...removeTagIds]).size) {
+        throw new NotFoundException('Uma ou mais tags não foram encontradas');
+      }
+    }
+
+    let stage: { id: string; pipelineId: string } | null = null;
+    if (shouldMoveStage && dto.pipelineId && dto.stageId) {
+      stage = await this.prisma.stage.findFirst({
+        where: {
+          id: dto.stageId,
+          pipelineId: dto.pipelineId,
+          pipeline: { workspaceId },
+        },
+        select: { id: true, pipelineId: true },
+      });
+
+      if (!stage) {
+        throw new NotFoundException('Stage não encontrado para o pipeline informado');
+      }
+    }
+
+    const tagInsertRows = addTagIds.flatMap((tagId) =>
+      contacts.map((contact) => ({ contactId: contact.id, tagId })),
+    );
+
+    const tagPairsToRemove = removeTagIds.flatMap((tagId) =>
+      contacts.map((contact) => ({ contactId: contact.id, tagId })),
+    );
+
+    const contactsChangingStage =
+      stage === null
+        ? []
+        : contacts.filter((contact) => {
+            const current = contact.contactPipelines.find(
+              (item) => item.pipelineId === stage.pipelineId,
+            );
+            return current?.stageId !== stage.id;
+          });
+
+    await this.prisma.$transaction(async (tx) => {
+      if (shouldUpdateOwner || shouldUpdateLifecycle) {
+        const contactData: Prisma.ContactUpdateManyMutationInput = {};
+
+        if (shouldUpdateOwner) {
+          contactData.ownerId = shouldClearOwner ? null : owner?.id ?? null;
+        }
+
+        if (shouldUpdateLifecycle && dto.lifecycleStage) {
+          contactData.lifecycleStage = dto.lifecycleStage;
+        }
+
+        await tx.contact.updateMany({
+          where: { workspaceId, id: { in: contactIds } },
+          data: contactData,
+        });
+      }
+
+      if (tagInsertRows.length > 0) {
+        await tx.contactTag.createMany({
+          data: tagInsertRows,
+          skipDuplicates: true,
+        });
+      }
+
+      if (tagPairsToRemove.length > 0) {
+        await tx.contactTag.deleteMany({
+          where: {
+            OR: tagPairsToRemove.map(({ contactId, tagId }) => ({ contactId, tagId })),
+          },
+        });
+      }
+
+      if (stage) {
+        for (const contact of contacts) {
+          await tx.contactPipeline.upsert({
+            where: {
+              contactId_pipelineId: {
+                contactId: contact.id,
+                pipelineId: stage.pipelineId,
+              },
+            },
+            create: {
+              contactId: contact.id,
+              pipelineId: stage.pipelineId,
+              stageId: stage.id,
+            },
+            update: { stageId: stage.id },
+          });
+        }
+      }
+    });
+
+    for (const contact of contacts) {
+      const existingTagIds = new Set(contact.contactTags.map((item) => item.tagId));
+      for (const tagId of addTagIds) {
+        if (existingTagIds.has(tagId)) continue;
+        await this.flowExecutor.triggerForContactEvent(
+          workspaceId,
+          contact.id,
+          'tag_applied',
+          tagId,
+        );
+      }
+    }
+
+    if (stage) {
+      for (const contact of contactsChangingStage) {
+        await this.flowExecutor.triggerForContactEvent(
+          workspaceId,
+          contact.id,
+          'stage_changed',
+          stage.id,
+        );
+      }
+    }
+
+    return {
+      updatedContacts: contactIds.length,
+      tagsAdded: addTagIds.length * contacts.length,
+      tagsRemoved: removeTagIds.length * contacts.length,
+      movedToStage: contactsChangingStage.length,
+    };
   }
 
   // ─── Importação CSV ───────────────────────────────────────────────────────────
@@ -299,6 +616,69 @@ export class ContactsService {
 
   // ─── Helpers CSV ──────────────────────────────────────────────────────────────
 
+  private buildContactWhere(
+    workspaceId: string,
+    filters: ContactFilterDto,
+  ): Prisma.ContactWhereInput {
+    const and: Prisma.ContactWhereInput[] = [{ workspaceId }];
+
+    if (filters.search?.trim()) {
+      const q = filters.search.trim();
+      and.push({
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { phone: { contains: q } },
+          { email: { contains: q, mode: 'insensitive' } },
+          { company: { contains: q, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    for (const tagId of filters.tagIds ?? []) {
+      and.push({ contactTags: { some: { tagId } } });
+    }
+
+    if (filters.stageId && filters.pipelineId) {
+      and.push({
+        contactPipelines: {
+          some: { stageId: filters.stageId, pipelineId: filters.pipelineId },
+        },
+      });
+    } else if (filters.stageId) {
+      and.push({ contactPipelines: { some: { stageId: filters.stageId } } });
+    } else if (filters.pipelineId) {
+      and.push({
+        contactPipelines: { some: { pipelineId: filters.pipelineId } },
+      });
+    }
+
+    if (filters.conversationStatus === 'open') {
+      and.push({
+        conversations: { some: { workspaceId, status: 'open' } },
+      });
+    } else if (filters.conversationStatus === 'closed') {
+      and.push({
+        conversations: { some: { workspaceId, status: 'closed' } },
+      });
+    } else if (filters.conversationStatus === 'none') {
+      and.push({
+        conversations: { none: { workspaceId } },
+      });
+    }
+
+    return and.length === 1 ? and[0] : { AND: and };
+  }
+
+  private normalizeSegmentFilters(dto: CreateSavedSegmentDto) {
+    return {
+      search: dto.search?.trim() || undefined,
+      tagIds: Array.from(new Set(dto.tagIds ?? [])).filter(Boolean),
+      pipelineId: dto.pipelineId ?? undefined,
+      stageId: dto.stageId ?? undefined,
+      conversationStatus: dto.conversationStatus ?? undefined,
+    } as Prisma.InputJsonObject;
+  }
+
   private isValidE164(phone: string): boolean {
     return /^\+[1-9]\d{7,14}$/.test(phone);
   }
@@ -337,6 +717,44 @@ export class ContactsService {
       .filter((entry): entry is [string, string] => Boolean(entry));
 
     return Object.fromEntries(entries) as Prisma.InputJsonObject;
+  }
+
+  private mergeCustomFields(
+    source: Prisma.JsonValue,
+    target: Prisma.JsonValue,
+  ): Prisma.InputJsonObject {
+    const sourceFields = this.asStringRecord(source);
+    const targetFields = this.asStringRecord(target);
+    return {
+      ...sourceFields,
+      ...targetFields,
+    } as Prisma.InputJsonObject;
+  }
+
+  private asStringRecord(value: Prisma.JsonValue): Record<string, string> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return {};
+    }
+
+    return Object.entries(value).reduce<Record<string, string>>((acc, [key, rawValue]) => {
+      if (typeof rawValue !== 'string') return acc;
+      acc[key] = rawValue;
+      return acc;
+    }, {});
+  }
+
+  private mergeLifecycleStage(
+    source: ContactLifecycleStage,
+    target: ContactLifecycleStage,
+  ): ContactLifecycleStage {
+    const rank: Record<ContactLifecycleStage, number> = {
+      inactive: 0,
+      lead: 1,
+      qualified: 2,
+      customer: 3,
+    };
+
+    return rank[target] >= rank[source] ? target : source;
   }
 
   private parseCsv(buffer: Buffer): Array<Record<string, string>> {
