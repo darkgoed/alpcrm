@@ -10,6 +10,9 @@ export interface Contact {
   name: string | null;
   phone: string;
   email: string | null;
+  source: 'manual' | 'import_csv' | 'whatsapp_inbound';
+  optInStatus: 'unknown' | 'opted_in' | 'opted_out';
+  optInAt: string | null;
 }
 
 export interface InteractiveButtonOption {

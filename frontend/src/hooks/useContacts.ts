@@ -13,6 +13,9 @@ export interface Contact {
   phone: string;
   name: string | null;
   email: string | null;
+  source: 'manual' | 'import_csv' | 'whatsapp_inbound';
+  optInStatus: 'unknown' | 'opted_in' | 'opted_out';
+  optInAt: string | null;
   createdAt: string;
   contactTags: Array<{ tag: Tag }>;
   contactPipelines: Array<{ stageId: string; pipelineId: string; stage: { name: string; color: string } }>;

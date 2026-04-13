@@ -126,7 +126,7 @@ Meta: dar ao operador um CRM realmente utilizável no dia a dia.
 - [x] Exibir histórico de conversas encerradas
 - [x] Exibir SLA e tempos de resposta
 - [x] Exibir última interação do cliente
-- [ ] Exibir origem do contato e opt-in
+- [x] Exibir origem do contato e opt-in
 
 ### 2.3 — Contact management real
 

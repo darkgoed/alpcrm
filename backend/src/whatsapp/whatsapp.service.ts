@@ -151,6 +151,7 @@ export class WhatsappService {
         workspaceId,
         phone: msg.from,
         name: waContact?.profile.name ?? msg.from,
+        source: 'whatsapp_inbound',
       },
     });
 

@@ -19,7 +19,7 @@ Read in this order:
 1. `AGENTS.md`
 2. `CLAUDE.md`
 3. `graphify-out/GRAPH_REPORT.md`
-4. `graphify-out/wiki/index.md` if it exists
+<!-- 4. `graphify-out/wiki/index.md` if it exists -->
 5. Only the files on the execution path you will touch
 6. `ROADMAP.md` only for new features or structural changes
 7. `frontend/node_modules/next/dist/docs/` only when a Next.js 16 API is unclear

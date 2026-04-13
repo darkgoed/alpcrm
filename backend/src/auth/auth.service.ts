@@ -69,8 +69,12 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.prisma.user.findFirst({
-      where: { email: dto.email },
+    const users = await this.prisma.user.findMany({
+      where: {
+        email: dto.email,
+        isActive: true,
+      },
+      orderBy: { updatedAt: 'desc' },
       include: {
         workspace: true,
         userRoles: {
@@ -87,22 +91,36 @@ export class AuthService {
       },
     });
 
-    if (!user || !user.isActive)
+    if (users.length === 0) {
       throw new UnauthorizedException('Credenciais inválidas');
+    }
 
-    const valid = await bcrypt.compare(dto.password, user.password);
-    if (!valid) throw new UnauthorizedException('Credenciais inválidas');
+    const matchingUsers = await Promise.all(
+      users.map(async (user) => ({
+        user,
+        valid: await bcrypt.compare(dto.password, user.password),
+      })),
+    );
+
+    const authenticatedUser = matchingUsers.find(({ valid }) => valid)?.user;
+    if (!authenticatedUser)
+      throw new UnauthorizedException('Credenciais inválidas');
 
     // Deduplica permissões caso o usuário tenha múltiplas roles
     const permissions = [
       ...new Set(
-        user.userRoles.flatMap((ur) =>
+        authenticatedUser.userRoles.flatMap((ur) =>
           ur.role.rolePermissions.map((rp) => rp.permission.key),
         ),
       ),
     ];
 
-    return this.signToken(user.id, user.email, user.workspaceId, permissions);
+    return this.signToken(
+      authenticatedUser.id,
+      authenticatedUser.email,
+      authenticatedUser.workspaceId,
+      permissions,
+    );
   }
 
   private signToken(

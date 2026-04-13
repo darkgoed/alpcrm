@@ -145,6 +145,28 @@ function formatDuration(durationMs: number) {
   return remainingHours === 0 ? `${days}d` : `${days}d ${remainingHours}h`;
 }
 
+function formatContactSource(source: 'manual' | 'import_csv' | 'whatsapp_inbound') {
+  switch (source) {
+    case 'manual':
+      return 'Cadastro manual';
+    case 'import_csv':
+      return 'Importacao CSV';
+    case 'whatsapp_inbound':
+      return 'WhatsApp inbound';
+  }
+}
+
+function formatOptInStatus(status: 'unknown' | 'opted_in' | 'opted_out') {
+  switch (status) {
+    case 'opted_in':
+      return 'Opt-in confirmado';
+    case 'opted_out':
+      return 'Opt-out registrado';
+    case 'unknown':
+      return 'Consentimento nao registrado';
+  }
+}
+
 function calculateResponseMetrics(messages: Message[]): ResponseMetrics {
   let firstContactMessageAt: string | null = null;
   const responseTimes: number[] = [];
@@ -1041,6 +1063,25 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
               <p className="mt-2 text-sm font-semibold text-foreground">{contactName}</p>
               <p className="mt-1 text-sm text-muted-foreground">{conversation.contact.phone}</p>
               {conversation.contact.email ? <p className="mt-1 text-sm text-muted-foreground">{conversation.contact.email}</p> : null}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Badge variant="outline">{formatContactSource(conversation.contact.source)}</Badge>
+                <Badge
+                  variant={
+                    conversation.contact.optInStatus === 'opted_in'
+                      ? 'secondary'
+                      : conversation.contact.optInStatus === 'opted_out'
+                        ? 'warning'
+                        : 'muted'
+                  }
+                >
+                  {formatOptInStatus(conversation.contact.optInStatus)}
+                </Badge>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {conversation.contact.optInAt
+                  ? `Consentimento registrado em ${formatFullDateTime(conversation.contact.optInAt)}`
+                  : 'Sem data de consentimento registrada'}
+              </p>
             </div>
             <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Responsável</p>

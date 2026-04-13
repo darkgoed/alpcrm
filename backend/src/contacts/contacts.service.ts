@@ -96,6 +96,7 @@ export class ContactsService {
     return this.prisma.contact.create({
       data: {
         workspaceId,
+        source: 'manual',
         ...rest,
         ...(tagIds?.length
           ? { contactTags: { create: tagIds.map((tagId) => ({ tagId })) } }
@@ -252,6 +253,7 @@ export class ContactsService {
         phone: r.phone,
         name: r.name ?? null,
         email: r.email ?? null,
+        source: 'import_csv',
       })),
       skipDuplicates: true,
     });

@@ -170,14 +170,29 @@ model WhatsappAccount {
 // CONTACTS
 // ─────────────────────────────────────────────────────────
 
+enum ContactSource {
+  manual
+  import_csv
+  whatsapp_inbound
+}
+
+enum ContactOptInStatus {
+  unknown
+  opted_in
+  opted_out
+}
+
 model Contact {
-  id          String   @id @default(uuid())
-  workspaceId String   @map("workspace_id")
+  id          String             @id @default(uuid())
+  workspaceId String             @map("workspace_id")
   phone       String
   name        String?
   email       String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  source      ContactSource      @default(manual)
+  optInStatus ContactOptInStatus @default(unknown) @map("opt_in_status")
+  optInAt     DateTime?          @map("opt_in_at")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
 
   workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   conversations    Conversation[]
