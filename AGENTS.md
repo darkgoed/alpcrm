@@ -147,29 +147,29 @@ Default to Small unless clearly proven otherwise by code dependencies.
 Infra:
 
 ```bash
-sudo docker compose up -d
-sudo docker compose ps
+docker compose up -d
+docker compose ps
 ```
 
 Backend:
 
 ```bash
 cd backend
-sudo npm run start:dev
-sudo npm run build
-sudo npm run lint
-sudo npm run test
-sudo npm run test:e2e
-sudo npx prisma migrate dev --name <name>
-sudo npx ts-node prisma/seeds/permissions.seed.ts
+npm run start:dev
+npm run build
+npm run lint
+npm run test
+npm run test:e2e
+npx prisma migrate dev --name <name>
+npx ts-node prisma/seeds/permissions.seed.ts
 ```
 
 Frontend:
 
 ```bash
 cd frontend
-sudo npm run dev
-sudo npm run build
+npm run dev
+npm run build
 ```
 
 ## Agent Scope
@@ -232,11 +232,11 @@ If unsure, stop expanding and proceed with the safest local assumption.
 
 ## Validation
 
-- Backend changes: run `sudo npm run lint` and the smallest useful test/build command.
-- Frontend changes: run `sudo npm run build` or targeted validation for touched area.
+- Backend changes: run `npm run lint` and the smallest useful test/build command.
+- Frontend changes: run `npm run build` or targeted validation for touched area.
 - If schema changed, remind the user to run migration and client generation flow.
 <!-- - If code files changed, rebuild graphify at the end:
 
 ```bash
-   sudo python3 -c "from graphify.watch import _rebuild_code; from pathlib import Path; _rebuild_code(Path('.'))"
+   python3 -c "from graphify.watch import _rebuild_code; from pathlib import Path; _rebuild_code(Path('.'))"
    ``` -->

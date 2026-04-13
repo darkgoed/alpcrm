@@ -123,17 +123,17 @@ After implementing any roadmap item, mark it `[x]` in `ROADMAP.md` before closin
 
 Run in this order after each change:
 
-1. **Backend change** → `sudo npm run lint` (scoped to touched files) → `sudo npm run build` if structural
-2. **Frontend change** → `sudo npm run build`
+1. **Backend change** → `npm run lint` (scoped to touched files) → `npm run build` if structural
+2. **Frontend change** → `npm run build`
 3. **Schema change** → tell the user to run:
    ```bash
    cd backend
-   sudo npx prisma migrate dev --name <descricao>
+   npx prisma migrate dev --name <descricao>
    # prisma generate runs automatically after migrate dev
    ```
 <!-- 4. **After any code file change** → rebuild graphify:
    ```bash
-   sudo python3 -c "from graphify.watch import _rebuild_code; from pathlib import Path; _rebuild_code(Path('.'))"
+   python3 -c "from graphify.watch import _rebuild_code; from pathlib import Path; _rebuild_code(Path('.'))"
    ``` -->
 
 ### On lint/build failure
