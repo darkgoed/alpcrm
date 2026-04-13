@@ -139,10 +139,10 @@ Meta: dar ao operador um CRM realmente utilizável no dia a dia.
 
 ### 2.4 — Tags, segmentação e pipeline
 
-- [ ] Melhorar filtros compostos por tags + pipeline + status
-- [ ] Adicionar segmentação salva
-- [ ] Adicionar ações em lote
-- [ ] Adicionar automação baseada em tags/stages
+- [x] Melhorar filtros compostos por tags + pipeline + status
+- [x] Adicionar segmentação salva
+- [x] Adicionar ações em lote
+- [x] Adicionar automação baseada em tags/stages
 
 ### 2.5 — Configurações de workspace completas
 
