@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateWorkspaceSettingsDto } from './dto/workspace-settings.dto';
 import {
@@ -18,6 +19,10 @@ import {
 export class WorkspacesService {
   constructor(private prisma: PrismaService) {}
 
+  private hasOwn(dto: object, key: string) {
+    return Object.prototype.hasOwnProperty.call(dto, key);
+  }
+
   // ─── Configurações do workspace ──────────────────────────────────────────────
 
   async getSettings(workspaceId: string) {
@@ -28,10 +33,28 @@ export class WorkspacesService {
   }
 
   async updateSettings(workspaceId: string, dto: UpdateWorkspaceSettingsDto) {
+    const data = {
+      ...(this.hasOwn(dto, 'autoCloseHours')
+        ? { autoCloseHours: dto.autoCloseHours ?? null }
+        : {}),
+      ...(this.hasOwn(dto, 'timezone') ? { timezone: dto.timezone } : {}),
+      ...(this.hasOwn(dto, 'language') ? { language: dto.language } : {}),
+      ...(this.hasOwn(dto, 'logoUrl') ? { logoUrl: dto.logoUrl ?? null } : {}),
+      ...(this.hasOwn(dto, 'businessHours')
+        ? {
+            businessHours:
+              dto.businessHours === null ? Prisma.JsonNull : dto.businessHours,
+          }
+        : {}),
+      ...(this.hasOwn(dto, 'outOfHoursMessage')
+        ? { outOfHoursMessage: dto.outOfHoursMessage ?? null }
+        : {}),
+    };
+
     return this.prisma.workspaceSettings.upsert({
       where: { workspaceId },
-      create: { workspaceId, autoCloseHours: dto.autoCloseHours ?? null },
-      update: { autoCloseHours: dto.autoCloseHours ?? null },
+      create: { workspaceId, ...data },
+      update: data,
     });
   }
 

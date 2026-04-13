@@ -146,11 +146,11 @@ Meta: dar ao operador um CRM realmente utilizável no dia a dia.
 
 ### 2.5 — Configurações de workspace completas
 
-- [ ] Persistir `timezone`
-- [ ] Persistir `language`
-- [ ] Persistir `logoUrl`
-- [ ] Persistir `businessHours`
-- [ ] Persistir `outOfHoursMessage`
+- [x] Persistir `timezone`
+- [x] Persistir `language`
+- [x] Persistir `logoUrl`
+- [x] Persistir `businessHours`
+- [x] Persistir `outOfHoursMessage`
 - [ ] Aplicar essas configs em follow-up e automação
 
 ### 2.6 — Horário comercial

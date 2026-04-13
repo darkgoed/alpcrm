@@ -69,7 +69,11 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { conversationId: string },
   ) {
-    if (!data?.conversationId || !client.data.workspaceId || !client.data.userId) {
+    if (
+      !data?.conversationId ||
+      !client.data.workspaceId ||
+      !client.data.userId
+    ) {
       return;
     }
 
@@ -130,7 +134,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     socketId: string,
   ) {
     const conversationUsers =
-      this.conversationPresence.get(conversationId) ?? new Map<string, Set<string>>();
+      this.conversationPresence.get(conversationId) ??
+      new Map<string, Set<string>>();
     const userSockets = conversationUsers.get(userId) ?? new Set<string>();
 
     userSockets.add(socketId);

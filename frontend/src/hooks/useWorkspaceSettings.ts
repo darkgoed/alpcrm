@@ -1,9 +1,22 @@
 import useSWR from 'swr';
 import { api } from '@/lib/api';
 
+export interface DayHours {
+  enabled: boolean;
+  open: string;
+  close: string;
+}
+
+export type BusinessHours = Record<string, DayHours>;
+
 export interface WorkspaceSettings {
   workspaceId: string;
   autoCloseHours: number | null;
+  timezone: string;
+  language: string;
+  logoUrl: string | null;
+  businessHours: BusinessHours | null;
+  outOfHoursMessage: string | null;
 }
 
 export interface FollowUpRule {
@@ -30,7 +43,16 @@ export function useFollowUpRules() {
   return { rules: data ?? EMPTY_RULES, mutate, error, isLoading: !data && !error };
 }
 
-export async function updateSettings(dto: { autoCloseHours: number | null }) {
+export async function updateSettings(
+  dto: Partial<{
+    autoCloseHours: number | null;
+    timezone: string;
+    language: string;
+    logoUrl: string | null;
+    businessHours: BusinessHours | null;
+    outOfHoursMessage: string | null;
+  }>,
+) {
   const r = await api.patch('/workspaces/settings', dto);
   return r.data as WorkspaceSettings;
 }
