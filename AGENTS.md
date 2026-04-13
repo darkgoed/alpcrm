@@ -235,8 +235,8 @@ If unsure, stop expanding and proceed with the safest local assumption.
 - Backend changes: run `sudo npm run lint` and the smallest useful test/build command.
 - Frontend changes: run `sudo npm run build` or targeted validation for touched area.
 - If schema changed, remind the user to run migration and client generation flow.
-- If code files changed, rebuild graphify at the end:
+<!-- - If code files changed, rebuild graphify at the end:
 
 ```bash
    sudo python3 -c "from graphify.watch import _rebuild_code; from pathlib import Path; _rebuild_code(Path('.'))"
-   ```
+   ``` -->

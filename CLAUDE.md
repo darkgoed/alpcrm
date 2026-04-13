@@ -131,10 +131,10 @@ Run in this order after each change:
    sudo npx prisma migrate dev --name <descricao>
    # prisma generate runs automatically after migrate dev
    ```
-4. **After any code file change** → rebuild graphify:
+<!-- 4. **After any code file change** → rebuild graphify:
    ```bash
    sudo python3 -c "from graphify.watch import _rebuild_code; from pathlib import Path; _rebuild_code(Path('.'))"
-   ```
+   ``` -->
 
 ### On lint/build failure
 

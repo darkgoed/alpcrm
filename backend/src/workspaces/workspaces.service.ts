@@ -19,8 +19,8 @@ import {
 export class WorkspacesService {
   constructor(private prisma: PrismaService) {}
 
-  private hasOwn(dto: object, key: string) {
-    return Object.prototype.hasOwnProperty.call(dto, key);
+  private hasOwn(dto: object, key: string): boolean {
+    return Object.hasOwn(dto, key);
   }
 
   // ─── Configurações do workspace ──────────────────────────────────────────────
