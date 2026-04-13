@@ -20,6 +20,41 @@ import {
 } from './dto/webhook.dto';
 import { MessageType, MessageStatus, Prisma } from '@prisma/client';
 
+interface WhatsappSendResponse {
+  messages?: Array<{ id?: string }>;
+}
+
+interface OutboundMediaPayload {
+  link: string;
+  caption?: string;
+}
+
+interface InteractiveButtonInput {
+  id: string;
+  title: string;
+}
+
+interface InteractiveListRowInput {
+  id: string;
+  title: string;
+  description?: string;
+}
+
+interface InteractiveListSectionInput {
+  title: string;
+  rows: InteractiveListRowInput[];
+}
+
+interface InteractivePayloadInput {
+  body?: string;
+  footer?: string;
+  headerText?: string;
+  buttonText?: string;
+  url?: string;
+  buttons?: InteractiveButtonInput[];
+  sections?: InteractiveListSectionInput[];
+}
+
 @Injectable()
 export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
@@ -264,7 +299,8 @@ export class WhatsappService {
         contact.id,
         content,
         isNewConv,
-        this.sendTextMessage.bind(this),
+        (accountId: string, to: string, text: string) =>
+          this.sendTextMessage(accountId, to, text),
       )
       .catch((err) => this.logger.error(`[Bot] Erro ao disparar flow: ${err}`));
   }
@@ -341,8 +377,7 @@ export class WhatsappService {
       throw new Error(`WhatsApp API error: ${err}`);
     }
 
-    const data: any = await response.json();
-    return data.messages?.[0]?.id ?? '';
+    return this.extractMessageId(response);
   }
 
   // ─── Enviar template HSM (outbound / janela de 24h) ─────────────────────────
@@ -352,7 +387,7 @@ export class WhatsappService {
     to: string,
     templateName: string,
     language: string,
-    components: any[],
+    components: Record<string, unknown>[],
   ): Promise<string> {
     const account = await this.prisma.whatsappAccount.findUnique({
       where: { id: accountId },
@@ -384,8 +419,7 @@ export class WhatsappService {
       throw new Error(`WhatsApp API error: ${err}`);
     }
 
-    const data: any = await response.json();
-    return data.messages?.[0]?.id ?? '';
+    return this.extractMessageId(response);
   }
 
   // ─── Enviar mídia ─────────────────────────────────────────────────────────────
@@ -403,7 +437,7 @@ export class WhatsappService {
     if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
 
     const url = `https://graph.facebook.com/v19.0/${account.metaAccountId}/messages`;
-    const mediaPayload: any = { link: mediaUrl };
+    const mediaPayload: OutboundMediaPayload = { link: mediaUrl };
     if (caption && (mediaType === 'image' || mediaType === 'document')) {
       mediaPayload.caption = caption;
     }
@@ -428,15 +462,14 @@ export class WhatsappService {
       throw new Error(`WhatsApp API error: ${err}`);
     }
 
-    const data: any = await response.json();
-    return data.messages?.[0]?.id ?? '';
+    return this.extractMessageId(response);
   }
 
   async sendInteractiveMessage(
     accountId: string,
     to: string,
     interactiveType: string,
-    payload: Record<string, any>,
+    payload: InteractivePayloadInput,
   ): Promise<string> {
     const account = await this.prisma.whatsappAccount.findUnique({
       where: { id: accountId },
@@ -465,8 +498,7 @@ export class WhatsappService {
       throw new Error(`WhatsApp API error: ${err}`);
     }
 
-    const data: any = await response.json();
-    return data.messages?.[0]?.id ?? '';
+    return this.extractMessageId(response);
   }
 
   // ─── Download de mídia inbound da Meta ───────────────────────────────────────
@@ -561,13 +593,16 @@ export class WhatsappService {
     return map[type] ?? 'text';
   }
 
-  private normalizeInboundInteractiveMessage(msg: WhatsappMessage):
-    | {
-        content: string | null;
-        interactiveType: string;
-        interactivePayload: Prisma.InputJsonValue;
-      }
-    | null {
+  private async extractMessageId(response: Response): Promise<string> {
+    const data = (await response.json()) as WhatsappSendResponse;
+    return data.messages?.[0]?.id ?? '';
+  }
+
+  private normalizeInboundInteractiveMessage(msg: WhatsappMessage): {
+    content: string | null;
+    interactiveType: string;
+    interactivePayload: Prisma.InputJsonValue;
+  } | null {
     if (msg.type === 'button' && msg.button) {
       return {
         content: msg.button.text,
@@ -583,7 +618,10 @@ export class WhatsappService {
       return null;
     }
 
-    if (msg.interactive.type === 'button_reply' && msg.interactive.button_reply) {
+    if (
+      msg.interactive.type === 'button_reply' &&
+      msg.interactive.button_reply
+    ) {
       return {
         content: msg.interactive.button_reply.title,
         interactiveType: 'button_reply',
@@ -609,13 +647,15 @@ export class WhatsappService {
     return {
       content: null,
       interactiveType: msg.interactive.type,
-      interactivePayload: JSON.parse(JSON.stringify(msg.interactive)),
+      interactivePayload: JSON.parse(
+        JSON.stringify(msg.interactive),
+      ) as Prisma.InputJsonValue,
     };
   }
 
   private buildInteractivePayload(
     interactiveType: string,
-    payload: Record<string, any>,
+    payload: InteractivePayloadInput,
   ) {
     if (interactiveType === 'reply_buttons') {
       const buttons = Array.isArray(payload.buttons) ? payload.buttons : [];
@@ -631,7 +671,7 @@ export class WhatsappService {
         body: { text: payload.body },
         ...(payload.footer ? { footer: { text: payload.footer } } : {}),
         action: {
-          buttons: buttons.slice(0, 3).map((button: any) => ({
+          buttons: buttons.slice(0, 3).map((button) => ({
             type: 'reply',
             reply: {
               id: button.id,
@@ -657,17 +697,13 @@ export class WhatsappService {
         ...(payload.footer ? { footer: { text: payload.footer } } : {}),
         action: {
           button: payload.buttonText,
-          sections: sections.map((section: any) => ({
+          sections: sections.map((section) => ({
             title: section.title,
-            rows: Array.isArray(section.rows)
-              ? section.rows.map((row: any) => ({
-                  id: row.id,
-                  title: row.title,
-                  ...(row.description
-                    ? { description: row.description }
-                    : {}),
-                }))
-              : [],
+            rows: section.rows.map((row) => ({
+              id: row.id,
+              title: row.title,
+              ...(row.description ? { description: row.description } : {}),
+            })),
           })),
         },
       };

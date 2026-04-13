@@ -89,11 +89,11 @@ Meta: colocar no produto as funções novas mais importantes que ainda faltam no
 
 ### 1.5 — Interactive messages
 
-- [ ] Suportar reply buttons
-- [ ] Suportar list messages
-- [ ] Suportar CTA URL quando aplicável
-- [ ] Normalizar resposta interativa inbound
-- [ ] Expor interativos no frontend e em automação
+- [x] Suportar reply buttons
+- [x] Suportar list messages
+- [x] Suportar CTA URL quando aplicável
+- [x] Normalizar resposta interativa inbound
+- [x] Expor interativos no frontend e em automação
 
 Critério de saída da fase:
 

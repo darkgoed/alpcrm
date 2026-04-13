@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, CheckCheck, Download, Lock, Paperclip } from 'lucide-react';
+import { Check, CheckCheck, Download, ExternalLink, List, Lock, MousePointerSquareDashed, Paperclip } from 'lucide-react';
 import type { Message } from '@/types';
 import { cn } from '@/lib/utils';
 import { formatTime } from '@/lib/dateUtils';
@@ -95,6 +95,95 @@ function NoteContent({ content }: { content: string }) {
   );
 }
 
+function InteractiveContent({ message }: { message: Message }) {
+  const payload = message.interactivePayload;
+  const kind = message.interactiveType;
+
+  if (!payload || !kind) {
+    return <p className="whitespace-pre-wrap leading-6">{message.content}</p>;
+  }
+
+  if (kind === 'reply_buttons') {
+    return (
+      <div className="space-y-3">
+        {payload.headerText ? <p className="text-xs font-semibold uppercase tracking-[0.16em] opacity-70">{payload.headerText}</p> : null}
+        {payload.body ? <p className="whitespace-pre-wrap leading-6">{payload.body}</p> : null}
+        <div className="space-y-2">
+          {payload.buttons?.map((button) => (
+            <div key={button.id} className="flex items-center gap-2 rounded-xl border border-current/15 px-3 py-2">
+              <MousePointerSquareDashed className="size-4 shrink-0 opacity-70" />
+              <span>{button.title}</span>
+            </div>
+          ))}
+        </div>
+        {payload.footer ? <p className="text-xs opacity-70">{payload.footer}</p> : null}
+      </div>
+    );
+  }
+
+  if (kind === 'list') {
+    return (
+      <div className="space-y-3">
+        {payload.headerText ? <p className="text-xs font-semibold uppercase tracking-[0.16em] opacity-70">{payload.headerText}</p> : null}
+        {payload.body ? <p className="whitespace-pre-wrap leading-6">{payload.body}</p> : null}
+        <div className="rounded-xl border border-current/15 px-3 py-2">
+          <div className="mb-2 flex items-center gap-2 text-xs font-semibold opacity-80">
+            <List className="size-4" />
+            {payload.buttonText ?? 'Abrir lista'}
+          </div>
+          <div className="space-y-2">
+            {payload.sections?.map((section, sectionIndex) => (
+              <div key={`${section.title}-${sectionIndex}`} className="space-y-1">
+                <p className="text-xs font-medium opacity-70">{section.title}</p>
+                {section.rows.map((row) => (
+                  <div key={row.id} className="rounded-lg border border-current/10 px-2.5 py-2">
+                    <p>{row.title}</p>
+                    {row.description ? <p className="text-xs opacity-70">{row.description}</p> : null}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+        {payload.footer ? <p className="text-xs opacity-70">{payload.footer}</p> : null}
+      </div>
+    );
+  }
+
+  if (kind === 'cta_url') {
+    return (
+      <div className="space-y-3">
+        {payload.headerText ? <p className="text-xs font-semibold uppercase tracking-[0.16em] opacity-70">{payload.headerText}</p> : null}
+        {payload.body ? <p className="whitespace-pre-wrap leading-6">{payload.body}</p> : null}
+        <a
+          href={payload.url ?? '#'}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-xl border border-current/15 px-3 py-2"
+        >
+          <ExternalLink className="size-4" />
+          {payload.buttonText ?? 'Abrir link'}
+        </a>
+        {payload.footer ? <p className="text-xs opacity-70">{payload.footer}</p> : null}
+      </div>
+    );
+  }
+
+  if (kind === 'button_reply' || kind === 'list_reply') {
+    return (
+      <div className="space-y-2">
+        <div className="inline-flex items-center gap-2 rounded-full border border-current/15 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.14em] opacity-80">
+          {kind === 'button_reply' ? 'Reply button' : 'List reply'}
+        </div>
+        <p className="whitespace-pre-wrap leading-6">{payload.title ?? message.content}</p>
+        {payload.description ? <p className="text-xs opacity-70">{payload.description}</p> : null}
+      </div>
+    );
+  }
+
+  return <p className="whitespace-pre-wrap leading-6">{message.content}</p>;
+}
+
 export function ConversationMessageBubble({ message }: { message: Message }) {
   const isOutgoing = message.senderType === 'user';
   const isSystem = message.senderType === 'system';
@@ -137,7 +226,9 @@ export function ConversationMessageBubble({ message }: { message: Message }) {
         )}
       >
         {message.type === 'text' || !message.mediaUrl ? (
-          message.content ? (
+          message.type === 'interactive' ? (
+            <InteractiveContent message={message} />
+          ) : message.content ? (
             <p className="whitespace-pre-wrap leading-6">{message.content}</p>
           ) : (
             <span className="inline-flex items-center gap-2 text-sm italic opacity-80">

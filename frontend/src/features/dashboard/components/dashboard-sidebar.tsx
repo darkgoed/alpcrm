@@ -46,6 +46,26 @@ function getInitials(value: string) {
     .toUpperCase();
 }
 
+function getMessagePreview(conversation: Conversation) {
+  const lastMessage = conversation.messages[0];
+  if (!lastMessage) return 'Sem mensagens';
+  if (lastMessage.type === 'interactive') {
+    const labelByType: Record<string, string> = {
+      reply_buttons: 'Interativo: botões',
+      list: 'Interativo: lista',
+      cta_url: 'Interativo: link',
+      button_reply: 'Resposta: botão',
+      list_reply: 'Resposta: lista',
+    };
+    return (
+      labelByType[lastMessage.interactiveType ?? ''] ??
+      lastMessage.content ??
+      'Mensagem interativa'
+    );
+  }
+  return lastMessage.content ?? 'Mídia compartilhada';
+}
+
 // ─── Global Search ────────────────────────────────────────────────────────────
 
 export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
@@ -225,7 +245,7 @@ function ConversationListItem({
   onOpen: () => void;
 }) {
   const name = conversation.contact.name ?? conversation.contact.phone;
-  const preview = conversation.messages[0]?.content ?? 'Mídia compartilhada';
+  const preview = getMessagePreview(conversation);
 
   return (
     <button
