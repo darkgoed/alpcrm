@@ -15,6 +15,10 @@ interface SocketHandlers {
     conversationId: string;
     conversation: any;
   }) => void;
+  onConversationPresence?: (data: {
+    conversationId: string;
+    operators: Array<{ userId: string; connections: number }>;
+  }) => void;
 }
 
 export function useSocket(handlers: SocketHandlers) {
@@ -29,15 +33,18 @@ export function useSocket(handlers: SocketHandlers) {
     const onNewMessage = (data: any) => handlersRef.current.onNewMessage?.(data);
     const onMessageStatus = (data: any) => handlersRef.current.onMessageStatus?.(data);
     const onConversationUpdated = (data: any) => handlersRef.current.onConversationUpdated?.(data);
+    const onConversationPresence = (data: any) => handlersRef.current.onConversationPresence?.(data);
 
     socket.on('new_message', onNewMessage);
     socket.on('message_status', onMessageStatus);
     socket.on('conversation_updated', onConversationUpdated);
+    socket.on('conversation_presence', onConversationPresence);
 
     return () => {
       socket.off('new_message', onNewMessage);
       socket.off('message_status', onMessageStatus);
       socket.off('conversation_updated', onConversationUpdated);
+      socket.off('conversation_presence', onConversationPresence);
     };
   }, []);
 }

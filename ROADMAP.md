@@ -117,15 +117,15 @@ Meta: dar ao operador um CRM realmente utilizável no dia a dia.
 - [x] Mostrar fila/estado da mensagem no composer
 - [x] Exibir erro operacional claro em falha de envio
 - [x] Adicionar contador de não lidas
-- [ ] Adicionar presença do operador na conversa
-- [ ] Adicionar prevenção de colisão entre agentes
+- [x] Adicionar presença do operador na conversa
+- [x] Adicionar prevenção de colisão entre agentes
 
 ### 2.2 — Histórico e contexto
 
-- [ ] Exibir timeline completa do contato, não só da conversa atual
-- [ ] Exibir histórico de conversas encerradas
+- [x] Exibir timeline completa do contato, não só da conversa atual
+- [x] Exibir histórico de conversas encerradas
 - [ ] Exibir SLA e tempos de resposta
-- [ ] Exibir última interação do cliente
+- [x] Exibir última interação do cliente
 - [ ] Exibir origem do contato e opt-in
 
 ### 2.3 — Contact management real

@@ -68,13 +68,12 @@ export class ContactsService {
         contactTags: { include: { tag: true } },
         contactPipelines: { include: { stage: true, pipeline: true } },
         conversations: {
-          orderBy: { createdAt: 'desc' },
-          take: 5,
-          select: {
-            id: true,
-            status: true,
-            createdAt: true,
-            lastMessageAt: true,
+          where: { workspaceId },
+          orderBy: { createdAt: 'asc' },
+          include: {
+            assignedUser: { select: { id: true, name: true } },
+            team: { select: { id: true, name: true } },
+            messages: { orderBy: { createdAt: 'asc' } },
           },
         },
       },

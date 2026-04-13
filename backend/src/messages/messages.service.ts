@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
@@ -133,6 +134,17 @@ export class MessagesService {
       conversation.assignedUserId !== userId
     ) {
       throw new ForbiddenException('Conversa atribuída a outro operador');
+    }
+
+    const hasAssignedOwner = Boolean(conversation.assignedUserId);
+    const otherActiveOperators = this.eventsGateway
+      .getActiveOperatorIds(dto.conversationId)
+      .filter((activeUserId) => activeUserId !== userId);
+
+    if (!hasAssignedOwner && otherActiveOperators.length > 0) {
+      throw new ConflictException(
+        'Outro operador ja esta com essa conversa aberta. Atribua a conversa antes de responder para evitar colisao.',
+      );
     }
 
     // Parar bot se estiver ativo — operador assumiu

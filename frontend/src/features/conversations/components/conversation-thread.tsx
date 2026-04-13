@@ -27,6 +27,7 @@ import {
 } from '@/hooks/useConversations';
 import { useQuickReplies, type QuickReply } from '@/hooks/useQuickReplies';
 import { joinConversation, leaveConversation, useSocket } from '@/hooks/useSocket';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Message } from '@/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +55,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ConversationMessageBubble } from './message-bubble';
 import { InteractiveMessageComposer } from './interactive-message-composer';
 import { api } from '@/lib/api';
+import { formatDistanceToNow, formatTime } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
 
 interface ConversationThreadPageProps {
@@ -83,6 +85,23 @@ interface ContactPipelineEntry {
 interface ContactDetail {
   contactTags: ContactTag[];
   contactPipelines: ContactPipelineEntry[];
+  conversations: Array<{
+    id: string;
+    status: 'open' | 'closed' | 'pending';
+    createdAt: string;
+    lastMessageAt: string | null;
+    lastContactMessageAt: string | null;
+    assignedUser: { id: string; name: string } | null;
+    team: { id: string; name: string } | null;
+    messages: Message[];
+  }>;
+}
+
+interface TimelineEntry {
+  conversationId: string;
+  conversationStatus: 'open' | 'closed' | 'pending';
+  conversationCreatedAt: string;
+  message: Message;
 }
 
 function getInitials(value: string) {
@@ -93,6 +112,13 @@ function getInitials(value: string) {
     .map((part) => part[0])
     .join('')
     .toUpperCase();
+}
+
+function formatFullDateTime(dateStr: string) {
+  return new Date(dateStr).toLocaleString('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  });
 }
 
 // ─── @Mention dropdown ────────────────────────────────────────────────────────
@@ -297,8 +323,10 @@ function AssignmentDialog({
 
 export function ConversationThread({ params }: ConversationThreadPageProps) {
   const { id } = use(params);
+  const { token } = useAuth();
   const { conversation, isLoading, mutate } = useConversation(id);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [activeOperatorIds, setActiveOperatorIds] = useState<string[]>([]);
   const [text, setText] = useState('');
   const [mode, setMode] = useState<'message' | 'note'>('message');
   const [sending, setSending] = useState(false);
@@ -347,11 +375,6 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  useEffect(() => {
-    joinConversation(id);
-    return () => leaveConversation(id);
-  }, [id]);
-
   const syncReadState = useEffectEvent(async () => {
     if (!conversation || conversation.unreadCount === 0) return;
     const updated = await markConversationAsRead(id);
@@ -376,7 +399,17 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
         current.map((item) => (item.id === messageId ? { ...item, status: status as Message['status'] } : item)),
       );
     },
+    onConversationPresence: ({ conversationId, operators }) => {
+      if (conversationId !== id) return;
+      setActiveOperatorIds(operators.map((operator) => operator.userId));
+    },
   });
+
+  useEffect(() => {
+    setActiveOperatorIds([]);
+    joinConversation(id);
+    return () => leaveConversation(id);
+  }, [id]);
 
   // ─── Handle textarea input for @mention detection ─────────────────────────
 
@@ -585,6 +618,33 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
 
   const contactName = conversation.contact.name ?? conversation.contact.phone;
   const isClosed = conversation.status === 'closed';
+  const contactTimeline: TimelineEntry[] = (contactDetail?.conversations ?? [])
+    .flatMap((item) =>
+      item.messages.map((message) => ({
+        conversationId: item.id,
+        conversationStatus: item.status,
+        conversationCreatedAt: item.createdAt,
+        message,
+      })),
+    )
+    .sort(
+      (left, right) =>
+        new Date(left.message.createdAt).getTime() -
+        new Date(right.message.createdAt).getTime(),
+    );
+  const historicalConversations = (contactDetail?.conversations ?? [])
+    .filter((item) => item.id !== conversation.id)
+    .sort(
+      (left, right) =>
+        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+    );
+  const lastCustomerInteraction =
+    contactDetail?.conversations
+      ?.map((item) => item.lastContactMessageAt)
+      .filter((value): value is string => Boolean(value))
+      .sort(
+        (left, right) => new Date(right).getTime() - new Date(left).getTime(),
+      )[0] ?? conversation.lastContactMessageAt;
 
   const windowOpen = conversation.lastContactMessageAt
     ? Date.now() - new Date(conversation.lastContactMessageAt).getTime() < 24 * 60 * 60 * 1000
@@ -600,6 +660,32 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
         : windowOpen
           ? 'Janela de 24h ativa'
           : 'Envio livre bloqueado';
+  const activeOperators = activeOperatorIds
+    .map((userId) => users.find((user) => user.id === userId))
+    .filter((user): user is WorkspaceUser => Boolean(user));
+  const activeOperatorCount = activeOperatorIds.length;
+  const activeOperatorLabel = activeOperatorCount
+    ? `${activeOperatorCount} operador${activeOperatorCount > 1 ? 'es' : ''} ativo${activeOperatorCount > 1 ? 's' : ''}`
+    : 'Nenhum operador ativo';
+  const currentUserId = token
+    ? (() => {
+        try {
+          return JSON.parse(atob(token.split('.')[1] ?? '')).sub as
+            | string
+            | undefined;
+        } catch {
+          return undefined;
+        }
+      })()
+    : undefined;
+  const hasOtherActiveOperator = currentUserId
+    ? activeOperatorIds.some((operatorId) => operatorId !== currentUserId)
+    : activeOperatorIds.length > 1;
+  const collisionPreventionActive =
+    mode === 'message' &&
+    !isClosed &&
+    !conversation.assignedUser &&
+    hasOtherActiveOperator;
 
   return (
     <div className="flex h-full flex-col">
@@ -620,6 +706,16 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                 {conversation.assignedUser ? ` • ${conversation.assignedUser.name}` : ''}
                 {conversation.team ? ` • ${conversation.team.name}` : ''}
               </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Badge variant={activeOperators.length > 0 ? 'secondary' : 'outline'}>
+                  {activeOperatorLabel}
+                </Badge>
+                {activeOperators.slice(0, 3).map((user) => (
+                  <Badge key={user.id} variant="outline">
+                    {user.name}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -656,14 +752,51 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       <div className="grid min-h-0 flex-1 gap-6 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:px-6">
         <Card className="flex min-h-0 flex-col border-border/70 bg-white/70">
           <CardHeader className="pb-4">
-            <CardTitle className="text-base">Linha do tempo</CardTitle>
+            <CardTitle className="text-base">Linha do tempo do contato</CardTitle>
           </CardHeader>
           <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
             <ScrollArea className="min-h-0 flex-1 rounded-2xl border border-border/70 bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)] p-4">
               <div className="space-y-3">
-                {messages.map((message) => (
-                  <ConversationMessageBubble key={message.id} message={message} />
-                ))}
+                {contactTimeline.map((entry, index) => {
+                  const previousEntry = contactTimeline[index - 1];
+                  const startsConversation =
+                    !previousEntry ||
+                    previousEntry.conversationId !== entry.conversationId;
+
+                  return (
+                    <div key={entry.message.id} className="space-y-3">
+                      {startsConversation ? (
+                        <div className="flex items-center gap-3 py-2">
+                          <Separator className="flex-1" />
+                          <Badge
+                            variant={
+                              entry.conversationId === conversation.id
+                                ? 'default'
+                                : entry.conversationStatus === 'closed'
+                                  ? 'muted'
+                                  : 'outline'
+                            }
+                            className="shrink-0"
+                          >
+                            {entry.conversationId === conversation.id
+                              ? 'Conversa atual'
+                              : entry.conversationStatus === 'closed'
+                                ? 'Conversa encerrada'
+                                : 'Conversa anterior'}
+                          </Badge>
+                          <span
+                            className="shrink-0 text-[11px] text-muted-foreground"
+                            title={formatFullDateTime(entry.conversationCreatedAt)}
+                          >
+                            iniciada {formatDistanceToNow(entry.conversationCreatedAt)}
+                          </span>
+                          <Separator className="flex-1" />
+                        </div>
+                      ) : null}
+                      <ConversationMessageBubble message={entry.message} />
+                    </div>
+                  );
+                })}
                 <div ref={bottomRef} />
               </div>
             </ScrollArea>
@@ -718,6 +851,12 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                     </div>
                   )}
 
+                  {collisionPreventionActive && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700">
+                      Outro operador esta com esta conversa aberta agora. Atribua a conversa antes de responder para evitar colisao.
+                    </div>
+                  )}
+
                   <div className="relative">
                     <Textarea
                       ref={textareaRef}
@@ -739,6 +878,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                         'min-h-24 resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0',
                         mode === 'note' && 'text-amber-900 placeholder:text-amber-400',
                       )}
+                      disabled={sending || collisionPreventionActive}
                     />
 
                     {/* @mention dropdown */}
@@ -773,7 +913,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                       {mode === 'message' && (
                         <>
                           <InteractiveMessageComposer
-                            disabled={sending}
+                            disabled={sending || collisionPreventionActive}
                             onSubmit={handleInteractiveSend}
                           />
                           <input
@@ -786,7 +926,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            disabled={sending}
+                            disabled={sending || collisionPreventionActive}
                             className="text-muted-foreground hover:text-foreground transition-colors"
                             title="Enviar arquivo"
                           >
@@ -813,7 +953,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                   <div className="flex items-center justify-end gap-3">
                     <Button
                       onClick={() => void handleSend()}
-                      disabled={!text.trim() || sending}
+                      disabled={!text.trim() || sending || collisionPreventionActive}
                       variant={mode === 'note' ? 'outline' : 'default'}
                       className={mode === 'note' ? 'border-amber-200 text-amber-700 hover:bg-amber-50' : ''}
                     >
@@ -847,12 +987,79 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
               <p className="mt-1 text-sm text-muted-foreground">{conversation.team?.name ?? 'Sem time vinculado'}</p>
             </div>
             <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Presenca</p>
+              <p className="mt-2 text-sm font-semibold text-foreground">{activeOperatorLabel}</p>
+              {activeOperators.length > 0 ? (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {activeOperators.map((user) => (
+                    <Badge key={user.id} variant="outline" className="text-xs">
+                      {user.name}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-1 text-sm text-muted-foreground">Nenhum operador com a conversa aberta agora.</p>
+              )}
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Resumo</p>
               <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                <li>{messages.length} mensagens registradas</li>
+                <li>{contactTimeline.length} mensagens registradas no histórico do contato</li>
                 <li>Status: {conversation.status}</li>
                 <li>Bot: {conversation.isBotActive ? 'ativo' : 'inativo'}</li>
+                <li>
+                  Última interação do cliente:{' '}
+                  {lastCustomerInteraction
+                    ? `${formatDistanceToNow(lastCustomerInteraction)} (${formatTime(lastCustomerInteraction)})`
+                    : 'sem registro'}
+                </li>
               </ul>
+            </div>
+
+            <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                Histórico de conversas
+              </p>
+              {historicalConversations.length > 0 ? (
+                <div className="mt-3 space-y-2">
+                  {historicalConversations.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-xl border border-border/70 bg-background/80 px-3 py-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <Badge variant={item.status === 'closed' ? 'muted' : 'outline'}>
+                          {item.status === 'closed' ? 'Encerrada' : 'Aberta'}
+                        </Badge>
+                        <span
+                          className="text-[11px] text-muted-foreground"
+                          title={formatFullDateTime(item.createdAt)}
+                        >
+                          {formatDistanceToNow(item.createdAt)}
+                        </span>
+                      </div>
+                      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                        <p>{item.messages.length} mensagens</p>
+                        <p>
+                          Última atividade:{' '}
+                          {item.lastMessageAt
+                            ? formatFullDateTime(item.lastMessageAt)
+                            : 'sem atividade'}
+                        </p>
+                        <p>
+                          Responsável:{' '}
+                          {item.assignedUser?.name ?? 'sem responsável'} •{' '}
+                          {item.team?.name ?? 'sem time'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Este contato ainda não tem conversas anteriores.
+                </p>
+              )}
             </div>
 
             {/* Tags */}
