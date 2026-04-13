@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
@@ -94,14 +95,16 @@ export class ContactsService {
     if (existing)
       throw new ConflictException('Contato com esse telefone já existe');
 
-    const { tagIds, ...rest } = dto;
-    const data = await this.buildContactWriteData(workspaceId, rest);
+    const { tagIds, ownerId, company, ...rest } = dto;
+    const owner = await this.findValidOwner(workspaceId, ownerId);
 
     return this.prisma.contact.create({
       data: {
         workspaceId,
         source: 'manual',
-        ...data,
+        ...rest,
+        company: company?.trim() ? company.trim() : null,
+        ownerId: owner?.id ?? null,
         ...(tagIds?.length
           ? { contactTags: { create: tagIds.map((tagId) => ({ tagId })) } }
           : {}),
@@ -121,7 +124,17 @@ export class ContactsService {
     });
     if (!contact) throw new NotFoundException('Contato não encontrado');
 
-    const data = await this.buildContactWriteData(workspaceId, dto);
+    const { ownerId, company, ...rest } = dto;
+    const data: Prisma.ContactUpdateInput = { ...rest };
+
+    if ('company' in dto) {
+      data.company = company?.trim() ? company.trim() : null;
+    }
+
+    if ('ownerId' in dto) {
+      const owner = await this.findValidOwner(workspaceId, ownerId);
+      data.owner = owner ? { connect: { id: owner.id } } : { disconnect: true };
+    }
 
     return this.prisma.contact.update({
       where: { id },
@@ -281,35 +294,19 @@ export class ContactsService {
 
   // ─── Helpers CSV ──────────────────────────────────────────────────────────────
 
-  private async buildContactWriteData(
-    workspaceId: string,
-    dto: Partial<CreateContactDto & UpdateContactDto>,
-  ) {
-    const data: Record<string, unknown> = { ...dto };
-
-    if ('company' in dto) {
-      data.company = dto.company?.trim() ? dto.company.trim() : null;
-    }
-
-    if ('ownerId' in dto) {
-      if (!dto.ownerId) {
-        data.ownerId = null;
-      } else {
-        const owner = await this.prisma.user.findFirst({
-          where: { id: dto.ownerId, workspaceId, isActive: true },
-          select: { id: true },
-        });
-        if (!owner)
-          throw new NotFoundException('Owner do contato não encontrado');
-        data.ownerId = owner.id;
-      }
-    }
-
-    return data;
-  }
-
   private isValidE164(phone: string): boolean {
     return /^\+[1-9]\d{7,14}$/.test(phone);
+  }
+
+  private async findValidOwner(workspaceId: string, ownerId?: string | null) {
+    if (!ownerId) return null;
+
+    const owner = await this.prisma.user.findFirst({
+      where: { id: ownerId, workspaceId, isActive: true },
+      select: { id: true },
+    });
+    if (!owner) throw new NotFoundException('Owner do contato não encontrado');
+    return owner;
   }
 
   private parseCsv(buffer: Buffer): Array<Record<string, string>> {
