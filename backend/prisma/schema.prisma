@@ -197,6 +197,7 @@ model Contact {
   name           String?
   email          String?
   company        String?
+  customFields   Json                  @default("{}") @map("custom_fields")
   ownerId        String?               @map("owner_id")
   source         ContactSource         @default(manual)
   lifecycleStage ContactLifecycleStage @default(lead) @map("lifecycle_stage")

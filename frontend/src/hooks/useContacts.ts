@@ -14,6 +14,7 @@ export interface Contact {
   name: string | null;
   email: string | null;
   company: string | null;
+  customFields: Record<string, string>;
   source: 'manual' | 'import_csv' | 'whatsapp_inbound';
   lifecycleStage: 'lead' | 'qualified' | 'customer' | 'inactive';
   optInStatus: 'unknown' | 'opted_in' | 'opted_out';
@@ -93,6 +94,7 @@ export async function createContact(dto: {
   name?: string;
   email?: string;
   company?: string;
+  customFields?: Record<string, string>;
   ownerId?: string;
   lifecycleStage?: 'lead' | 'qualified' | 'customer' | 'inactive';
 }) {
@@ -106,6 +108,7 @@ export async function updateContact(
     name?: string;
     email?: string;
     company?: string | null;
+    customFields?: Record<string, string>;
     ownerId?: string | null;
     lifecycleStage?: 'lead' | 'qualified' | 'customer' | 'inactive';
   },

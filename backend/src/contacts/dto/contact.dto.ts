@@ -5,6 +5,7 @@ import {
   IsArray,
   IsUUID,
   IsEnum,
+  IsObject,
 } from 'class-validator';
 
 export enum ContactLifecycleStageDto {
@@ -39,6 +40,10 @@ export class CreateContactDto {
   lifecycleStage?: ContactLifecycleStageDto;
 
   @IsOptional()
+  @IsObject()
+  customFields?: Record<string, string>;
+
+  @IsOptional()
   @IsArray()
   @IsUUID('4', { each: true })
   tagIds?: string[];
@@ -64,6 +69,10 @@ export class UpdateContactDto {
   @IsOptional()
   @IsEnum(ContactLifecycleStageDto)
   lifecycleStage?: ContactLifecycleStageDto;
+
+  @IsOptional()
+  @IsObject()
+  customFields?: Record<string, string>;
 }
 
 export class AddTagDto {

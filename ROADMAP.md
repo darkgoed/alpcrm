@@ -130,7 +130,7 @@ Meta: dar ao operador um CRM realmente utilizável no dia a dia.
 
 ### 2.3 — Contact management real
 
-- [ ] Adicionar campos customizados
+- [x] Adicionar campos customizados
 - [x] Adicionar empresa/organização
 - [x] Adicionar owner do contato
 - [x] Adicionar lifecycle stage

@@ -42,6 +42,104 @@ function getLifecycleBadgeVariant(stage: Contact['lifecycleStage']): React.Compo
   return 'outline';
 }
 
+type CustomFieldDraft = {
+  id: string;
+  key: string;
+  value: string;
+};
+
+function createCustomFieldDraft(key = '', value = ''): CustomFieldDraft {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    key,
+    value,
+  };
+}
+
+function getCustomFieldDrafts(customFields: Contact['customFields'] | undefined) {
+  return Object.entries(customFields ?? {}).map(([key, value]) =>
+    createCustomFieldDraft(key, value),
+  );
+}
+
+function normalizeCustomFields(rows: CustomFieldDraft[]) {
+  return rows.reduce<Record<string, string>>((acc, row) => {
+    const key = row.key.trim();
+    const value = row.value.trim();
+    if (!key || !value) return acc;
+    acc[key] = value;
+    return acc;
+  }, {});
+}
+
+function CustomFieldsEditor({
+  rows,
+  onChange,
+}: {
+  rows: CustomFieldDraft[];
+  onChange: (rows: CustomFieldDraft[]) => void;
+}) {
+  function handleRowChange(id: string, field: 'key' | 'value', value: string) {
+    onChange(
+      rows.map((row) => (row.id === id ? { ...row, [field]: value } : row)),
+    );
+  }
+
+  function handleRemoveRow(id: string) {
+    onChange(rows.filter((row) => row.id !== id));
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Campos customizados
+        </p>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-xs"
+          onClick={() => onChange([...rows, createCustomFieldDraft()])}
+        >
+          <Plus className="size-3" />
+          Adicionar campo
+        </Button>
+      </div>
+      {rows.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
+          Nenhum campo customizado definido.
+        </p>
+      ) : (
+        rows.map((row) => (
+          <div key={row.id} className="grid gap-2 md:grid-cols-[0.9fr_1.1fr_auto]">
+            <Input
+              placeholder="Campo"
+              value={row.key}
+              onChange={(e) => handleRowChange(row.id, 'key', e.target.value)}
+            />
+            <Input
+              placeholder="Valor"
+              value={row.value}
+              onChange={(e) => handleRowChange(row.id, 'value', e.target.value)}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="size-10 shrink-0 text-muted-foreground"
+              onClick={() => handleRemoveRow(row.id)}
+              title="Remover campo"
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 // ─── Tag Badge ───────────────────────────────────────────────────────────────
 
 function TagBadge({ tag, onRemove }: { tag: Tag; onRemove?: () => void }) {
@@ -75,6 +173,7 @@ function CreateContactForm({
     ownerId: '',
     lifecycleStage: 'lead' as Contact['lifecycleStage'],
   });
+  const [customFields, setCustomFields] = useState<CustomFieldDraft[]>([]);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -87,6 +186,7 @@ function CreateContactForm({
         name: form.name || undefined,
         email: form.email || undefined,
         company: form.company || undefined,
+        customFields: normalizeCustomFields(customFields),
         ownerId: form.ownerId || undefined,
         lifecycleStage: form.lifecycleStage,
       });
@@ -99,6 +199,7 @@ function CreateContactForm({
         ownerId: '',
         lifecycleStage: 'lead',
       });
+      setCustomFields([]);
     } finally {
       setLoading(false);
     }
@@ -138,6 +239,7 @@ function CreateContactForm({
             ))}
         </select>
       </div>
+      <CustomFieldsEditor rows={customFields} onChange={setCustomFields} />
       <Button type="submit" size="sm" disabled={loading || !form.phone}>
         {loading ? 'Criando...' : 'Criar contato'}
       </Button>
@@ -343,6 +445,9 @@ function ContactRow({
     ownerId: contact.owner?.id ?? '',
     lifecycleStage: contact.lifecycleStage,
   });
+  const [customFields, setCustomFields] = useState<CustomFieldDraft[]>(
+    getCustomFieldDrafts(contact.customFields),
+  );
   const appliedTagIds = new Set(contact.contactTags.map((ct) => ct.tag.id));
 
   useEffect(() => {
@@ -351,7 +456,8 @@ function ContactRow({
       ownerId: contact.owner?.id ?? '',
       lifecycleStage: contact.lifecycleStage,
     });
-  }, [contact.company, contact.lifecycleStage, contact.owner?.id]);
+    setCustomFields(getCustomFieldDrafts(contact.customFields));
+  }, [contact.company, contact.customFields, contact.lifecycleStage, contact.owner?.id]);
 
   async function handleAddTag(tagId: string) {
     await addTag(contact.id, tagId);
@@ -370,6 +476,7 @@ function ContactRow({
     try {
       await updateContact(contact.id, {
         company: draft.company.trim() || null,
+        customFields: normalizeCustomFields(customFields),
         ownerId: draft.ownerId || null,
         lifecycleStage: draft.lifecycleStage,
       });
@@ -400,6 +507,18 @@ function ContactRow({
             {getLifecycleLabel(contact.lifecycleStage)}
           </Badge>
         </div>
+        {Object.entries(contact.customFields ?? {}).length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {Object.entries(contact.customFields).map(([key, value]) => (
+              <span
+                key={key}
+                className="rounded-md border border-border/70 bg-muted/40 px-2 py-1 text-[11px] text-muted-foreground"
+              >
+                <span className="font-medium text-foreground">{key}:</span> {value}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-1 pt-0.5">
           {contact.contactTags.map(({ tag }) => (
             <TagBadge key={tag.id} tag={tag} onRemove={() => handleRemoveTag(tag.id)} />
@@ -458,46 +577,49 @@ function ContactRow({
       </div>
 
       {showEditor && (
-        <div className="mt-3 grid gap-3 border-t border-border/70 pt-3 md:grid-cols-[1.2fr_0.9fr_0.9fr_auto]">
-          <Input
-            placeholder="Empresa / organização"
-            value={draft.company}
-            onChange={(e) => setDraft((current) => ({ ...current, company: e.target.value }))}
-          />
-          <select
-            value={draft.lifecycleStage}
-            onChange={(e) =>
-              setDraft((current) => ({
-                ...current,
-                lifecycleStage: e.target.value as Contact['lifecycleStage'],
-              }))
-            }
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-          >
-            {LIFECYCLE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={draft.ownerId}
-            onChange={(e) => setDraft((current) => ({ ...current, ownerId: e.target.value }))}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-          >
-            <option value="">Sem owner</option>
-            {agents
-              .filter((agent) => agent.isActive)
-              .map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name}
+        <div className="mt-3 space-y-3 border-t border-border/70 pt-3">
+          <div className="grid gap-3 md:grid-cols-[1.2fr_0.9fr_0.9fr_auto]">
+            <Input
+              placeholder="Empresa / organização"
+              value={draft.company}
+              onChange={(e) => setDraft((current) => ({ ...current, company: e.target.value }))}
+            />
+            <select
+              value={draft.lifecycleStage}
+              onChange={(e) =>
+                setDraft((current) => ({
+                  ...current,
+                  lifecycleStage: e.target.value as Contact['lifecycleStage'],
+                }))
+              }
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {LIFECYCLE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
-          </select>
-          <Button size="sm" onClick={handleSave} disabled={saving}>
-            {saving ? 'Salvando...' : 'Salvar'}
-          </Button>
-          {error && <p className="text-xs text-destructive md:col-span-4">{error}</p>}
+            </select>
+            <select
+              value={draft.ownerId}
+              onChange={(e) => setDraft((current) => ({ ...current, ownerId: e.target.value }))}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Sem owner</option>
+              {agents
+                .filter((agent) => agent.isActive)
+                .map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+            </select>
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </div>
+          <CustomFieldsEditor rows={customFields} onChange={setCustomFields} />
+          {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
       )}
     </div>

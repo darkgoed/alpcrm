@@ -95,7 +95,7 @@ export class ContactsService {
     if (existing)
       throw new ConflictException('Contato com esse telefone já existe');
 
-    const { tagIds, ownerId, company, ...rest } = dto;
+    const { tagIds, ownerId, company, customFields, ...rest } = dto;
     const owner = await this.findValidOwner(workspaceId, ownerId);
 
     return this.prisma.contact.create({
@@ -104,6 +104,7 @@ export class ContactsService {
         source: 'manual',
         ...rest,
         company: company?.trim() ? company.trim() : null,
+        customFields: this.normalizeCustomFields(customFields),
         ownerId: owner?.id ?? null,
         ...(tagIds?.length
           ? { contactTags: { create: tagIds.map((tagId) => ({ tagId })) } }
@@ -124,11 +125,15 @@ export class ContactsService {
     });
     if (!contact) throw new NotFoundException('Contato não encontrado');
 
-    const { ownerId, company, ...rest } = dto;
+    const { ownerId, company, customFields, ...rest } = dto;
     const data: Prisma.ContactUpdateInput = { ...rest };
 
     if ('company' in dto) {
       data.company = company?.trim() ? company.trim() : null;
+    }
+
+    if ('customFields' in dto) {
+      data.customFields = this.normalizeCustomFields(customFields);
     }
 
     if ('ownerId' in dto) {
@@ -307,6 +312,31 @@ export class ContactsService {
     });
     if (!owner) throw new NotFoundException('Owner do contato não encontrado');
     return owner;
+  }
+
+  private normalizeCustomFields(
+    input?: Record<string, unknown>,
+  ): Prisma.InputJsonObject {
+    const entries = Object.entries(input ?? {})
+      .map(([rawKey, rawValue]) => {
+        const key = rawKey.trim().slice(0, 60);
+        if (!key) return null;
+
+        if (
+          rawValue === null ||
+          rawValue === undefined ||
+          Array.isArray(rawValue) ||
+          typeof rawValue === 'object'
+        ) {
+          return null;
+        }
+
+        const value = String(rawValue).trim().slice(0, 500);
+        return value ? [key, value] : null;
+      })
+      .filter((entry): entry is [string, string] => Boolean(entry));
+
+    return Object.fromEntries(entries) as Prisma.InputJsonObject;
   }
 
   private parseCsv(buffer: Buffer): Array<Record<string, string>> {
