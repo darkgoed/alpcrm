@@ -711,17 +711,52 @@ function ContactRow({
 
 export function ContactsPage() {
   const [search, setSearch] = useState('');
-  const [selectedTag, setSelectedTag] = useState<string | undefined>();
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [selectedPipelineId, setSelectedPipelineId] = useState('');
+  const [selectedStageId, setSelectedStageId] = useState('');
+  const [conversationStatus, setConversationStatus] = useState<
+    ContactFilters['conversationStatus'] | ''
+  >('');
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showCreateTag, setShowCreateTag] = useState(false);
+  const [showSaveSegment, setShowSaveSegment] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState(COLORS[0]);
+  const [segmentName, setSegmentName] = useState('');
+  const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
+  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
+  const [bulkAddTagId, setBulkAddTagId] = useState('');
+  const [bulkRemoveTagId, setBulkRemoveTagId] = useState('');
+  const [bulkOwnerId, setBulkOwnerId] = useState('');
+  const [bulkLifecycleStage, setBulkLifecycleStage] = useState('');
+  const [bulkPipelineId, setBulkPipelineId] = useState('');
+  const [bulkStageId, setBulkStageId] = useState('');
+  const [applyingBulk, setApplyingBulk] = useState(false);
   const deferredSearch = useDeferredValue(search);
+  const activeFilters: ContactFilters = {
+    search: deferredSearch || undefined,
+    tagIds: selectedTagIds,
+    pipelineId: selectedPipelineId || undefined,
+    stageId: selectedStageId || undefined,
+    conversationStatus: conversationStatus || undefined,
+  };
 
-  const { contacts, mutate, isLoading } = useContacts({ search: deferredSearch || undefined, tagId: selectedTag });
+  const { contacts, mutate, isLoading } = useContacts(activeFilters);
   const { tags, mutate: mutateTags } = useTags();
+  const { pipelines } = usePipelines();
+  const { segments, mutate: mutateSegments } = useSavedSegments();
   const { agents } = useAgents();
+  const selectedPipeline =
+    pipelines.find((pipeline) => pipeline.id === selectedPipelineId) ?? null;
+  const bulkPipeline =
+    pipelines.find((pipeline) => pipeline.id === bulkPipelineId) ?? null;
+
+  useEffect(() => {
+    setSelectedContactIds((current) =>
+      current.filter((id) => contacts.some((contact) => contact.id === id)),
+    );
+  }, [contacts]);
 
   async function handleDeleteContact(id: string) {
     await deleteContact(id);
@@ -737,95 +772,409 @@ export function ContactsPage() {
     setShowCreateTag(false);
   }
 
+  function resetFilters() {
+    setSearch('');
+    setSelectedTagIds([]);
+    setSelectedPipelineId('');
+    setSelectedStageId('');
+    setConversationStatus('');
+    setActiveSegmentId(null);
+  }
+
+  function toggleTagFilter(tagId: string) {
+    setActiveSegmentId(null);
+    setSelectedTagIds((current) =>
+      current.includes(tagId)
+        ? current.filter((id) => id !== tagId)
+        : [...current, tagId],
+    );
+  }
+
+  function applySegmentFilters(
+    nextFilters: ContactFilters,
+    segmentId: string | null = null,
+  ) {
+    setSearch(nextFilters.search ?? '');
+    setSelectedTagIds(nextFilters.tagIds ?? []);
+    setSelectedPipelineId(nextFilters.pipelineId ?? '');
+    setSelectedStageId(nextFilters.stageId ?? '');
+    setConversationStatus(nextFilters.conversationStatus ?? '');
+    setActiveSegmentId(segmentId);
+  }
+
+  async function handleSaveSegment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!segmentName.trim()) return;
+    const segment = await saveSegment({
+      name: segmentName.trim(),
+      ...activeFilters,
+    });
+    await mutateSegments();
+    setActiveSegmentId(segment.id);
+    setSegmentName('');
+    setShowSaveSegment(false);
+  }
+
+  async function handleDeleteSegment(id: string) {
+    await deleteSegment(id);
+    await mutateSegments();
+    if (activeSegmentId === id) {
+      setActiveSegmentId(null);
+    }
+  }
+
+  function toggleSelectedContact(contactId: string) {
+    setSelectedContactIds((current) =>
+      current.includes(contactId)
+        ? current.filter((id) => id !== contactId)
+        : [...current, contactId],
+    );
+  }
+
+  async function handleApplyBulkActions() {
+    if (selectedContactIds.length === 0) return;
+    setApplyingBulk(true);
+    try {
+      await applyBulkContactAction({
+        contactIds: selectedContactIds,
+        addTagIds: bulkAddTagId ? [bulkAddTagId] : undefined,
+        removeTagIds: bulkRemoveTagId ? [bulkRemoveTagId] : undefined,
+        ownerId: bulkOwnerId || undefined,
+        lifecycleStage:
+          (bulkLifecycleStage as Contact['lifecycleStage'] | '') || undefined,
+        pipelineId: bulkPipelineId || undefined,
+        stageId: bulkStageId || undefined,
+      });
+      setSelectedContactIds([]);
+      setBulkAddTagId('');
+      setBulkRemoveTagId('');
+      setBulkOwnerId('');
+      setBulkLifecycleStage('');
+      setBulkPipelineId('');
+      setBulkStageId('');
+      await mutate();
+    } finally {
+      setApplyingBulk(false);
+    }
+  }
+
   return (
     <div className="flex h-full overflow-hidden">
-      {/* Sidebar de filtros */}
-      <aside className="w-56 shrink-0 border-r border-border/70 bg-muted/20 flex flex-col">
-        <div className="p-4 border-b border-border/70">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filtrar por tag</p>
+      <aside className="w-72 shrink-0 border-r border-border/70 bg-muted/20 flex flex-col">
+        <div className="p-4 border-b border-border/70 space-y-1">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Segmentação CRM</p>
+          <p className="text-xs text-muted-foreground">Combine tags, pipeline e status sem workarounds.</p>
         </div>
-        <div className="flex-1 overflow-y-auto p-3 space-y-1">
-          <button
-            onClick={() => setSelectedTag(undefined)}
-            className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors ${!selectedTag ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-accent'}`}
-          >
-            Todos os contatos
-          </button>
-          {tags.map((tag) => (
-            <button
-              key={tag.id}
-              onClick={() => setSelectedTag(selectedTag === tag.id ? undefined : tag.id)}
-              className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors ${selectedTag === tag.id ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-accent'}`}
-            >
-              <span className="size-2 rounded-full" style={{ background: tag.color }} />
-              {tag.name}
-            </button>
-          ))}
-          <button
-            onClick={() => setShowCreateTag((v) => !v)}
-            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent mt-2 border border-dashed border-border"
-          >
-            <Plus className="size-3" /> Nova tag
-          </button>
-          {showCreateTag && (
-            <form onSubmit={handleCreateTag} className="mt-2 space-y-2">
-              <Input
-                placeholder="Nome da tag"
-                value={newTagName}
-                onChange={(e) => setNewTagName(e.target.value)}
-                className="text-xs h-8"
-              />
-              <div className="flex gap-1 flex-wrap">
-                {COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setNewTagColor(c)}
-                    className="size-5 rounded-full border-2 transition-transform hover:scale-110"
-                    style={{ background: c, borderColor: newTagColor === c ? '#000' : 'transparent' }}
-                  />
-                ))}
-              </div>
-              <Button size="sm" type="submit" className="w-full h-7 text-xs" disabled={!newTagName}>
-                Criar
+        <div className="flex-1 overflow-y-auto p-3 space-y-5">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Segmentos salvos</p>
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setShowSaveSegment((current) => !current)}>
+                <Save className="size-3" />
+                Salvar
               </Button>
-            </form>
-          )}
+            </div>
+            <button
+              onClick={resetFilters}
+              className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors ${activeSegmentId === null ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-accent'}`}
+            >
+              Todos os contatos
+            </button>
+            {segments.map((segment) => (
+              <div key={segment.id} className="flex items-center gap-1">
+                <button
+                  onClick={() => applySegmentFilters(segment.filters, segment.id)}
+                  className={`flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors ${activeSegmentId === segment.id ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-accent'}`}
+                >
+                  <Layers3 className="size-3.5 shrink-0" />
+                  <span className="truncate">{segment.name}</span>
+                </button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-7 shrink-0 text-muted-foreground"
+                  onClick={() => void handleDeleteSegment(segment.id)}
+                  title="Excluir segmento"
+                >
+                  <X className="size-3.5" />
+                </Button>
+              </div>
+            ))}
+            {showSaveSegment && (
+              <form onSubmit={handleSaveSegment} className="rounded-xl border border-border/70 bg-background p-2 space-y-2">
+                <Input
+                  placeholder="Nome da segmentação"
+                  value={segmentName}
+                  onChange={(e) => setSegmentName(e.target.value)}
+                  className="h-8 text-xs"
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" type="submit" className="h-7 flex-1 text-xs" disabled={!segmentName.trim()}>
+                    Salvar atual
+                  </Button>
+                  <Button size="sm" type="button" variant="ghost" className="h-7 text-xs" onClick={() => setShowSaveSegment(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filtrar por tags</p>
+            <div className="space-y-1">
+              {tags.map((tag) => {
+                const active = selectedTagIds.includes(tag.id);
+                return (
+                  <button
+                    key={tag.id}
+                    onClick={() => toggleTagFilter(tag.id)}
+                    className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors ${active ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-accent'}`}
+                  >
+                    <span className="size-2 rounded-full" style={{ background: tag.color }} />
+                    {tag.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <button
+              onClick={() => setShowCreateTag((v) => !v)}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent border border-dashed border-border"
+            >
+              <Plus className="size-3" /> Nova tag
+            </button>
+            {showCreateTag && (
+              <form onSubmit={handleCreateTag} className="space-y-2">
+                <Input
+                  placeholder="Nome da tag"
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  className="text-xs h-8"
+                />
+                <div className="flex gap-1 flex-wrap">
+                  {COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setNewTagColor(c)}
+                      className="size-5 rounded-full border-2 transition-transform hover:scale-110"
+                      style={{ background: c, borderColor: newTagColor === c ? '#000' : 'transparent' }}
+                    />
+                  ))}
+                </div>
+                <Button size="sm" type="submit" className="w-full h-7 text-xs" disabled={!newTagName}>
+                  Criar
+                </Button>
+              </form>
+            )}
+          </div>
         </div>
       </aside>
 
-      {/* Lista principal */}
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="border-b border-border/70 px-6 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 flex-1">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar por nome ou telefone"
-                className="pl-9"
-              />
+        <div className="border-b border-border/70 px-6 py-4 flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setActiveSegmentId(null);
+                  }}
+                  placeholder="Buscar por nome, telefone, email ou empresa"
+                  className="pl-9"
+                />
+              </div>
+              <span className="text-sm text-muted-foreground">{contacts.length} contato{contacts.length !== 1 ? 's' : ''}</span>
             </div>
-            <span className="text-sm text-muted-foreground">{contacts.length} contato{contacts.length !== 1 ? 's' : ''}</span>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => { setShowImport((v) => !v); setShowCreate(false); }}
+              >
+                <Upload className="size-4" />
+                Importar CSV
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => { setShowCreate((v) => !v); setShowImport(false); }}
+              >
+                <UserPlus className="size-4" />
+                Novo contato
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => { setShowImport((v) => !v); setShowCreate(false); }}
+
+          <div className="grid gap-3 xl:grid-cols-[1fr_1fr_1fr_auto]">
+            <select
+              value={selectedPipelineId}
+              onChange={(e) => {
+                setSelectedPipelineId(e.target.value);
+                setSelectedStageId('');
+                setActiveSegmentId(null);
+              }}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
             >
-              <Upload className="size-4" />
-              Importar CSV
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => { setShowCreate((v) => !v); setShowImport(false); }}
+              <option value="">Todos os pipelines</option>
+              {pipelines.map((pipeline) => (
+                <option key={pipeline.id} value={pipeline.id}>
+                  {pipeline.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={selectedStageId}
+              onChange={(e) => {
+                setSelectedStageId(e.target.value);
+                setActiveSegmentId(null);
+              }}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              disabled={!selectedPipeline}
             >
-              <UserPlus className="size-4" />
-              Novo contato
+              <option value="">Todos os stages</option>
+              {selectedPipeline?.stages.map((stage) => (
+                <option key={stage.id} value={stage.id}>
+                  {stage.name}
+                </option>
+              )) ?? null}
+            </select>
+            <select
+              value={conversationStatus}
+              onChange={(e) => {
+                setConversationStatus(e.target.value as ContactFilters['conversationStatus'] | '');
+                setActiveSegmentId(null);
+              }}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Qualquer status de conversa</option>
+              <option value="open">Com conversa aberta</option>
+              <option value="closed">Com conversa encerrada</option>
+              <option value="none">Sem conversa</option>
+            </select>
+            <Button variant="ghost" onClick={resetFilters}>
+              Limpar filtros
             </Button>
           </div>
+
+          {selectedContactIds.length > 0 && (
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-foreground">
+                  {selectedContactIds.length} contato{selectedContactIds.length !== 1 ? 's' : ''} selecionado{selectedContactIds.length !== 1 ? 's' : ''}
+                </p>
+                <Button size="sm" variant="ghost" onClick={() => setSelectedContactIds([])}>
+                  Limpar seleção
+                </Button>
+              </div>
+              <div className="grid gap-3 xl:grid-cols-3">
+                <select
+                  value={bulkAddTagId}
+                  onChange={(e) => setBulkAddTagId(e.target.value)}
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">Adicionar tag</option>
+                  {tags.map((tag) => (
+                    <option key={tag.id} value={tag.id}>
+                      {tag.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={bulkRemoveTagId}
+                  onChange={(e) => setBulkRemoveTagId(e.target.value)}
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">Remover tag</option>
+                  {tags.map((tag) => (
+                    <option key={tag.id} value={tag.id}>
+                      {tag.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={bulkOwnerId}
+                  onChange={(e) => setBulkOwnerId(e.target.value)}
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">Atribuir owner</option>
+                  {agents
+                    .filter((agent) => agent.isActive)
+                    .map((agent) => (
+                      <option key={agent.id} value={agent.id}>
+                        {agent.name}
+                      </option>
+                    ))}
+                </select>
+                <select
+                  value={bulkLifecycleStage}
+                  onChange={(e) => setBulkLifecycleStage(e.target.value)}
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">Alterar lifecycle</option>
+                  {LIFECYCLE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={bulkPipelineId}
+                  onChange={(e) => {
+                    setBulkPipelineId(e.target.value);
+                    setBulkStageId('');
+                  }}
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">Mover pipeline</option>
+                  {pipelines.map((pipeline) => (
+                    <option key={pipeline.id} value={pipeline.id}>
+                      {pipeline.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={bulkStageId}
+                  onChange={(e) => setBulkStageId(e.target.value)}
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  disabled={!bulkPipeline}
+                >
+                  <option value="">Mover stage</option>
+                  {bulkPipeline?.stages.map((stage) => (
+                    <option key={stage.id} value={stage.id}>
+                      {stage.name}
+                    </option>
+                  )) ?? null}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => void handleApplyBulkActions()}
+                  disabled={
+                    applyingBulk ||
+                    (
+                      !bulkAddTagId &&
+                      !bulkRemoveTagId &&
+                      !bulkOwnerId &&
+                      !bulkLifecycleStage &&
+                      !bulkStageId
+                    )
+                  }
+                >
+                  {applyingBulk ? 'Aplicando...' : 'Aplicar em lote'}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setSelectedContactIds(contacts.map((contact) => contact.id))}>
+                  Selecionar resultado atual
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
@@ -848,6 +1197,7 @@ export function ContactsPage() {
           {isLoading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex items-start gap-4 rounded-xl border border-border/70 p-3">
+                <Skeleton className="size-4 rounded-sm" />
                 <Skeleton className="size-10 rounded-full" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-1/3" />
@@ -869,10 +1219,12 @@ export function ContactsPage() {
                 agents={agents}
                 tags={tags}
                 contacts={contacts}
+                selected={selectedContactIds.includes(contact.id)}
                 onDelete={() => handleDeleteContact(contact.id)}
                 onTagAdded={() => void mutate()}
                 onTagRemoved={() => void mutate()}
                 onUpdated={() => void mutate()}
+                onToggleSelected={() => toggleSelectedContact(contact.id)}
               />
             ))
           )}

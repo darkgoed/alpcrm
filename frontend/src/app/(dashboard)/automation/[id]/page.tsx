@@ -15,7 +15,8 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { useFlow, updateFlow, toggleFlow, type FlowNode } from '@/hooks/useAutomation';
+import { useFlow, updateFlow, toggleFlow, type Flow, type FlowNode } from '@/hooks/useAutomation';
+import { usePipelines, useTags } from '@/hooks/useContacts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -120,6 +121,10 @@ function TriggerChip({ triggerType, triggerValue }: { triggerType: string; trigg
             ? `Palavra-chave: "${triggerValue || '—'}"`
             : triggerType === 'new_conversation'
               ? 'Nova conversa'
+              : triggerType === 'tag_applied'
+                ? 'Tag aplicada'
+                : triggerType === 'stage_changed'
+                  ? 'Mudança de stage'
               : 'Toda mensagem'}
         </p>
       </div>
@@ -220,13 +225,18 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
   const { flow, mutate } = useFlow(id);
 
   const [name, setName] = useState('');
-  const [triggerType, setTriggerType] = useState<'new_conversation' | 'keyword' | 'always'>('new_conversation');
+  const [triggerType, setTriggerType] = useState<Flow['triggerType']>('new_conversation');
   const [triggerValue, setTriggerValue] = useState('');
+  const [selectedTagId, setSelectedTagId] = useState('');
+  const [selectedPipelineId, setSelectedPipelineId] = useState('');
+  const [selectedStageId, setSelectedStageId] = useState('');
   const [nodes, setNodes] = useState<NodeDraft[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [savedFeedback, setSavedFeedback] = useState(false);
+  const { tags } = useTags();
+  const { pipelines } = usePipelines();
 
   // Hydrate from fetched flow
   useEffect(() => {
@@ -234,6 +244,8 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
     setName(flow.name);
     setTriggerType(flow.triggerType);
     setTriggerValue(flow.triggerValue ?? '');
+    setSelectedTagId(flow.triggerType === 'tag_applied' ? flow.triggerValue ?? '' : '');
+    setSelectedStageId(flow.triggerType === 'stage_changed' ? flow.triggerValue ?? '' : '');
     setNodes(
       flow.nodes.map((n) => ({
         type: n.type === 'delay' ? 'delay' : 'message',
@@ -242,6 +254,29 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
       })),
     );
   }, [flow]);
+
+  useEffect(() => {
+    if (triggerType !== 'stage_changed') {
+      setSelectedPipelineId('');
+      return;
+    }
+
+    const stageId =
+      selectedStageId ||
+      (flow?.triggerType === 'stage_changed' ? flow.triggerValue ?? '' : '');
+    if (!stageId) return;
+
+    const ownerPipeline = pipelines.find((pipeline) =>
+      pipeline.stages.some((stage) => stage.id === stageId),
+    );
+
+    if (ownerPipeline) {
+      setSelectedPipelineId(ownerPipeline.id);
+    }
+  }, [flow?.triggerType, flow?.triggerValue, pipelines, selectedStageId, triggerType]);
+
+  const selectedPipeline =
+    pipelines.find((pipeline) => pipeline.id === selectedPipelineId) ?? null;
 
   function addNode(type: NodeDraft['type']) {
     setNodes((current) => [
@@ -269,7 +304,14 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
       await updateFlow(id, {
         name: name.trim(),
         triggerType,
-        triggerValue: triggerType === 'keyword' ? triggerValue.trim() : undefined,
+        triggerValue:
+          triggerType === 'keyword'
+            ? triggerValue.trim()
+            : triggerType === 'tag_applied'
+              ? selectedTagId || undefined
+              : triggerType === 'stage_changed'
+                ? selectedStageId || undefined
+                : undefined,
         nodes,
       });
       await mutate();
@@ -323,7 +365,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
         />
 
         {/* Trigger */}
-        <Select value={triggerType} onValueChange={(v) => setTriggerType(v as typeof triggerType)}>
+        <Select value={triggerType} onValueChange={(v) => setTriggerType(v as Flow['triggerType'])}>
           <SelectTrigger className="h-8 w-44 text-xs">
             <SelectValue />
           </SelectTrigger>
@@ -331,6 +373,8 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
             <SelectItem value="new_conversation">Nova conversa</SelectItem>
             <SelectItem value="keyword">Palavra-chave</SelectItem>
             <SelectItem value="always">Toda mensagem</SelectItem>
+            <SelectItem value="tag_applied">Tag aplicada</SelectItem>
+            <SelectItem value="stage_changed">Mudança de stage</SelectItem>
           </SelectContent>
         </Select>
 
@@ -341,6 +385,52 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
             placeholder="Ex: oi, catálogo"
             className="h-8 w-36 text-xs"
           />
+        )}
+        {triggerType === 'tag_applied' && (
+          <select
+            value={selectedTagId}
+            onChange={(event) => setSelectedTagId(event.target.value)}
+            className="h-8 w-40 rounded-md border border-input bg-background px-3 text-xs"
+          >
+            <option value="">Selecione a tag</option>
+            {tags.map((tag) => (
+              <option key={tag.id} value={tag.id}>
+                {tag.name}
+              </option>
+            ))}
+          </select>
+        )}
+        {triggerType === 'stage_changed' && (
+          <>
+            <select
+              value={selectedPipelineId}
+              onChange={(event) => {
+                setSelectedPipelineId(event.target.value);
+                setSelectedStageId('');
+              }}
+              className="h-8 w-40 rounded-md border border-input bg-background px-3 text-xs"
+            >
+              <option value="">Selecione o pipeline</option>
+              {pipelines.map((pipeline) => (
+                <option key={pipeline.id} value={pipeline.id}>
+                  {pipeline.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={selectedStageId}
+              onChange={(event) => setSelectedStageId(event.target.value)}
+              className="h-8 w-40 rounded-md border border-input bg-background px-3 text-xs"
+              disabled={!selectedPipeline}
+            >
+              <option value="">Selecione o stage</option>
+              {selectedPipeline?.stages.map((stage) => (
+                <option key={stage.id} value={stage.id}>
+                  {stage.name}
+                </option>
+              )) ?? null}
+            </select>
+          </>
         )}
 
         <div className="ml-auto flex items-center gap-2">

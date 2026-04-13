@@ -457,7 +457,7 @@ export class ContactsService {
 
     await this.prisma.$transaction(async (tx) => {
       if (shouldUpdateOwner || shouldUpdateLifecycle) {
-        const contactData: Prisma.ContactUpdateManyMutationInput = {};
+        const contactData: Prisma.ContactUncheckedUpdateManyInput = {};
 
         if (shouldUpdateOwner) {
           contactData.ownerId = shouldClearOwner ? null : owner?.id ?? null;
@@ -670,13 +670,30 @@ export class ContactsService {
   }
 
   private normalizeSegmentFilters(dto: CreateSavedSegmentDto) {
-    return {
-      search: dto.search?.trim() || undefined,
-      tagIds: Array.from(new Set(dto.tagIds ?? [])).filter(Boolean),
-      pipelineId: dto.pipelineId ?? undefined,
-      stageId: dto.stageId ?? undefined,
-      conversationStatus: dto.conversationStatus ?? undefined,
-    } as Prisma.InputJsonObject;
+    const filters: Record<string, Prisma.InputJsonValue> = {};
+
+    if (dto.search?.trim()) {
+      filters.search = dto.search.trim();
+    }
+
+    const tagIds = Array.from(new Set(dto.tagIds ?? [])).filter(Boolean);
+    if (tagIds.length > 0) {
+      filters.tagIds = tagIds;
+    }
+
+    if (dto.pipelineId) {
+      filters.pipelineId = dto.pipelineId;
+    }
+
+    if (dto.stageId) {
+      filters.stageId = dto.stageId;
+    }
+
+    if (dto.conversationStatus) {
+      filters.conversationStatus = dto.conversationStatus;
+    }
+
+    return filters as Prisma.InputJsonObject;
   }
 
   private isValidE164(phone: string): boolean {
