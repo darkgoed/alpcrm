@@ -162,11 +162,11 @@ Meta: dar ao operador um CRM realmente utilizável no dia a dia.
 
 ### 2.7 — Opt-in e compliance de outbound
 
-- [ ] Modelar consentimento/opt-in por contato
-- [ ] Registrar origem do consentimento
-- [ ] Registrar data e evidência
-- [ ] Implementar opt-out
-- [ ] Bloquear outbound quando política exigir
+- [x] Modelar consentimento/opt-in por contato
+- [x] Registrar origem do consentimento
+- [x] Registrar data e evidência
+- [x] Implementar opt-out
+- [x] Bloquear outbound quando política exigir
 
 Critério de saída da fase:
 
