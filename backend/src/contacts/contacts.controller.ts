@@ -18,7 +18,11 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ContactsService } from './contacts.service';
-import { CreateContactDto, UpdateContactDto, AddTagDto } from './dto/contact.dto';
+import {
+  CreateContactDto,
+  UpdateContactDto,
+  AddTagDto,
+} from './dto/contact.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contacts')
@@ -35,7 +39,12 @@ export class ContactsController {
     @Query('stageId') stageId?: string,
     @Query('pipelineId') pipelineId?: string,
   ) {
-    return this.contactsService.findAll(user.workspaceId, { search, tagId, stageId, pipelineId });
+    return this.contactsService.findAll(user.workspaceId, {
+      search,
+      tagId,
+      stageId,
+      pipelineId,
+    });
   }
 
   @Get(':id')
@@ -49,7 +58,11 @@ export class ContactsController {
   }
 
   @Patch(':id')
-  update(@CurrentUser() user: any, @Param('id') id: string, @Body() dto: UpdateContactDto) {
+  update(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateContactDto,
+  ) {
     return this.contactsService.update(user.workspaceId, id, dto);
   }
 
@@ -65,13 +78,17 @@ export class ContactsController {
   @UseInterceptors(FileInterceptor('file'))
   async importPreview(@CurrentUser() user: any, @UploadedFile() file: any) {
     if (!file?.buffer) throw new BadRequestException('Arquivo CSV obrigatório');
-    return this.contactsService.previewImport(user.workspaceId, file.buffer as Buffer);
+    return this.contactsService.previewImport(
+      user.workspaceId,
+      file.buffer as Buffer,
+    );
   }
 
   @Post('import/confirm')
   async importConfirm(
     @CurrentUser() user: any,
-    @Body() dto: { rows: Array<{ phone: string; name?: string; email?: string }> },
+    @Body()
+    dto: { rows: Array<{ phone: string; name?: string; email?: string }> },
   ) {
     return this.contactsService.queueImport(user.workspaceId, dto.rows ?? []);
   }
@@ -79,13 +96,21 @@ export class ContactsController {
   // ─── Tags por contato ─────────────────────────────────────────────────────────
 
   @Post(':id/tags')
-  addTag(@CurrentUser() user: any, @Param('id') id: string, @Body() dto: AddTagDto) {
+  addTag(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: AddTagDto,
+  ) {
     return this.contactsService.addTag(user.workspaceId, id, dto.tagId);
   }
 
   @Delete(':id/tags/:tagId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  removeTag(@CurrentUser() user: any, @Param('id') id: string, @Param('tagId') tagId: string) {
+  removeTag(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Param('tagId') tagId: string,
+  ) {
     return this.contactsService.removeTag(user.workspaceId, id, tagId);
   }
 

@@ -24,7 +24,11 @@ export class SchedulerService {
 
   // ─── Agendar follow-ups para uma conversa ───────────────────────────────────
 
-  async scheduleFollowUps(conversationId: string, workspaceId: string, contactId: string) {
+  async scheduleFollowUps(
+    conversationId: string,
+    workspaceId: string,
+    contactId: string,
+  ) {
     const rules = await this.prisma.followUpRule.findMany({
       where: { workspaceId, isActive: true },
     });
@@ -56,14 +60,18 @@ export class SchedulerService {
         },
       );
 
-      this.logger.log(`[FollowUp] Agendado para conversa ${conversationId} em ${rule.delayHours}h`);
+      this.logger.log(
+        `[FollowUp] Agendado para conversa ${conversationId} em ${rule.delayHours}h`,
+      );
     }
   }
 
   // ─── Cancelar follow-ups (contato respondeu) ────────────────────────────────
 
   async cancelFollowUps(conversationId: string, workspaceId: string) {
-    const rules = await this.prisma.followUpRule.findMany({ where: { workspaceId } });
+    const rules = await this.prisma.followUpRule.findMany({
+      where: { workspaceId },
+    });
 
     for (const rule of rules) {
       const jobId = `follow-up:${conversationId}:${rule.id}`;
@@ -74,7 +82,9 @@ export class SchedulerService {
   // ─── Agendar auto-close ──────────────────────────────────────────────────────
 
   async scheduleAutoClose(conversationId: string, workspaceId: string) {
-    const settings = await this.prisma.workspaceSettings.findUnique({ where: { workspaceId } });
+    const settings = await this.prisma.workspaceSettings.findUnique({
+      where: { workspaceId },
+    });
     if (!settings?.autoCloseHours) return;
 
     const delayMs = settings.autoCloseHours * 60 * 60 * 1000;
@@ -92,7 +102,9 @@ export class SchedulerService {
   }
 
   async cancelAutoClose(conversationId: string) {
-    await this.autoCloseQueue.remove(`auto-close:${conversationId}`).catch(() => null);
+    await this.autoCloseQueue
+      .remove(`auto-close:${conversationId}`)
+      .catch(() => null);
   }
 
   // ─── Delay de flow ───────────────────────────────────────────────────────────
@@ -106,7 +118,12 @@ export class SchedulerService {
   ) {
     await this.flowDelayQueue.add(
       'flow-delay',
-      { nextNodeId, conversationId, contactId, flowId } satisfies FlowDelayJobData,
+      {
+        nextNodeId,
+        conversationId,
+        contactId,
+        flowId,
+      } satisfies FlowDelayJobData,
       { delay: delayMs, attempts: 2 },
     );
   }

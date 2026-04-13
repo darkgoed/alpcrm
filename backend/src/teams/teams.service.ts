@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
@@ -43,7 +47,8 @@ export class TeamsService {
     const exists = await this.prisma.team.findFirst({
       where: { name: dto.name, workspaceId },
     });
-    if (exists) throw new ConflictException('Já existe uma equipe com esse nome');
+    if (exists)
+      throw new ConflictException('Já existe uma equipe com esse nome');
 
     return this.prisma.team.create({
       data: {
@@ -81,8 +86,11 @@ export class TeamsService {
   async addMember(teamId: string, userId: string, workspaceId: string) {
     await this.assertExists(teamId, workspaceId);
 
-    const user = await this.prisma.user.findFirst({ where: { id: userId, workspaceId } });
-    if (!user) throw new NotFoundException('Usuário não encontrado neste workspace');
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, workspaceId },
+    });
+    if (!user)
+      throw new NotFoundException('Usuário não encontrado neste workspace');
 
     await this.prisma.teamUser.upsert({
       where: { teamId_userId: { teamId, userId } },
@@ -129,7 +137,9 @@ export class TeamsService {
   // ─── Helper ──────────────────────────────────────────────────────────────────
 
   private async assertExists(id: string, workspaceId: string) {
-    const team = await this.prisma.team.findFirst({ where: { id, workspaceId } });
+    const team = await this.prisma.team.findFirst({
+      where: { id, workspaceId },
+    });
     if (!team) throw new NotFoundException('Equipe não encontrada');
     return team;
   }

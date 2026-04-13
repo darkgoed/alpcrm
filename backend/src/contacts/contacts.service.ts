@@ -1,8 +1,16 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateContactDto, UpdateContactDto, ContactFilterDto } from './dto/contact.dto';
+import {
+  CreateContactDto,
+  UpdateContactDto,
+  ContactFilterDto,
+} from './dto/contact.dto';
 import { CONTACT_IMPORT_QUEUE } from '../queues/queues.constants';
 
 @Injectable()
@@ -62,7 +70,12 @@ export class ContactsService {
         conversations: {
           orderBy: { createdAt: 'desc' },
           take: 5,
-          select: { id: true, status: true, createdAt: true, lastMessageAt: true },
+          select: {
+            id: true,
+            status: true,
+            createdAt: true,
+            lastMessageAt: true,
+          },
         },
       },
     });
@@ -76,7 +89,8 @@ export class ContactsService {
     const existing = await this.prisma.contact.findUnique({
       where: { workspaceId_phone: { workspaceId, phone: dto.phone } },
     });
-    if (existing) throw new ConflictException('Contato com esse telefone já existe');
+    if (existing)
+      throw new ConflictException('Contato com esse telefone já existe');
 
     const { tagIds, ...rest } = dto;
 
@@ -97,7 +111,9 @@ export class ContactsService {
   // ─── Atualizar contato ────────────────────────────────────────────────────────
 
   async update(workspaceId: string, id: string, dto: UpdateContactDto) {
-    const contact = await this.prisma.contact.findFirst({ where: { id, workspaceId } });
+    const contact = await this.prisma.contact.findFirst({
+      where: { id, workspaceId },
+    });
     if (!contact) throw new NotFoundException('Contato não encontrado');
 
     return this.prisma.contact.update({ where: { id }, data: dto });
@@ -106,7 +122,9 @@ export class ContactsService {
   // ─── Excluir contato ──────────────────────────────────────────────────────────
 
   async remove(workspaceId: string, id: string) {
-    const contact = await this.prisma.contact.findFirst({ where: { id, workspaceId } });
+    const contact = await this.prisma.contact.findFirst({
+      where: { id, workspaceId },
+    });
     if (!contact) throw new NotFoundException('Contato não encontrado');
 
     await this.prisma.contact.delete({ where: { id } });
@@ -115,10 +133,14 @@ export class ContactsService {
   // ─── Tags ─────────────────────────────────────────────────────────────────────
 
   async addTag(workspaceId: string, contactId: string, tagId: string) {
-    const contact = await this.prisma.contact.findFirst({ where: { id: contactId, workspaceId } });
+    const contact = await this.prisma.contact.findFirst({
+      where: { id: contactId, workspaceId },
+    });
     if (!contact) throw new NotFoundException('Contato não encontrado');
 
-    const tag = await this.prisma.tag.findFirst({ where: { id: tagId, workspaceId } });
+    const tag = await this.prisma.tag.findFirst({
+      where: { id: tagId, workspaceId },
+    });
     if (!tag) throw new NotFoundException('Tag não encontrada');
 
     await this.prisma.contactTag.upsert({
@@ -129,7 +151,9 @@ export class ContactsService {
   }
 
   async removeTag(workspaceId: string, contactId: string, tagId: string) {
-    const contact = await this.prisma.contact.findFirst({ where: { id: contactId, workspaceId } });
+    const contact = await this.prisma.contact.findFirst({
+      where: { id: contactId, workspaceId },
+    });
     if (!contact) throw new NotFoundException('Contato não encontrado');
 
     await this.prisma.contactTag.deleteMany({ where: { contactId, tagId } });
@@ -138,14 +162,21 @@ export class ContactsService {
   // ─── CRUD de Tags do workspace ────────────────────────────────────────────────
 
   async listTags(workspaceId: string) {
-    return this.prisma.tag.findMany({ where: { workspaceId }, orderBy: { name: 'asc' } });
+    return this.prisma.tag.findMany({
+      where: { workspaceId },
+      orderBy: { name: 'asc' },
+    });
   }
 
   async createTag(workspaceId: string, name: string, color?: string) {
-    const existing = await this.prisma.tag.findUnique({ where: { workspaceId_name: { workspaceId, name } } });
+    const existing = await this.prisma.tag.findUnique({
+      where: { workspaceId_name: { workspaceId, name } },
+    });
     if (existing) throw new ConflictException('Tag com esse nome já existe');
 
-    return this.prisma.tag.create({ data: { workspaceId, name, color: color ?? '#6366f1' } });
+    return this.prisma.tag.create({
+      data: { workspaceId, name, color: color ?? '#6366f1' },
+    });
   }
 
   async deleteTag(workspaceId: string, id: string) {
@@ -159,7 +190,8 @@ export class ContactsService {
   async previewImport(workspaceId: string, buffer: Buffer) {
     const rows = this.parseCsv(buffer);
 
-    const candidates: Array<{ phone: string; name?: string; email?: string }> = [];
+    const candidates: Array<{ phone: string; name?: string; email?: string }> =
+      [];
     const invalid: Array<{ row: number; phone: string; reason: string }> = [];
 
     rows.forEach((row, i) => {
@@ -233,13 +265,19 @@ export class ContactsService {
   }
 
   private parseCsv(buffer: Buffer): Array<Record<string, string>> {
-    const text = buffer.toString('utf-8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const text = buffer
+      .toString('utf-8')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n');
     const lines = text.split('\n').filter((l) => l.trim());
     if (lines.length < 2) return [];
 
     const delimiter = lines[0].includes(';') ? ';' : ',';
     const headers = this.splitCsvLine(lines[0], delimiter).map((h) =>
-      h.trim().toLowerCase().replace(/^["']|["']$/g, ''),
+      h
+        .trim()
+        .toLowerCase()
+        .replace(/^["']|["']$/g, ''),
     );
 
     return lines.slice(1).map((line) => {

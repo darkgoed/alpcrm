@@ -28,7 +28,12 @@ export class FlowExecutorService {
     });
 
     for (const flow of flows) {
-      const matches = this.checkTrigger(flow.triggerType, flow.triggerValue, incomingText, isNewConversation);
+      const matches = this.checkTrigger(
+        flow.triggerType,
+        flow.triggerValue,
+        incomingText,
+        isNewConversation,
+      );
       if (!matches) continue;
 
       const existingState = await this.prisma.contactFlowState.findUnique({
@@ -42,7 +47,12 @@ export class FlowExecutorService {
 
       await this.prisma.contactFlowState.upsert({
         where: { contactId_flowId: { contactId, flowId: flow.id } },
-        create: { contactId, flowId: flow.id, currentNodeId: firstNode.id, isActive: true },
+        create: {
+          contactId,
+          flowId: flow.id,
+          currentNodeId: firstNode.id,
+          isActive: true,
+        },
         update: { currentNodeId: firstNode.id, isActive: true },
       });
 
@@ -51,7 +61,13 @@ export class FlowExecutorService {
         data: { isBotActive: true },
       });
 
-      await this.executeNode(firstNode.id, conversationId, contactId, flow.id, sendFn);
+      await this.executeNode(
+        firstNode.id,
+        conversationId,
+        contactId,
+        flow.id,
+        sendFn,
+      );
     }
   }
 
@@ -71,14 +87,24 @@ export class FlowExecutorService {
 
     // Recria sendFn usando dados da conta WhatsApp
     const sendFn = async (accountId: string, to: string, text: string) => {
-      const account = await this.prisma.whatsappAccount.findUnique({ where: { id: accountId } });
+      const account = await this.prisma.whatsappAccount.findUnique({
+        where: { id: accountId },
+      });
       if (!account) throw new Error('Conta WhatsApp não encontrada');
 
       const url = `https://graph.facebook.com/v19.0/${account.metaAccountId}/messages`;
       const response = await fetch(url, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${account.token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body: text } }),
+        headers: {
+          Authorization: `Bearer ${account.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to,
+          type: 'text',
+          text: { body: text },
+        }),
       });
       const data: any = await response.json();
       return data.messages?.[0]?.id ?? '';
@@ -96,7 +122,9 @@ export class FlowExecutorService {
     flowId: string,
     sendFn: (accountId: string, to: string, text: string) => Promise<string>,
   ) {
-    const node = await this.prisma.flowNode.findUnique({ where: { id: nodeId } });
+    const node = await this.prisma.flowNode.findUnique({
+      where: { id: nodeId },
+    });
     if (!node) return;
 
     const conversation = await this.prisma.conversation.findUnique({
@@ -142,7 +170,13 @@ export class FlowExecutorService {
           where: { contactId_flowId: { contactId, flowId } },
           data: { currentNodeId: node.nextId },
         });
-        await this.executeNode(node.nextId, conversationId, contactId, flowId, sendFn);
+        await this.executeNode(
+          node.nextId,
+          conversationId,
+          contactId,
+          flowId,
+          sendFn,
+        );
       } else {
         await this.completeFlow(contactId, flowId, conversationId);
       }
@@ -156,13 +190,28 @@ export class FlowExecutorService {
 
       if (node.nextId) {
         // Usa BullMQ para delay confiável (sobrevive a restart)
-        await this.scheduler.scheduleFlowDelay(ms, node.nextId, conversationId, contactId, flowId);
+        await this.scheduler.scheduleFlowDelay(
+          ms,
+          node.nextId,
+          conversationId,
+          contactId,
+          flowId,
+        );
       } else {
-        setTimeout(() => this.completeFlow(contactId, flowId, conversationId), ms);
+        setTimeout(
+          () => this.completeFlow(contactId, flowId, conversationId),
+          ms,
+        );
       }
     } else {
       if (node.nextId) {
-        await this.executeNode(node.nextId, conversationId, contactId, flowId, sendFn);
+        await this.executeNode(
+          node.nextId,
+          conversationId,
+          contactId,
+          flowId,
+          sendFn,
+        );
       } else {
         await this.completeFlow(contactId, flowId, conversationId);
       }
@@ -172,7 +221,9 @@ export class FlowExecutorService {
   // ─── Parar bot (operador respondeu) ─────────────────────────────────────────
 
   async stopBotForConversation(conversationId: string, contactId: string) {
-    const conversation = await this.prisma.conversation.findUnique({ where: { id: conversationId } });
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+    });
     if (!conversation?.isBotActive) return;
 
     await this.prisma.conversation.update({
@@ -185,12 +236,18 @@ export class FlowExecutorService {
       data: { isActive: false },
     });
 
-    this.logger.log(`[Bot] Parado para conversa ${conversationId} — operador assumiu`);
+    this.logger.log(
+      `[Bot] Parado para conversa ${conversationId} — operador assumiu`,
+    );
   }
 
   // ─── Completar flow ───────────────────────────────────────────────────────────
 
-  private async completeFlow(contactId: string, flowId: string, conversationId: string) {
+  private async completeFlow(
+    contactId: string,
+    flowId: string,
+    conversationId: string,
+  ) {
     await this.prisma.contactFlowState.update({
       where: { contactId_flowId: { contactId, flowId } },
       data: { isActive: false, currentNodeId: null },

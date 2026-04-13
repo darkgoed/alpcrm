@@ -1,0 +1,1 @@
+{"nodes": [{"id": "update_workspace_settings_dto", "label": "UpdateWorkspaceSettingsDto", "file_type": "code", "source_file": "backend/src/workspaces/dto/workspace-settings.dto.ts", "source_location": "lines 1-20", "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

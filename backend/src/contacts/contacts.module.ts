@@ -7,7 +7,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { CONTACT_IMPORT_QUEUE } from '../queues/queues.constants';
 
 @Module({
-  imports: [PrismaModule, BullModule.registerQueue({ name: CONTACT_IMPORT_QUEUE })],
+  imports: [
+    PrismaModule,
+    BullModule.registerQueue({ name: CONTACT_IMPORT_QUEUE }),
+  ],
   providers: [ContactsService, ContactImportProcessor],
   controllers: [ContactsController],
   exports: [ContactsService],

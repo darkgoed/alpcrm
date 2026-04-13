@@ -9,7 +9,12 @@ import { FollowUpProcessor } from '../queues/follow-up.processor';
 import { QueuesModule } from '../queues/queues.module';
 
 @Module({
-  imports: [GatewayModule, forwardRef(() => TeamsModule), AutomationModule, QueuesModule],
+  imports: [
+    GatewayModule,
+    forwardRef(() => TeamsModule),
+    AutomationModule,
+    QueuesModule,
+  ],
   providers: [WhatsappService, WebhookSignatureGuard, FollowUpProcessor],
   controllers: [WhatsappController],
   exports: [WhatsappService],

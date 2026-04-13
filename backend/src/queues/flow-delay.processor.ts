@@ -22,6 +22,11 @@ export class FlowDelayProcessor extends WorkerHost {
   async process(job: Job<FlowDelayJobData>) {
     const { nextNodeId, conversationId, contactId, flowId } = job.data;
     this.logger.log(`[FlowDelay] Executando nó ${nextNodeId} após delay`);
-    await this.flowExecutor.executeNodeById(nextNodeId, conversationId, contactId, flowId);
+    await this.flowExecutor.executeNodeById(
+      nextNodeId,
+      conversationId,
+      contactId,
+      flowId,
+    );
   }
 }

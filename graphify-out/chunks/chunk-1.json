@@ -1,0 +1,1075 @@
+{
+  "nodes": [
+    {
+      "id": "operational_agent_guide",
+      "label": "Operational Agent Guide",
+      "file_type": "document",
+      "source_file": "AGENTS.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tenant_isolation_rules",
+      "label": "Tenant Isolation Rules",
+      "file_type": "document",
+      "source_file": "AGENTS.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "minimal_context_editing",
+      "label": "Minimal Context Editing",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "production_roadmap",
+      "label": "Production Roadmap",
+      "file_type": "document",
+      "source_file": "ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "roadmap_cloud_api_completeness",
+      "label": "Cloud API Completeness",
+      "file_type": "document",
+      "source_file": "ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "roadmap_inbox_crm_operational",
+      "label": "Inbox and CRM Operations",
+      "file_type": "document",
+      "source_file": "ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "roadmap_security_hardening",
+      "label": "Security Hardening",
+      "file_type": "document",
+      "source_file": "ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "roadmap_messaging_reliability",
+      "label": "Messaging Reliability",
+      "file_type": "document",
+      "source_file": "ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "roadmap_observability_testing",
+      "label": "Observability, Tests and Operation",
+      "file_type": "document",
+      "source_file": "ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "roadmap_scale_intelligence",
+      "label": "Scale and Intelligence",
+      "file_type": "document",
+      "source_file": "ROADMAP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "whatsapp_cloud_config",
+      "label": "WhatsApp Cloud Config",
+      "file_type": "document",
+      "source_file": "whatsapp-config.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "whatsapp_config_token_rotation",
+      "label": "Temporary Access Token",
+      "file_type": "document",
+      "source_file": "whatsapp-config.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "whatsapp_config_webhook_verification",
+      "label": "Webhook Verification Setup",
+      "file_type": "document",
+      "source_file": "whatsapp-config.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "app_module_domain_registration",
+      "label": "App Module Domain Wiring",
+      "file_type": "code",
+      "source_file": "backend/src/app.module.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "main_api_prefix_and_raw_body",
+      "label": "API Prefix and Raw Body",
+      "file_type": "code",
+      "source_file": "backend/src/main.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "auth_module_jwt_registration",
+      "label": "JWT Module Registration",
+      "file_type": "code",
+      "source_file": "backend/src/auth/auth.module.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "auth_service_workspace_bootstrap",
+      "label": "Workspace Bootstrap",
+      "file_type": "code",
+      "source_file": "backend/src/auth/auth.service.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "auth_service_token_signing",
+      "label": "Token Signing",
+      "file_type": "code",
+      "source_file": "backend/src/auth/auth.service.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "register_dto",
+      "label": "Register DTO",
+      "file_type": "code",
+      "source_file": "backend/src/auth/dto/register.dto.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "jwt_strategy_workspace_permissions_claims",
+      "label": "JWT Workspace and Permissions Claims",
+      "file_type": "code",
+      "source_file": "backend/src/auth/strategies/jwt.strategy.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "permissions_guard_permission_claims",
+      "label": "Permissions Guard",
+      "file_type": "code",
+      "source_file": "backend/src/common/guards/permissions.guard.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "webhook_signature_guard_hmac_validation",
+      "label": "Webhook HMAC Validation",
+      "file_type": "code",
+      "source_file": "backend/src/common/guards/webhook-signature.guard.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "automation_controller_workspace_scoped_flows",
+      "label": "Automation Flow Endpoints",
+      "file_type": "code",
+      "source_file": "backend/src/automation/automation.controller.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "flows_service_workspace_scoped_flow_crud",
+      "label": "Workspace Scoped Flow CRUD",
+      "file_type": "code",
+      "source_file": "backend/src/automation/flows.service.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "flow_executor_trigger_and_state",
+      "label": "Flow Trigger and State",
+      "file_type": "code",
+      "source_file": "backend/src/automation/flow-executor.service.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "flow_executor_message_and_delay_execution",
+      "label": "Message and Delay Execution",
+      "file_type": "code",
+      "source_file": "backend/src/automation/flow-executor.service.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "flow_executor_stop_bot_on_reply",
+      "label": "Stop Bot on Operator Reply",
+      "file_type": "code",
+      "source_file": "backend/src/automation/flow-executor.service.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "contacts_module",
+      "label": "Contacts Module",
+      "file_type": "code",
+      "source_file": "backend/src/contacts/contacts.module.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "contacts_controller_workspace_scoped_contacts",
+      "label": "Workspace Scoped Contacts",
+      "file_type": "code",
+      "source_file": "backend/src/contacts/contacts.controller.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "contacts_service_import_and_tagging",
+      "label": "Contact Import and Tagging",
+      "file_type": "code",
+      "source_file": "backend/src/contacts/contacts.service.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "create_contact_dto",
+      "label": "Create Contact DTO",
+      "file_type": "code",
+      "source_file": "backend/src/contacts/dto/contact.dto.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "update_contact_dto",
+      "label": "Update Contact DTO",
+      "file_type": "code",
+      "source_file": "backend/src/contacts/dto/contact.dto.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "add_tag_dto",
+      "label": "Add Tag DTO",
+      "file_type": "code",
+      "source_file": "backend/src/contacts/dto/contact.dto.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "contact_filter_dto",
+      "label": "Contact Filter DTO",
+      "file_type": "code",
+      "source_file": "backend/src/contacts/dto/contact.dto.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "conversations_controller_workspace_scoped_conversations",
+      "label": "Workspace Scoped Conversations",
+      "file_type": "code",
+      "source_file": "backend/src/conversations/conversations.controller.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "conversations_service_access_control",
+      "label": "Conversation Access Control",
+      "file_type": "code",
+      "source_file": "backend/src/conversations/conversations.service.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "conversations_service_template_initiation",
+      "label": "Template Conversation Initiation",
+      "file_type": "code",
+      "source_file": "backend/src/conversations/conversations.service.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "conversations_service_events_and_bot_state",
+      "label": "Conversation Events and Bot State",
+      "file_type": "code",
+      "source_file": "backend/src/conversations/conversations.service.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "operational_agent_guide",
+      "target": "tenant_isolation_rules",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "operational_agent_guide",
+      "target": "minimal_context_editing",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "operational_agent_guide",
+      "target": "app_module_domain_registration",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "minimal_context_editing",
+      "target": "operational_agent_guide",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.92,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "production_roadmap",
+      "target": "roadmap_cloud_api_completeness",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "production_roadmap",
+      "target": "roadmap_inbox_crm_operational",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "production_roadmap",
+      "target": "roadmap_security_hardening",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "production_roadmap",
+      "target": "roadmap_messaging_reliability",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "production_roadmap",
+      "target": "roadmap_observability_testing",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "production_roadmap",
+      "target": "roadmap_scale_intelligence",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_cloud_config",
+      "target": "roadmap_cloud_api_completeness",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "whatsapp-config.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_cloud_config",
+      "target": "whatsapp_config_token_rotation",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "whatsapp-config.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_cloud_config",
+      "target": "whatsapp_config_webhook_verification",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "whatsapp-config.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_config_token_rotation",
+      "target": "roadmap_security_hardening",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.88,
+      "source_file": "whatsapp-config.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_config_webhook_verification",
+      "target": "main_api_prefix_and_raw_body",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "whatsapp-config.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_config_webhook_verification",
+      "target": "webhook_signature_guard_hmac_validation",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "whatsapp-config.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "app_module_domain_registration",
+      "target": "auth_module_jwt_registration",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/app.module.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "app_module_domain_registration",
+      "target": "automation_controller_workspace_scoped_flows",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/app.module.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "app_module_domain_registration",
+      "target": "contacts_module",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/app.module.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "app_module_domain_registration",
+      "target": "contacts_controller_workspace_scoped_contacts",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/app.module.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "app_module_domain_registration",
+      "target": "conversations_controller_workspace_scoped_conversations",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/app.module.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "auth_module_jwt_registration",
+      "target": "auth_service_token_signing",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/auth/auth.module.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "auth_service_workspace_bootstrap",
+      "target": "auth_service_token_signing",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/auth/auth.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "register_dto",
+      "target": "auth_service_workspace_bootstrap",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.88,
+      "source_file": "backend/src/auth/dto/register.dto.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "auth_service_token_signing",
+      "target": "jwt_strategy_workspace_permissions_claims",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.94,
+      "source_file": "backend/src/auth/auth.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "jwt_strategy_workspace_permissions_claims",
+      "target": "permissions_guard_permission_claims",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "backend/src/auth/strategies/jwt.strategy.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "permissions_guard_permission_claims",
+      "target": "conversations_service_access_control",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.86,
+      "source_file": "backend/src/common/guards/permissions.guard.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "roadmap_security_hardening",
+      "target": "main_api_prefix_and_raw_body",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "roadmap_security_hardening",
+      "target": "webhook_signature_guard_hmac_validation",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "roadmap_security_hardening",
+      "target": "permissions_guard_permission_claims",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ROADMAP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "automation_controller_workspace_scoped_flows",
+      "target": "flows_service_workspace_scoped_flow_crud",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/automation/automation.controller.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "flows_service_workspace_scoped_flow_crud",
+      "target": "flow_executor_trigger_and_state",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/automation/flows.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "flow_executor_trigger_and_state",
+      "target": "flow_executor_message_and_delay_execution",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.86,
+      "source_file": "backend/src/automation/flow-executor.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "flow_executor_trigger_and_state",
+      "target": "flow_executor_stop_bot_on_reply",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.72,
+      "source_file": "backend/src/automation/flow-executor.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "flow_executor_message_and_delay_execution",
+      "target": "flow_executor_stop_bot_on_reply",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.78,
+      "source_file": "backend/src/automation/flow-executor.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "flow_executor_stop_bot_on_reply",
+      "target": "conversations_service_events_and_bot_state",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.88,
+      "source_file": "backend/src/automation/flow-executor.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "contacts_module",
+      "target": "contacts_controller_workspace_scoped_contacts",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/contacts/contacts.module.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "contacts_module",
+      "target": "contacts_service_import_and_tagging",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/contacts/contacts.module.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "contacts_controller_workspace_scoped_contacts",
+      "target": "contacts_service_import_and_tagging",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/contacts/contacts.controller.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "contacts_controller_workspace_scoped_contacts",
+      "target": "create_contact_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/contacts/contacts.controller.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "contacts_controller_workspace_scoped_contacts",
+      "target": "update_contact_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/contacts/contacts.controller.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "contacts_controller_workspace_scoped_contacts",
+      "target": "add_tag_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/contacts/contacts.controller.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "contacts_service_import_and_tagging",
+      "target": "create_contact_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/contacts/contacts.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "contacts_service_import_and_tagging",
+      "target": "update_contact_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/contacts/contacts.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "contacts_service_import_and_tagging",
+      "target": "add_tag_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/contacts/contacts.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "contacts_service_import_and_tagging",
+      "target": "contact_filter_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/contacts/contacts.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "create_contact_dto",
+      "target": "contacts_service_import_and_tagging",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "backend/src/contacts/dto/contact.dto.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "update_contact_dto",
+      "target": "contacts_service_import_and_tagging",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "backend/src/contacts/dto/contact.dto.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "add_tag_dto",
+      "target": "contacts_service_import_and_tagging",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "backend/src/contacts/dto/contact.dto.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "contact_filter_dto",
+      "target": "contacts_service_import_and_tagging",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.88,
+      "source_file": "backend/src/contacts/dto/contact.dto.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "contacts_service_import_and_tagging",
+      "target": "roadmap_inbox_crm_operational",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.82,
+      "source_file": "backend/src/contacts/contacts.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "conversations_controller_workspace_scoped_conversations",
+      "target": "conversations_service_access_control",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/conversations/conversations.controller.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "conversations_controller_workspace_scoped_conversations",
+      "target": "conversations_service_template_initiation",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/conversations/conversations.controller.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "conversations_service_access_control",
+      "target": "jwt_strategy_workspace_permissions_claims",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.83,
+      "source_file": "backend/src/conversations/conversations.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "conversations_service_access_control",
+      "target": "roadmap_inbox_crm_operational",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.84,
+      "source_file": "backend/src/conversations/conversations.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "conversations_service_template_initiation",
+      "target": "whatsapp_cloud_config",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "backend/src/conversations/conversations.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "conversations_service_template_initiation",
+      "target": "roadmap_cloud_api_completeness",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "backend/src/conversations/conversations.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "conversations_service_events_and_bot_state",
+      "target": "flow_executor_trigger_and_state",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/src/conversations/conversations.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "conversations_service_events_and_bot_state",
+      "target": "flow_executor_message_and_delay_execution",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.74,
+      "source_file": "backend/src/conversations/conversations.service.ts",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "jwt_permission_path",
+      "label": "JWT Permission Path",
+      "nodes": [
+        "auth_service_token_signing",
+        "jwt_strategy_workspace_permissions_claims",
+        "permissions_guard_permission_claims"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.86,
+      "source_file": "backend/src/auth/auth.service.ts"
+    },
+    {
+      "id": "workspace_crm_surface",
+      "label": "Workspace CRM Surface",
+      "nodes": [
+        "contacts_module",
+        "contacts_controller_workspace_scoped_contacts",
+        "contacts_service_import_and_tagging",
+        "conversations_controller_workspace_scoped_conversations",
+        "conversations_service_access_control"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "AGENTS.md"
+    },
+    {
+      "id": "automation_flow_stack",
+      "label": "Automation Flow Stack",
+      "nodes": [
+        "automation_controller_workspace_scoped_flows",
+        "flows_service_workspace_scoped_flow_crud",
+        "flow_executor_trigger_and_state",
+        "flow_executor_message_and_delay_execution",
+        "flow_executor_stop_bot_on_reply"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.87,
+      "source_file": "backend/src/automation/flow-executor.service.ts"
+    },
+    {
+      "id": "webhook_handling_path",
+      "label": "Webhook Handling Path",
+      "nodes": [
+        "whatsapp_cloud_config",
+        "whatsapp_config_webhook_verification",
+        "main_api_prefix_and_raw_body",
+        "webhook_signature_guard_hmac_validation"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.88,
+      "source_file": "backend/src/main.ts"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

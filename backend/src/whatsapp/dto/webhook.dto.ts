@@ -36,16 +36,30 @@ export interface WhatsappMessage {
   from: string;
   id: string;
   timestamp: string;
-  type: 'text' | 'image' | 'audio' | 'video' | 'document' | 'sticker';
+  type:
+    | 'text'
+    | 'image'
+    | 'audio'
+    | 'video'
+    | 'document'
+    | 'sticker'
+    | 'interactive'
+    | 'button';
   text?: { body: string };
   image?: { id: string; mime_type: string; caption?: string };
   audio?: { id: string; mime_type: string };
   video?: { id: string; mime_type: string; caption?: string };
   document?: { id: string; filename: string; mime_type: string };
+  button?: { payload?: string; text: string };
+  interactive?: {
+    type: 'button_reply' | 'list_reply' | 'nfm_reply';
+    button_reply?: { id: string; title: string };
+    list_reply?: { id: string; title: string; description?: string };
+  };
 }
 
 export interface WhatsappStatus {
-  id: string;           // message external_id
+  id: string; // message external_id
   status: 'sent' | 'delivered' | 'read' | 'failed';
   timestamp: string;
   recipient_id: string;

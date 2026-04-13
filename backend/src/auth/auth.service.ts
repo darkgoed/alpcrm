@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
@@ -13,7 +17,9 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    const existing = await this.prisma.workspace.findUnique({ where: { slug: dto.workspaceSlug } });
+    const existing = await this.prisma.workspace.findUnique({
+      where: { slug: dto.workspaceSlug },
+    });
     if (existing) throw new ConflictException('Workspace slug já está em uso');
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
@@ -54,7 +60,12 @@ export class AuthService {
     });
 
     const permissions = allPermissions.map((p) => p.key);
-    return this.signToken(result.user.id, result.user.email, result.workspace.id, permissions);
+    return this.signToken(
+      result.user.id,
+      result.user.email,
+      result.workspace.id,
+      permissions,
+    );
   }
 
   async login(dto: LoginDto) {
@@ -76,7 +87,8 @@ export class AuthService {
       },
     });
 
-    if (!user || !user.isActive) throw new UnauthorizedException('Credenciais inválidas');
+    if (!user || !user.isActive)
+      throw new UnauthorizedException('Credenciais inválidas');
 
     const valid = await bcrypt.compare(dto.password, user.password);
     if (!valid) throw new UnauthorizedException('Credenciais inválidas');
@@ -93,7 +105,12 @@ export class AuthService {
     return this.signToken(user.id, user.email, user.workspaceId, permissions);
   }
 
-  private signToken(userId: string, email: string, workspaceId: string, permissions: string[] = []) {
+  private signToken(
+    userId: string,
+    email: string,
+    workspaceId: string,
+    permissions: string[] = [],
+  ) {
     const payload = { sub: userId, email, workspaceId, permissions };
     return {
       access_token: this.jwt.sign(payload),

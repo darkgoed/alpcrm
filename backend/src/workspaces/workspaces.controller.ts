@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -16,8 +17,14 @@ import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { WorkspacesService } from './workspaces.service';
 import { UpdateWorkspaceSettingsDto } from './dto/workspace-settings.dto';
-import { CreateFollowUpRuleDto, UpdateFollowUpRuleDto } from './dto/follow-up-rule.dto';
-import { CreateWhatsappAccountDto, UpdateWhatsappAccountDto } from './dto/whatsapp-account.dto';
+import {
+  CreateFollowUpRuleDto,
+  UpdateFollowUpRuleDto,
+} from './dto/follow-up-rule.dto';
+import {
+  CreateWhatsappAccountDto,
+  UpdateWhatsappAccountDto,
+} from './dto/whatsapp-account.dto';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('workspaces')
@@ -34,7 +41,10 @@ export class WorkspacesController {
 
   @Patch('settings')
   @RequirePermissions('manage_workspace')
-  updateSettings(@CurrentUser() user: any, @Body() dto: UpdateWorkspaceSettingsDto) {
+  updateSettings(
+    @CurrentUser() user: any,
+    @Body() dto: UpdateWorkspaceSettingsDto,
+  ) {
     return this.workspacesService.updateSettings(user.workspaceId, dto);
   }
 
@@ -48,7 +58,10 @@ export class WorkspacesController {
 
   @Post('follow-up-rules')
   @RequirePermissions('manage_workspace')
-  createFollowUpRule(@CurrentUser() user: any, @Body() dto: CreateFollowUpRuleDto) {
+  createFollowUpRule(
+    @CurrentUser() user: any,
+    @Body() dto: CreateFollowUpRuleDto,
+  ) {
     return this.workspacesService.createFollowUpRule(user.workspaceId, dto);
   }
 
@@ -79,7 +92,10 @@ export class WorkspacesController {
 
   @Post('whatsapp-accounts')
   @RequirePermissions('manage_workspace')
-  createWhatsappAccount(@CurrentUser() user: any, @Body() dto: CreateWhatsappAccountDto) {
+  createWhatsappAccount(
+    @CurrentUser() user: any,
+    @Body() dto: CreateWhatsappAccountDto,
+  ) {
     return this.workspacesService.createWhatsappAccount(user.workspaceId, dto);
   }
 
@@ -90,7 +106,11 @@ export class WorkspacesController {
     @Param('id') id: string,
     @Body() dto: UpdateWhatsappAccountDto,
   ) {
-    return this.workspacesService.updateWhatsappAccount(user.workspaceId, id, dto);
+    return this.workspacesService.updateWhatsappAccount(
+      user.workspaceId,
+      id,
+      dto,
+    );
   }
 
   @Delete('whatsapp-accounts/:id')
@@ -98,5 +118,28 @@ export class WorkspacesController {
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteWhatsappAccount(@CurrentUser() user: any, @Param('id') id: string) {
     return this.workspacesService.deleteWhatsappAccount(user.workspaceId, id);
+  }
+
+  // ─── Audit Logs ───────────────────────────────────────────────────────────────
+
+  @Get('audit-logs')
+  @RequirePermissions('manage_workspace')
+  listAuditLogs(
+    @CurrentUser() user: any,
+    @Query('entity') entity?: string,
+    @Query('userId') userId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('take') take?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    return this.workspacesService.listAuditLogs(user.workspaceId, {
+      entity,
+      userId,
+      from: from ? new Date(from) : undefined,
+      to: to ? new Date(to) : undefined,
+      take: take ? parseInt(take) : 50,
+      cursor,
+    });
   }
 }

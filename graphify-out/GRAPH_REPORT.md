@@ -1,347 +1,300 @@
-# Graph Report - .  (2026-04-10)
+# Graph Report - .  (2026-04-13)
 
 ## Corpus Check
-- Corpus is ~36,705 words - fits in a single context window. You may not need a graph.
+- 184 files · ~51,182 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 608 nodes · 824 edges · 57 communities detected
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.8)
-- Token cost: 12,500 input · 2,800 output
+- 752 nodes · 1040 edges · 48 communities detected
+- Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 50 edges (avg confidence: 0.88)
+- Token cost: 0 input · 0 output
 
 ## God Nodes (most connected - your core abstractions)
-1. `PipelinesController` - 13 edges
-2. `PipelinesService` - 13 edges
-3. `ContactsService` - 12 edges
-4. `ContactsController` - 12 edges
-5. `TeamsService` - 11 edges
-6. `UsersService` - 10 edges
-7. `UsersController` - 9 edges
-8. `TeamsController` - 9 edges
-9. `ConversationsService` - 9 edges
-10. `ConversationsController` - 8 edges
+1. `ContactsService` - 18 edges
+2. `ContactsController` - 14 edges
+3. `WorkspacesService` - 13 edges
+4. `WorkspacesController` - 13 edges
+5. `PipelinesController` - 13 edges
+6. `PipelinesService` - 13 edges
+7. `UsersService` - 11 edges
+8. `TeamsService` - 11 edges
+9. `WhatsappService` - 11 edges
+10. `TemplatesService` - 10 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Rationale: Canvas Route Replaces Flow Editor Dialog` --rationale_for--> `Automation Canvas Page (route)`  [EXTRACTED]
-  ROADMAP.md → frontend/src/app/(dashboard)/automation/[id]/page.tsx
-- `useAutomation Hook` --shares_data_with--> `FlowExecutorService`  [INFERRED]
-  frontend/src/hooks/useAutomation.ts → backend/src/automation/flow-executor.service.ts
-- `Rationale: Dual Sidebar Layout` --rationale_for--> `DashboardLayout Component`  [EXTRACTED]
-  ROADMAP.md → frontend/src/app/(dashboard)/layout.tsx
-- `FlowExecutorService` --calls--> `SchedulerService`  [EXTRACTED]
-  backend/src/automation/flow-executor.service.ts → backend/src/queues/scheduler.service.ts
-- `FollowUpProcessor` --shares_data_with--> `ConversationsService`  [INFERRED]
-  backend/src/queues/follow-up.processor.ts → backend/src/conversations/conversations.service.ts
+- `Contact Import and Tagging` --conceptually_related_to--> `Inbox and CRM Operations`  [INFERRED]
+  backend/src/contacts/contacts.service.ts → ROADMAP.md
+- `Minimal Context Editing` --semantically_similar_to--> `Operational Agent Guide`  [INFERRED] [semantically similar]
+  CLAUDE.md → AGENTS.md
+- `Template Conversation Initiation` --conceptually_related_to--> `Cloud API Completeness`  [INFERRED]
+  backend/src/conversations/conversations.service.ts → ROADMAP.md
+- `Conversation Access Control` --conceptually_related_to--> `Inbox and CRM Operations`  [INFERRED]
+  backend/src/conversations/conversations.service.ts → ROADMAP.md
+- `Security Hardening` --rationale_for--> `API Prefix and Raw Body`  [EXTRACTED]
+  ROADMAP.md → backend/src/main.ts
 
 ## Hyperedges (group relationships)
-- **BullMQ Queue Processing Pattern** — queues_SchedulerService, queues_FlowDelayProcessor, queues_FollowUpProcessor, queues_AutoCloseProcessor [EXTRACTED 0.95]
-- **Operator Reply Flow** — messages_MessagesService, whatsapp_WhatsappService, queues_SchedulerService [EXTRACTED 0.95]
-- **Flow Execution Pipeline** — automation_flowexecutor, queues_SchedulerService, queues_FlowDelayProcessor [EXTRACTED 0.95]
-- **Workspace Settings Full-Stack** — workspaces_service, workspaces_controller, hooks_useworkspacesettings [INFERRED 0.88]
 - **CRM Kanban Full-Stack** — pipelines_service, hooks_usecontacts, features_crm_kanbanpage [INFERRED 0.85]
-- **Dashboard App Shell Layout System** — dashboard_layout_dashboardlayout, dashboard_sidebar_navrail, dashboard_sidebar_contextsidebar, dashboard_layout_mobiledrawer [EXTRACTED 1.00]
 - **Automation Canvas Editing Flow** — app_automation_page, app_automation_id_page, flow_card_flowcard, app_automation_createflowdialog [EXTRACTED 0.95]
-- **Settings Page Passive Automation UI** — settings_page_settingspage, settings_page_autoclosesection, settings_page_followupsection [EXTRACTED 1.00]
+- **JWT Permission Path** — auth_service_token_signing, jwt_strategy_workspace_permissions_claims, permissions_guard_permission_claims [INFERRED 0.86]
+- **Workspace CRM Surface** — contacts_module, contacts_controller_workspace_scoped_contacts, contacts_service_import_and_tagging, conversations_controller_workspace_scoped_conversations, conversations_service_access_control [INFERRED 0.90]
+- **Automation Flow Stack** — automation_controller_workspace_scoped_flows, flows_service_workspace_scoped_flow_crud, flow_executor_trigger_and_state, flow_executor_message_and_delay_execution, flow_executor_stop_bot_on_reply [INFERRED 0.87]
+- **Webhook Handling Path** — whatsapp_cloud_config, whatsapp_config_webhook_verification, main_api_prefix_and_raw_body, webhook_signature_guard_hmac_validation [INFERRED 0.88]
+- **Operator Message Flow** — messages_controller, messages_service, events_gateway, whatsapp_service, scheduler_service, flow_executor_service [INFERRED 0.86]
+- **Pipeline Management Surface** — pipelines_controller, pipelines_service, create_pipeline_dto, update_pipeline_dto, create_stage_dto, update_stage_dto, reorder_stages_dto, move_contact_dto [INFERRED 0.90]
+- **Queue Processing Stack** — scheduler_service, auto_close_processor, follow_up_processor, flow_delay_processor [INFERRED 0.84]
+- **Workspace Settings Full-Stack** — workspaces_controller, workspaces_service, update_workspace_settings_dto [INFERRED 0.88]
+- **WhatsApp Webhook Payload Model** — whatsapp_webhook_payload, whatsapp_message, whatsapp_contact, whatsapp_status [EXTRACTED 1.00]
+- **Conversation UI Message Flow** — conversation_thread_component, conversation_message_bubble_component, frontend_message_type [INFERRED 0.85]
 
 ## Communities
 
-### Community 0 - "Frontend UI Primitives"
-Cohesion: 0.03
+### Community 0 - "Agents UI"
+Cohesion: 0.02
 Nodes (8): close(), goToConversation(), FormControl(), useFormField(), getErrorMessage(), onSubmit(), getErrorMessage(), onSubmit()
 
-### Community 1 - "NestJS Backend Core"
-Cohesion: 0.06
-Nodes (18): AppModule, AssignConversationDto, AutoCloseProcessor, FlowExecutorService, AutomationModule, ConversationsModule, CreateFlowDto, CreateFlowNodeDto (+10 more)
+### Community 1 - "Core Backend"
+Cohesion: 0.04
+Nodes (27): AppModule, AssignConversationDto, AutoCloseProcessor, AutomationModule, ConversationsModule, CreateTemplateDto, FlowDelayProcessor, FollowUpProcessor (+19 more)
 
-### Community 2 - "RBAC, Teams & Guards"
-Cohesion: 0.06
-Nodes (14): CreateRoleDto, CreateTeamDto, InviteUserDto, JwtAuthGuard, MessagesController, PermissionsGuard, RolesController, RolesModule (+6 more)
-
-### Community 3 - "Frontend Auth & Data Layer"
+### Community 2 - "Automation Settings"
 Cohesion: 0.05
+Nodes (16): CreateFollowUpRuleDto, Follow-Up Rule DTOs, CreateFollowUpRuleDto, UpdateFollowUpRuleDto, useAutomation Hook, useConversations Hook, useWorkspaceSettings Hook, API Axios Client (+8 more)
+
+### Community 3 - "CRM Pipelines"
+Cohesion: 0.05
+Nodes (17): CRM Kanban Page (route), Create Pipeline DTO, Create Stage DTO, KanbanPage Feature Component, Move Contact DTO, CreatePipelineDto, CreateStageDto, MoveContactDto (+9 more)
+
+### Community 4 - "Conversation Types"
+Cohesion: 0.08
+Nodes (11): ConversationMessageBubble Component, ConversationThread Component, Conversation Thread, Frontend Conversation Type, Frontend Message Type, InviteUserDto, UpdateUserDto, UsersController (+3 more)
+
+### Community 5 - "Conversation Thread"
+Cohesion: 0.06
 Nodes (0): 
 
-### Community 4 - "CRM Pipeline DTOs"
-Cohesion: 0.06
-Nodes (10): CreatePipelineDto, CreateStageDto, MoveContactDto, ReorderStageItem, ReorderStagesDto, UpdatePipelineDto, UpdateStageDto, PipelinesController (+2 more)
-
-### Community 5 - "Frontend Feature Pages"
-Cohesion: 0.06
-Nodes (18): Contacts Page (route), CRM Kanban Page (route), ConversationMessageBubble Component, ContactsPage Feature Component, KanbanPage Feature Component, CreateFollowUpRuleDto, UpdateFollowUpRuleDto, useAutomation Hook (+10 more)
-
-### Community 6 - "Contact Management DTOs"
+### Community 6 - "Contacts DTOs"
 Cohesion: 0.07
-Nodes (7): AddTagDto, ContactFilterDto, CreateContactDto, UpdateContactDto, ContactsController, ContactsModule, ContactsService
+Nodes (13): Add Tag DTO, AddTagDto, ContactFilterDto, CreateContactDto, UpdateContactDto, Contact Filter DTO, ContactImportProcessor, ContactsController (+5 more)
 
-### Community 7 - "Auth Controller"
+### Community 7 - "Workspace Security"
+Cohesion: 0.09
+Nodes (30): App Module Domain Wiring, JWT Module Registration, Token Signing, Workspace Bootstrap, Automation Flow Endpoints, Workspace Scoped Conversations, Conversation Access Control, Conversation Events and Bot State (+22 more)
+
+### Community 8 - "Teams Management"
+Cohesion: 0.1
+Nodes (5): CreateTeamDto, TeamsController, TeamsModule, TeamsService, UpdateTeamDto
+
+### Community 9 - "Permissions and Replies"
+Cohesion: 0.09
+Nodes (6): CreateQuickReplyDto, PermissionsGuard, QuickRepliesController, QuickRepliesModule, QuickRepliesService, UpdateQuickReplyDto
+
+### Community 10 - "Roles Management"
+Cohesion: 0.11
+Nodes (5): CreateRoleDto, RolesController, RolesModule, RolesService, UpdateRolePermissionsDto
+
+### Community 11 - "Automation CRUD"
+Cohesion: 0.12
+Nodes (5): AutomationController, CreateFlowDto, CreateFlowNodeDto, UpdateFlowDto, FlowsService
+
+### Community 12 - "Auth Flow"
 Cohesion: 0.12
 Nodes (6): AuthController, AuthModule, AuthService, JwtStrategy, LoginDto, RegisterDto
 
-### Community 8 - "CRM Data Hooks"
+### Community 13 - "Contacts Service"
+Cohesion: 0.13
+Nodes (1): ContactsService
+
+### Community 14 - "Contacts Hooks"
+Cohesion: 0.11
+Nodes (0): 
+
+### Community 15 - "Agents Hooks"
 Cohesion: 0.12
 Nodes (0): 
 
-### Community 9 - "Teams Service"
+### Community 16 - "WhatsApp Inbound"
+Cohesion: 0.25
+Nodes (1): WhatsappService
+
+### Community 17 - "Template Sync"
 Cohesion: 0.29
-Nodes (1): TeamsService
+Nodes (1): TemplatesService
 
-### Community 10 - "Users Service"
-Cohesion: 0.36
-Nodes (1): UsersService
+### Community 18 - "Conversation Service"
+Cohesion: 0.29
+Nodes (1): ConversationsService
 
-### Community 11 - "Permissions Module"
+### Community 19 - "Permissions Catalog"
 Cohesion: 0.22
 Nodes (3): PermissionsController, PermissionsModule, PermissionsService
 
-### Community 12 - "Teams Controller"
+### Community 20 - "Conversation Controller"
 Cohesion: 0.22
-Nodes (1): TeamsController
+Nodes (1): ConversationsController
 
-### Community 13 - "Conversations Service"
-Cohesion: 0.33
-Nodes (1): ConversationsService
-
-### Community 14 - "Users Controller"
-Cohesion: 0.22
-Nodes (1): UsersController
-
-### Community 15 - "Message Routing & Auto-Close"
-Cohesion: 0.25
-Nodes (9): ConversationsController, ConversationsService, MessagesController, MessagesService, AutoCloseProcessor, FollowUpProcessor, Queue Name Constants, SchedulerService (+1 more)
-
-### Community 16 - "Dashboard Layout Shell"
-Cohesion: 0.22
-Nodes (9): DashboardLayout Component, MobileDrawer Component, ContextSidebar Component, ConversationListItem Component, GlobalSearch Component, InboxRail Component, NavRail Component, useMessageSearch Hook (+1 more)
-
-### Community 17 - "Automation Canvas UI"
-Cohesion: 0.22
-Nodes (9): CreateFlowDialog Component, NodeChip Component, NodeEditorPanel Component, Automation Canvas Page (route), Automation List Page (route), FlowCard Component, useFlow Hook, useFlows Hook (+1 more)
-
-### Community 18 - "App Boilerplate"
+### Community 21 - "Nest Boilerplate"
 Cohesion: 0.29
 Nodes (2): AppController, AppService
 
-### Community 19 - "Conversations Controller"
-Cohesion: 0.25
-Nodes (1): ConversationsController
-
-### Community 20 - "WhatsApp Webhook Handler"
-Cohesion: 0.36
-Nodes (1): WhatsappService
-
-### Community 21 - "Real-time Events Gateway"
+### Community 22 - "Realtime Gateway"
 Cohesion: 0.25
 Nodes (1): EventsGateway
 
-### Community 22 - "Roles Service"
-Cohesion: 0.36
-Nodes (1): RolesService
-
-### Community 23 - "Automation Flow Executor"
+### Community 23 - "Flow Execution"
 Cohesion: 0.39
 Nodes (1): FlowExecutorService
 
-### Community 24 - "Automation CRUD Controller"
+### Community 24 - "Teams Hooks"
 Cohesion: 0.25
-Nodes (1): AutomationController
+Nodes (0): 
 
-### Community 25 - "Flows CRUD Service"
-Cohesion: 0.43
-Nodes (1): FlowsService
+### Community 25 - "Automation UI"
+Cohesion: 0.25
+Nodes (8): CreateFlowDialog Component, NodeChip Component, NodeEditorPanel Component, Automation Canvas Page (route), Automation List Page (route), FlowCard Component, useFlow Hook, useFlows Hook
 
-### Community 26 - "BullMQ Scheduler"
+### Community 26 - "Scheduling"
 Cohesion: 0.29
 Nodes (1): SchedulerService
 
-### Community 27 - "Messages Service"
+### Community 27 - "Messages Controller"
+Cohesion: 0.4
+Nodes (1): MessagesController
+
+### Community 28 - "Messages Service"
 Cohesion: 0.4
 Nodes (1): MessagesService
 
-### Community 28 - "Prisma Database Layer"
+### Community 29 - "WhatsApp Webhook"
 Cohesion: 0.5
-Nodes (1): PrismaService
+Nodes (1): WhatsappController
 
-### Community 29 - "Settings Page UI"
-Cohesion: 0.5
-Nodes (4): Settings Page (route), AutoCloseSection Component, FollowUpSection Component, SettingsPage Component
-
-### Community 30 - "Product Roadmap"
-Cohesion: 0.5
-Nodes (4): Phase 10 - SaaS Production Readiness (Planned), Phase 8 - Frontend Unificado (In Progress), Phase 9 - Audit Logs and LGPD Compliance (Planned), Rationale: Consolidate Frontend Before SaaS
-
-### Community 31 - "Permissions Seed"
+### Community 30 - "Permission Seeds"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 32 - "Contacts API"
-Cohesion: 1.0
-Nodes (2): ContactsController, ContactsService
-
-### Community 33 - "Prisma Config"
+### Community 31 - "Prisma Config"
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 34 - "Next.js Config"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 35 - "Next.js Types"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 36 - "Global Types Index"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 37 - "Backend README"
-Cohesion: 1.0
-Nodes (1): NestJS Backend App (boilerplate README)
-
-### Community 38 - "App Module"
-Cohesion: 1.0
-Nodes (1): AppModule
-
-### Community 39 - "Queues Module"
-Cohesion: 1.0
-Nodes (1): QueuesModule
-
-### Community 40 - "Flow Delay Processor"
-Cohesion: 1.0
-Nodes (1): FlowDelayProcessor
-
-### Community 41 - "Conversations Module"
-Cohesion: 1.0
-Nodes (1): ConversationsModule
-
-### Community 42 - "Messages Module"
+### Community 32 - "Messages Module"
 Cohesion: 1.0
 Nodes (1): MessagesModule
 
-### Community 43 - "Contacts Module"
+### Community 33 - "Next Config"
 Cohesion: 1.0
-Nodes (1): ContactsModule
+Nodes (0): 
 
-### Community 44 - "Create Contact DTO"
+### Community 34 - "Next Typings"
 Cohesion: 1.0
-Nodes (1): CreateContactDto
+Nodes (0): 
 
-### Community 45 - "Update Contact DTO"
+### Community 35 - "Legacy Message Bubble"
 Cohesion: 1.0
-Nodes (1): UpdateContactDto
+Nodes (0): 
 
-### Community 46 - "Add Tag DTO"
-Cohesion: 1.0
-Nodes (1): AddTagDto
-
-### Community 47 - "Contact Filter DTO"
-Cohesion: 1.0
-Nodes (1): ContactFilterDto
-
-### Community 48 - "WhatsApp Module"
-Cohesion: 1.0
-Nodes (1): WhatsappModule
-
-### Community 49 - "Follow-Up Rule DTOs"
-Cohesion: 1.0
-Nodes (1): FollowUpRule DTOs
-
-### Community 50 - "Workspace Settings DTO"
-Cohesion: 1.0
-Nodes (1): UpdateWorkspaceSettingsDto
-
-### Community 51 - "Pipeline DTOs"
-Cohesion: 1.0
-Nodes (1): Pipeline DTOs
-
-### Community 52 - "Flows Service (singleton)"
-Cohesion: 1.0
-Nodes (1): FlowsService
-
-### Community 53 - "Automation Controller (singleton)"
-Cohesion: 1.0
-Nodes (1): AutomationController
-
-### Community 54 - "Tooltip Component"
+### Community 36 - "Tooltip UI"
 Cohesion: 1.0
 Nodes (1): Tooltip UI Component
 
-### Community 55 - "Conversation Thread"
+### Community 37 - "Type Exports"
 Cohesion: 1.0
-Nodes (1): ConversationThread Component
+Nodes (0): 
 
-### Community 56 - "Follow-Up Rules Hook"
+### Community 38 - "Contacts Route"
 Cohesion: 1.0
-Nodes (1): useFollowUpRules Hook
+Nodes (1): Contacts Page (route)
+
+### Community 39 - "Settings Route"
+Cohesion: 1.0
+Nodes (1): Settings Page (route)
+
+### Community 40 - "Date Utilities"
+Cohesion: 1.0
+Nodes (1): Date Utilities
+
+### Community 41 - "Repo README"
+Cohesion: 1.0
+Nodes (1): NestJS Backend App (boilerplate README)
+
+### Community 42 - "Uploaded Image"
+Cohesion: 1.0
+Nodes (1): TRIPZ
+
+### Community 43 - "Globe Asset"
+Cohesion: 1.0
+Nodes (1): Globe Icon
+
+### Community 44 - "Window Asset"
+Cohesion: 1.0
+Nodes (1): Browser Window Icon
+
+### Community 45 - "Next Asset"
+Cohesion: 1.0
+Nodes (1): Next.js Logo
+
+### Community 46 - "File Asset"
+Cohesion: 1.0
+Nodes (1): File Icon
+
+### Community 47 - "Vercel Asset"
+Cohesion: 1.0
+Nodes (1): Vercel Logo
 
 ## Knowledge Gaps
-- **89 isolated node(s):** `AppModule`, `QueuesModule`, `PrismaModule`, `UsersModule`, `InviteUserDto` (+84 more)
+- **81 isolated node(s):** `AppModule`, `TemplatesModule`, `CreateTemplateDto`, `QueuesModule`, `PrismaModule` (+76 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Permissions Seed`** (2 nodes): `permissions.seed.ts`, `main()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Contacts API`** (2 nodes): `ContactsController`, `ContactsService`
+- **Thin community `Permission Seeds`** (2 nodes): `permissions.seed.ts`, `main()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Prisma Config`** (1 nodes): `prisma.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Next.js Config`** (1 nodes): `next.config.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Next.js Types`** (1 nodes): `next-env.d.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Global Types Index`** (1 nodes): `index.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Backend README`** (1 nodes): `NestJS Backend App (boilerplate README)`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `App Module`** (1 nodes): `AppModule`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Queues Module`** (1 nodes): `QueuesModule`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Flow Delay Processor`** (1 nodes): `FlowDelayProcessor`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Conversations Module`** (1 nodes): `ConversationsModule`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Messages Module`** (1 nodes): `MessagesModule`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Contacts Module`** (1 nodes): `ContactsModule`
+- **Thin community `Next Config`** (1 nodes): `next.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Create Contact DTO`** (1 nodes): `CreateContactDto`
+- **Thin community `Next Typings`** (1 nodes): `next-env.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Update Contact DTO`** (1 nodes): `UpdateContactDto`
+- **Thin community `Legacy Message Bubble`** (1 nodes): `MessageBubble.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Add Tag DTO`** (1 nodes): `AddTagDto`
+- **Thin community `Tooltip UI`** (1 nodes): `Tooltip UI Component`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Contact Filter DTO`** (1 nodes): `ContactFilterDto`
+- **Thin community `Type Exports`** (1 nodes): `index.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `WhatsApp Module`** (1 nodes): `WhatsappModule`
+- **Thin community `Contacts Route`** (1 nodes): `Contacts Page (route)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Follow-Up Rule DTOs`** (1 nodes): `FollowUpRule DTOs`
+- **Thin community `Settings Route`** (1 nodes): `Settings Page (route)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Workspace Settings DTO`** (1 nodes): `UpdateWorkspaceSettingsDto`
+- **Thin community `Date Utilities`** (1 nodes): `Date Utilities`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Pipeline DTOs`** (1 nodes): `Pipeline DTOs`
+- **Thin community `Repo README`** (1 nodes): `NestJS Backend App (boilerplate README)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Flows Service (singleton)`** (1 nodes): `FlowsService`
+- **Thin community `Uploaded Image`** (1 nodes): `TRIPZ`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Automation Controller (singleton)`** (1 nodes): `AutomationController`
+- **Thin community `Globe Asset`** (1 nodes): `Globe Icon`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Tooltip Component`** (1 nodes): `Tooltip UI Component`
+- **Thin community `Window Asset`** (1 nodes): `Browser Window Icon`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Conversation Thread`** (1 nodes): `ConversationThread Component`
+- **Thin community `Next Asset`** (1 nodes): `Next.js Logo`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Follow-Up Rules Hook`** (1 nodes): `useFollowUpRules Hook`
+- **Thin community `File Asset`** (1 nodes): `File Icon`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Vercel Asset`** (1 nodes): `Vercel Logo`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `FlowExecutorService` connect `NestJS Backend Core` to `Frontend Feature Pages`, `Message Routing & Auto-Close`?**
-  _High betweenness centrality (0.025) - this node is a cross-community bridge._
-- **What connects `AppModule`, `QueuesModule`, `PrismaModule` to the rest of the system?**
-  _89 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Frontend UI Primitives` be split into smaller, more focused modules?**
-  _Cohesion score 0.03 - nodes in this community are weakly interconnected._
-- **Should `NestJS Backend Core` be split into smaller, more focused modules?**
-  _Cohesion score 0.06 - nodes in this community are weakly interconnected._
-- **Should `RBAC, Teams & Guards` be split into smaller, more focused modules?**
-  _Cohesion score 0.06 - nodes in this community are weakly interconnected._
-- **Should `Frontend Auth & Data Layer` be split into smaller, more focused modules?**
+- **Why does `ContactsService` connect `Contacts Service` to `Contacts DTOs`?**
+  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+- **Why does `App Module Domain Wiring` connect `Workspace Security` to `Contacts DTOs`?**
+  _High betweenness centrality (0.029) - this node is a cross-community bridge._
+- **What connects `AppModule`, `TemplatesModule`, `CreateTemplateDto` to the rest of the system?**
+  _81 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Agents UI` be split into smaller, more focused modules?**
+  _Cohesion score 0.02 - nodes in this community are weakly interconnected._
+- **Should `Core Backend` be split into smaller, more focused modules?**
+  _Cohesion score 0.04 - nodes in this community are weakly interconnected._
+- **Should `Automation Settings` be split into smaller, more focused modules?**
   _Cohesion score 0.05 - nodes in this community are weakly interconnected._
-- **Should `CRM Pipeline DTOs` be split into smaller, more focused modules?**
-  _Cohesion score 0.06 - nodes in this community are weakly interconnected._
+- **Should `CRM Pipelines` be split into smaller, more focused modules?**
+  _Cohesion score 0.05 - nodes in this community are weakly interconnected._

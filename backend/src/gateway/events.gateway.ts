@@ -26,7 +26,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // ─── Conexão ────────────────────────────────────────────────────────────────
 
   async handleConnection(client: Socket) {
-    const token = client.handshake.auth?.token ?? client.handshake.headers?.authorization;
+    const token =
+      client.handshake.auth?.token ?? client.handshake.headers?.authorization;
     if (!token) {
       client.disconnect();
       return;
@@ -39,7 +40,9 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // Entrar na sala do workspace automaticamente
       client.join(`workspace:${payload.workspaceId}`);
-      this.logger.log(`Cliente conectado: ${client.id} (workspace: ${payload.workspaceId})`);
+      this.logger.log(
+        `Cliente conectado: ${client.id} (workspace: ${payload.workspaceId})`,
+      );
     } catch {
       client.disconnect();
     }

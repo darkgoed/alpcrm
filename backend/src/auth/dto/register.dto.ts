@@ -15,6 +15,8 @@ export class RegisterDto {
   workspaceName: string;
 
   @IsString()
-  @Matches(/^[a-z0-9-]+$/, { message: 'Slug deve conter apenas letras minúsculas, números e hífens' })
+  @Matches(/^[a-z0-9-]+$/, {
+    message: 'Slug deve conter apenas letras minúsculas, números e hífens',
+  })
   workspaceSlug: string;
 }

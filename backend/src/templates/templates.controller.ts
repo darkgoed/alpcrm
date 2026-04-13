@@ -42,7 +42,10 @@ export class TemplatesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@CurrentUser() user: any, @Param('id', ParseUUIDPipe) id: string) {
+  async remove(
+    @CurrentUser() user: any,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     await this.templatesService.delete(user.workspaceId, id);
   }
 }

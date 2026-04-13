@@ -1,314 +1,562 @@
-# CRM WhatsApp SaaS — Roadmap de Desenvolvimento
+# CRM WhatsApp SaaS — Roadmap de Produção
+
+Este roadmap substitui o anterior.
+
+Objetivo: levar o sistema atual de "chat funcionando com texto" para um WhatsApp CRM pronto para operação real, com novas funções essenciais, confiabilidade, conformidade com a Cloud API e base para escala.
+
+## Estado atual resumido
+
+O sistema já possui:
+
+- autenticação JWT multi-tenant
+- RBAC básico
+- ingestão de webhook do WhatsApp
+- criação de contatos e conversas
+- envio de mensagens de texto
+- templates básicos
+- filas BullMQ
+- socket para atualização em tempo real
+- UI de inbox, contatos, configurações e automação básica
+
+O sistema ainda não está pronto para produção porque faltam principalmente:
+
+- envio e consumo reais de mídia
+- cumprimento completo das regras da WhatsApp Cloud API
+- automação avançada
+- funções de CRM ainda incompletas
+- hardening de segurança
+- idempotência e confiabilidade operacional
+- observabilidade
+- cobertura de testes
 
 ---
 
-## Fase 1 — Base ✅
-> Setup da infraestrutura, autenticação e multi-tenant
+## Ordem de execução recomendada
 
-- [x] Docker instalado (PostgreSQL 16 + Redis 7)
-- [x] NestJS scaffolded com todos os módulos
-- [x] Prisma v7 + schema completo (todas as tabelas)
-- [x] Migration inicial aplicada
-- [x] Auth JWT (`/api/auth/register`, `/api/auth/login`)
-- [x] Guards JWT + RBAC (PermissionsGuard)
-- [x] Multi-tenant: workspace_id em toda a estrutura
+Executar nesta ordem:
 
----
-
-## Fase 2 — Chat ✅
-> Integração com WhatsApp Cloud API e mensagens em tempo real
-
-- [x] Webhook para receber mensagens do WhatsApp (`POST /api/whatsapp/webhook`)
-- [x] Identificar workspace + conta WhatsApp pelo número (via `meta_account_id`)
-- [x] Criar ou buscar contato pelo telefone (upsert por workspace+phone)
-- [x] Criar ou reutilizar conversa ativa (status open)
-- [x] Salvar mensagens (texto, imagem, áudio, vídeo, documento)
-- [x] Enviar mensagens pela API do WhatsApp (`POST /api/messages`)
-- [x] Atualizar status da mensagem via webhook de status (sent → delivered → read)
-- [x] WebSocket (Socket.io) em `/ws` — rooms por workspace + conversa
-- [x] `GET /api/conversations` com filtros (status, team, operador) + RBAC
-- [x] `GET /api/conversations/:id` com todas as mensagens
-- [x] `PATCH /api/conversations/:id/assign|close|reopen`
-- [x] `GET /api/messages?conversationId=` com paginação por cursor
+1. Fase 1 — WhatsApp Cloud API completa
+2. Fase 2 — Inbox e CRM operacional
+3. Fase 3 — Automação v2
+4. Fase 4 — Segurança e isolamento
+5. Fase 5 — Confiabilidade de mensageria
+6. Fase 6 — Observabilidade e QA
+7. Fase 7 — Escala e inteligência operacional
 
 ---
 
-## Fase 3 — Operadores ✅
-> Controle de acesso, atribuição e travamento de conversas
+## Fase 1 — WhatsApp Cloud API Completa
 
-- [x] CRUD de usuários por workspace (`GET/POST/PATCH /api/users`)
-- [x] Convidar operador com role opcional, desativar conta
-- [x] Atribuir/remover role de usuário (`POST/DELETE /api/users/:id/roles/:roleId`)
-- [x] CRUD de roles por workspace (`GET/POST/DELETE /api/roles`)
-- [x] Atualizar permissões da role em lote (`PATCH /api/roles/:id/permissions`)
-- [x] Listar permissões do sistema (`GET /api/permissions`)
-- [x] 12 permissões padrão seedadas automaticamente
-- [x] Role **admin** criada automaticamente no registro com todas as permissões
-- [x] Lock de conversa: só operador atribuído responde (ou quem tem `view_all_conversations`)
-- [x] Admin/Supervisor vê e responde qualquer conversa
-- [x] JWT retorna array `permissions` para o frontend usar
+Status: `CRÍTICO`
 
----
+Meta: colocar no produto as funções novas mais importantes que ainda faltam no núcleo WhatsApp.
 
-## Fase 4 — Teams ✅
-> Organização de operadores em equipes
+### 1.1 — Mídia outbound real
 
-- [x] CRUD de equipes por workspace (`GET/POST/PATCH/DELETE /api/teams`)
-- [x] Adicionar/remover membros (`POST/DELETE /api/teams/:id/members/:userId`)
-- [x] Atribuição de conversa a equipe via round-robin na chegada do webhook
-- [x] Round-robin por menor carga: operador com menos conversas abertas recebe a próxima
-- [x] Validação de assinatura `X-Hub-Signature-256` com `WHATSAPP_APP_SECRET`
-- [x] Credenciais do app Meta configuradas no `.env`
+- [x] Integrar `sendMediaMessage` no fluxo de envio
+- [x] Suportar imagem
+- [x] Suportar documento
+- [x] Suportar áudio
+- [x] Suportar vídeo
+- [x] Persistir `externalId` da mídia enviada
+- [x] Tratar caption corretamente por tipo
 
----
+### 1.2 — Mídia inbound utilizável
 
-## Fase 5 — Automação ✅
-> Bot com fluxos de mensagens e delays
+- [x] Baixar mídia da Meta usando media endpoint
+- [x] Persistir metadados de mídia
+- [x] Armazenar arquivo em storage apropriado
+- [x] Gerar URL autenticada para renderização
+- [x] Exibir preview/download no frontend
+- [x] Mostrar nome do arquivo, tipo MIME e tamanho
 
-- [x] CRUD de flows por workspace (`GET/POST/PUT/DELETE /api/automation/flows`)
-- [x] Toggle ativo/inativo por flow (`PATCH /api/automation/flows/:id/toggle`)
-- [x] 3 tipos de gatilho: `new_conversation`, `keyword`, `always`
-- [x] Engine de execução de nós encadeados via `next_id`
-- [x] Nó de mensagem: envia texto via WhatsApp Cloud API e salva no banco
-- [x] Nó de delay: aguarda N segundos antes do próximo nó
-- [x] Bot para automaticamente quando operador humano responde
-- [x] Estado do contato no flow (`contact_flow_state`) com upsert
-- [x] Frontend: página `/automation` com criação/edição/toggle/exclusão de flows
-- [x] Sidebar com navegação Inbox ↔ Automação
+### 1.3 — Regras de janela de 24 horas
 
----
+- [x] Registrar timestamp da última mensagem do contato
+- [x] Bloquear mensagem livre fora da janela
+- [x] Exigir template aprovado fora da janela
+- [x] Explicar bloqueio de sessão na UI
 
-## Fase 6 — Follow-up ✅
-> Filas com BullMQ, delays e encerramento automático
+### 1.4 — Templates completos
 
-- [x] Integrar BullMQ + Redis para filas de automação
-- [x] Processar delays de flow via fila (não bloqueante)
-- [x] Follow-up agendado: reenviar mensagem após X horas sem resposta
-- [x] Encerramento automático de conversas inativas
-- [x] Retry automático em falhas de envio ao WhatsApp
+- [x] Suportar header
+- [x] Suportar footer
+- [x] Suportar botões
+- [x] Suportar media header
+- [x] Suportar exemplos de variáveis
+- [x] Exibir motivo de rejeição de forma operacional
+- [x] Melhorar sincronização de status com a Meta
 
----
+### 1.5 — Interactive messages
 
-## Fase 7 — CRM ✅
-> Gestão de contatos, pipeline e kanban
+- [ ] Suportar reply buttons
+- [ ] Suportar list messages
+- [ ] Suportar CTA URL quando aplicável
+- [ ] Normalizar resposta interativa inbound
+- [ ] Expor interativos no frontend e em automação
 
-- [x] CRUD completo de contatos (com tags)
-- [x] CRUD de pipelines e stages por workspace
-- [x] Mover contato entre stages (`contact_pipeline`)
-- [x] Endpoint para ordenar stages (drag-and-drop)
-- [x] Filtros de contatos por tag, stage e equipe
+Critério de saída da fase:
+
+- mídia funciona de ponta a ponta
+- regras de janela 24h são respeitadas
+- templates deixam de ser apenas texto BODY
+- mensagens interativas entram no produto
 
 ---
 
-## Fase 8 — Extras ✅
-> Funcionalidades avançadas de colaboração
+## Fase 2 — Inbox e CRM Operacional
 
-- [x] Tags: criar, atribuir e filtrar por tags
-- [x] Notas internas na conversa (sender_type = system)
-- [x] @menção de operadores em notas
-- [x] Histórico de conversas encerradas
-- [x] Busca full-text em mensagens e contatos
+Status: `MVP`
+
+Meta: dar ao operador um CRM realmente utilizável no dia a dia.
+
+### 2.1 — Inbox operacional
+
+- [x] Tornar o botão "Atribuir" funcional no thread
+- [x] Adicionar modal ou drawer de atribuição
+- [x] Mostrar fila/estado da mensagem no composer
+- [x] Exibir erro operacional claro em falha de envio
+- [ ] Adicionar contador de não lidas
+- [ ] Adicionar presença do operador na conversa
+- [ ] Adicionar prevenção de colisão entre agentes
+
+### 2.2 — Histórico e contexto
+
+- [ ] Exibir timeline completa do contato, não só da conversa atual
+- [ ] Exibir histórico de conversas encerradas
+- [ ] Exibir SLA e tempos de resposta
+- [ ] Exibir última interação do cliente
+- [ ] Exibir origem do contato e opt-in
+
+### 2.3 — Contact management real
+
+- [ ] Adicionar campos customizados
+- [ ] Adicionar empresa/organização
+- [ ] Adicionar owner do contato
+- [ ] Adicionar lifecycle stage
+- [ ] Adicionar merge de duplicados
+- [ ] Adicionar notas internas no nível do contato
+
+### 2.4 — Tags, segmentação e pipeline
+
+- [ ] Melhorar filtros compostos por tags + pipeline + status
+- [ ] Adicionar segmentação salva
+- [ ] Adicionar ações em lote
+- [ ] Adicionar automação baseada em tags/stages
+
+### 2.5 — Configurações de workspace completas
+
+- [ ] Persistir `timezone`
+- [ ] Persistir `language`
+- [ ] Persistir `logoUrl`
+- [ ] Persistir `businessHours`
+- [ ] Persistir `outOfHoursMessage`
+- [ ] Aplicar essas configs em follow-up e automação
+
+### 2.6 — Horário comercial
+
+- [ ] Respeitar timezone do workspace
+- [ ] Detectar atendimento fora de horário
+- [ ] Enviar mensagem automática fora do horário quando configurado
+- [ ] Evitar follow-up indevido fora de horário
+
+### 2.7 — Opt-in e compliance de outbound
+
+- [ ] Modelar consentimento/opt-in por contato
+- [ ] Registrar origem do consentimento
+- [ ] Registrar data e evidência
+- [ ] Implementar opt-out
+- [ ] Bloquear outbound quando política exigir
+
+Critério de saída da fase:
+
+- operador consegue atender, atribuir, entender contexto e agir sem workarounds
 
 ---
 
-Fase 8 continuação — Frontend Unificado 🔨
+## Fase 3 — Automação v2
 
-Antes de avançar para LGPD e SaaS, o frontend precisa ser consolidado com layout correto, design system e componentes reutilizáveis. Esta fase garante consistência visual para todas as próximas etapas.
+Status: `MVP+`
 
-> **Foco:** frontend. Alterações no backend são permitidas apenas se necessárias para que o frontend funcione corretamente (ex: endpoint faltando, campo ausente na resposta). Não refatorar backend sem necessidade.
+Meta: sair do fluxo linear simples e chegar a uma engine utilizável para atendimento automatizado.
 
-**Estado atual analisado (2026-04-09):**
-- `globals.css`: CSS variables `:root` completas (cores, radius, sombras) — design tokens OK
-- `message-bubble.tsx`: bolhas outgoing/incoming, status icons, nota interna amber — OK
-- `conversation-thread.tsx`: header, input com Enter, status de mensagem, painel lateral direito (só dados básicos) — base OK, falta tags/pipeline no painel
-- `flow-editor-dialog.tsx`: editor dentro de Dialog/modal, layout 2-col funcional — viewport não estoura, mas precisa virar canvas com painel lateral
-- `dashboard-sidebar.tsx`: sidebar principal + GlobalSearch já existem — layout duplo quebrado no `(dashboard)/layout.tsx`
-- shadcn/ui: Button, Input, Badge, Avatar, Card, Modal, Toast, ScrollArea, Separator — todos instalados
-- Skeleton/Loading: só spinner (`LoaderCircle`) — sem skeleton de lista
+### 3.1 — Engine de execução
 
-**Ordem de execução recomendada:** 8.1 → 8.4 (só skeletons) → 8.2 → 8.3
+- [ ] Substituir recursão linear por executores de nó
+- [ ] Persistir histórico de execução
+- [ ] Tornar retomada via fila determinística
+- [ ] Garantir cancelamento limpo quando operador assume
 
-8.1 — Layout Shell (App Shell) ✅
+### 3.2 — Novos tipos de nó
 
- [x] Corrigir `(dashboard)/layout.tsx`: flex-row fixo com NavRail + ContextSidebar + conteúdo
- [x] Sidebar secundário contextual (lista de conversas) ao lado do principal
- [x] Layout: `sidebar-nav (64px) | sidebar-context (300px) | main-content (flex-1)`
- [x] Ambos os sidebars com `height: 100vh` e scroll interno independente
- [x] Sidebar secundário recolhível em telas menores (drawer mobile)
+- [ ] Condition real
+- [ ] Wait for reply
+- [ ] Branch
+- [ ] Tag contact
+- [ ] Move pipeline stage
+- [ ] Assign team/user
+- [ ] Send template
+- [ ] Send interactive message
+- [ ] Webhook call
 
-8.2 — Conversations / Inbox ✅
+### 3.3 — Estado por contato e conversa
 
- [x] Lista de conversas (sidebar-context): avatar, nome, preview, timestamp, badge status
- [x] Filtros por status (aberta, fechada) na barra superior da lista
- [x] Painel lateral direito do thread: tags e stage de pipeline no "Contexto do atendimento"
- [x] Bolhas de mensagem: enviadas (direita, cor primária) e recebidas (esquerda, cinza)
- [x] Header do chat: nome do contato, status e ações (fechar, reabrir)
- [x] Input fixo no rodapé com suporte a Enter para enviar
- [x] Indicador de status por mensagem (enviando, enviado, entregue, lido, falhou)
+- [ ] Criar store de variáveis do flow
+- [ ] Registrar respostas do usuário por etapa
+- [ ] Permitir reutilização de variáveis em mensagens
+- [ ] Suportar timeout em espera de resposta
 
-8.3 — Automação (Canvas) ✅
+### 3.4 — Triggers avançados
 
- [x] Substituir Dialog por página/rota dedicada `/automation/[id]` com layout de canvas
- [x] Canvas com `overflow: auto` e nós em coluna vertical conectada por setas SVG simples
- [x] Toolbar superior: adicionar nó (mensagem / delay), salvar, toggle ativo/inativo
- [x] Painel lateral direito para editar o nó selecionado (inline, sem modal)
- [x] Chips coloridos por tipo: mensagem = azul (`primary`), delay = amarelo (`amber`)
+- [ ] Trigger por nova conversa
+- [ ] Trigger por keyword
+- [ ] Trigger por tag
+- [ ] Trigger por stage
+- [ ] Trigger por evento de sistema
+- [ ] Trigger por template reply/button reply
 
-8.4 — Design System Base ✅
+### 3.5 — UI de flow builder
 
- [x] CSS variables globais: cores, espaçamentos, border-radius — `globals.css` OK
- [x] Componentes base: Button, Input, Badge, Avatar, Card, Modal, Toast — shadcn/ui instalados
- [x] Tema claro definido — OK
- [x] Skeleton/Loading para listas assíncronas (lista de conversas, lista de flows)
- [x] Tipografia: consistência de escala verificada entre páginas
+- [ ] Canvas com conexões reais
+- [ ] Painel lateral por tipo de nó
+- [ ] Validação visual do flow
+- [ ] Simulador/test run
+- [ ] Publicação versionada
 
-Estado atual e gaps críticos (perspectiva de produto)
-O sistema tem toda a infraestrutura backend funcionando (Fases 1–8), mas falta a camada de configuração e operação que transforma o código em um produto utilizável. Pense como Chatwoot ou Syngoo: nenhum dos dois funciona sem que o admin configure primeiro a conta WhatsApp, depois crie usuários, depois monte as equipes. A ordem importa.
+Critério de saída da fase:
 
-Fase 9 — Configurações e Conexão WhatsApp (desbloqueador de tudo)
+- fluxos conseguem bifurcar, esperar resposta e alterar estado do CRM
 
-Prioridade máxima. Sem a conta WhatsApp conectada via UI, nenhum atendimento funciona em produção. Hoje isso exige editar banco de dados provavelmente.
+---
 
-9.1 — Tela de conexão WhatsApp Cloud API ✅
+## Fase 4 — Segurança e Isolamento de Tenant
 
-Rota: /settings/whatsapp (acesso: manage_workspace)
-Campos: display_phone_number, phone_number_id, waba_id, access_token, app_secret
-Botão "Verificar conexão" — chama GET https://graph.facebook.com/v18.0/{phoneNumberId} e exibe status
-Exibir webhook URL e verify token gerados automaticamente para o admin copiar no painel Meta
-Backend: GET/POST/PATCH/DELETE /api/workspaces/whatsapp-accounts — CRUD completo com multi-conta
-Schema: adicionados campos wabaId, appSecret, verifyToken, name ao WhatsappAccount
-Settings shell com nav lateral unificando /settings e /settings/whatsapp
+Status: `CRÍTICO`
 
-9.2 — Templates HSM (mensagens pré-aprovadas Meta) ✅
+Meta: corrigir riscos de acesso indevido, configuração insegura e entrada falsa de eventos.
 
-Rota: /settings/templates
-CRUD local de templates com campos: name, category (MARKETING/UTILITY/AUTHENTICATION), language, body com variáveis {{1}}, {{2}}
-Sincronização com a API da Meta: POST /v18.0/{waba_id}/message_templates
-Status de aprovação: PENDING / APPROVED / REJECTED — polling ou webhook de status
-Por que é crítico: sem HSM aprovado, o WhatsApp bloqueia mensagens para contatos que não iniciaram conversa nas últimas 24h. Todo fluxo de prospecção depende disso.
-Backend: novo módulo templates/ com MessageTemplate no schema Prisma
+### 4.1 — Endurecimento de autenticação
 
-9.3 — Importação de contatos ✅
+- [x] Remover fallback de `JWT_SECRET`
+- [x] Falhar boot se variáveis críticas não existirem
+- [ ] Adicionar validação central de configuração de ambiente
+- [ ] Definir perfis explícitos `development`, `staging`, `production`
+- [ ] Adicionar rotação planejada de segredo JWT
+- [ ] Implementar refresh token
+- [ ] Implementar revogação de sessão
 
-Upload CSV com colunas: name, phone (obrigatório), email, tags
-Validação de formato de telefone (E.164), deduplicação por workspaceId + phone
-Preview antes de confirmar (N novos, M duplicados, K inválidos)
-Backend: POST /api/contacts/import/preview + POST /api/contacts/import/confirm com BullMQ (contact-import queue)
-Frontend: botão "Importar CSV" na página /contacts, seção inline 3 etapas (upload → preview → sucesso)
+### 4.2 — Hardening do webhook
 
+- [ ] Exigir assinatura válida da Meta em produção
+- [ ] Proibir bypass silencioso quando `WHATSAPP_APP_SECRET` estiver ausente
+- [ ] Garantir `rawBody` obrigatório para rota de webhook
+- [ ] Validar origem esperada do payload
+- [ ] Registrar tentativas inválidas com contexto suficiente
+- [ ] Adicionar proteção contra replay de webhook
 
-Fase 10 — Gestão de Usuários, Roles e Equipes (UI completa)
+### 4.3 — RBAC real nas ações sensíveis
 
-O backend de RBAC já existe (Fases 3–4). Falta a interface administrativa para o admin do workspace operar sem tocar na API.
+- [ ] Exigir permissão explícita para atribuir conversa
+- [ ] Exigir permissão explícita para fechar/reabrir conversa
+- [ ] Exigir permissão explícita para iniciar conversa outbound
+- [ ] Exigir permissão explícita para notas internas
+- [ ] Exigir permissão explícita para ler usuários, roles e times
+- [ ] Revalidar autorização no service layer, não só no controller
 
-10.1 — Cadastro e gestão de agentes
+### 4.4 — Segurança de websocket
 
-Rota: /settings/agents
-Admin cria agente com: nome, e-mail, senha temporária, role inicial
-Listar agentes com status (online/offline — via Socket.io), conversas abertas, equipes
-Ações: editar, desativar, redefinir senha, reatribuir conversas abertas
-Diferença de hoje: hoje existe POST /api/users mas não há tela; o admin precisa usar Postman
+- [ ] Validar acesso à conversa antes de entrar em `conversation room`
+- [ ] Restringir eventos por workspace e por autorização real
+- [ ] Definir CORS/WS origin por ambiente
+- [ ] Impedir que cliente entre em salas arbitrárias sem checagem
 
-10.2 — Editor visual de roles e permissões
+### 4.5 — Segredos e credenciais
 
-Rota: /settings/roles
-Criar role com nome customizado (ex: "Supervisor", "Atendimento Nível 1")
-Interface de toggle por permissão, agrupadas por domínio:
+- [ ] Nunca expor token da Meta no frontend
+- [ ] Mover "testar conexão WhatsApp" para endpoint backend
+- [ ] Definir política de criptografia para tokens armazenados
+- [ ] Adicionar rotação de credenciais de conta WhatsApp
 
-Conversas: view_all_conversations, assign_conversations, close_conversations
-Contatos: manage_contacts, export_contacts
-Equipes: manage_teams
-Configurações: manage_workspace, manage_flows, manage_roles
+Critério de saída da fase:
 
+- nenhuma ação crítica de conversa acessível apenas com login
+- webhook aceito somente com validação correta
+- nenhum segredo sensível exposto ao browser
 
-Exibir quais agentes têm cada role
-Backend: PATCH /api/roles/:id/permissions já existe — só falta a UI
+---
 
-10.3 — Gestão de equipes (UI completa)
+## Fase 5 — Confiabilidade de Mensageria
 
-Rota: /settings/teams
-Criar equipe com nome, descrição, avatar de cor
-Adicionar/remover agentes com busca
-Configurar: round-robin ativo/inativo, carga máxima por agente
-Ver métricas por equipe: conversas abertas, TMA, agentes online
+Status: `CRÍTICO`
 
+Meta: corrigir ingestão, persistência e envio para operação estável sob retry, falha transitória e duplicidade.
 
-Fase 11 — Inbox operacional (após WA conectado)
+### 5.1 — Idempotência inbound
 
-Com a Fase 9 concluída, o chat começa a funcionar de verdade. Esta fase adiciona as ferramentas do dia a dia do agente.
+- [ ] Tornar `Message.externalId` único quando presente
+- [ ] Implementar deduplicação de mensagens recebidas
+- [ ] Implementar deduplicação de status webhook
+- [ ] Criar tabela ou mecanismo de receipts de processamento de webhook
+- [ ] Garantir que retry da Meta não gere mensagem duplicada
 
-11.1 — Iniciar conversa ativa (outbound)
+### 5.2 — Envio outbound via fila
 
-Botão "Nova conversa" na inbox
-Selecionar contato (busca) ou digitar número novo
-Selecionar template HSM aprovado + preencher variáveis
-Enviar e abrir thread imediatamente
-Regra de negócio: só HSM pode iniciar conversa fora da janela de 24h — validar no backend antes de enviar
+- [ ] Tirar envio Meta do request síncrono do operador
+- [ ] Criar job outbound de mensagem
+- [ ] Persistir estado `queued`, `sending`, `sent`, `failed`
+- [ ] Classificar erros retryable vs não retryable
+- [ ] Adicionar exponential backoff
+- [ ] Adicionar dead-letter strategy
+- [ ] Permitir reenvio manual de mensagens falhadas
 
-11.2 — Respostas rápidas (canned responses)
+### 5.3 — Consistência de estado
 
-Atalho / no input do chat abre painel de busca de respostas prontas
-CRUD em /settings/quick-replies: título (interno), texto (com variáveis {{contact_name}}, {{agent_name}})
-Backend: novo módulo quick-replies/ com isolamento por workspaceId
+- [ ] Garantir atualização correta de `lastMessageAt`
+- [ ] Garantir consistência entre banco, fila e socket
+- [ ] Emitir socket só após persistência confirmada
+- [ ] Criar estratégia de recuperação para jobs órfãos
 
-11.3 — Envio de mídia no chat
+### 5.4 — Meta error handling
 
-Suporte a: imagem (jpg/png/webp), documento (pdf), áudio (ogg/mp3), sticker
-Upload via POST /api/messages com multipart/form-data
-Backend: upload para storage (local ou S3) + enviar via messages/media da API Meta
-UI: botão de clipe no input, preview antes de enviar
+- [ ] Mapear erros da Cloud API por categoria
+- [ ] Exibir motivo de falha para operador
+- [ ] Persistir código e mensagem de erro da Meta
+- [ ] Diferenciar bloqueio de janela 24h, rate limit, número inválido, token inválido, mídia inválida
 
+### 5.5 — Rate limiting e throughput
 
-Fase 12 — Painel de configurações unificado
+- [ ] Centralizar cliente de WhatsApp Cloud API
+- [ ] Implementar controle de taxa por `phone_number_id`
+- [ ] Implementar retry com jitter
+- [ ] Preparar fila para bursts por workspace
 
-Tudo que o admin precisa sem abrir o banco de dados.
+Critério de saída da fase:
 
-12.1 — Settings do workspace
+- retries da Meta não duplicam mensagens
+- falhas transitórias não dependem de retry manual do operador
+- mensagens falhadas têm motivo auditável
 
-Nome, logo, fuso horário, idioma padrão
-Horário de atendimento: janelas por dia da semana + mensagem automática fora do horário
+---
 
-12.2 — Notificações
+## Fase 6 — Observabilidade, Testes e Operação
 
-Push/som no browser quando chega nova conversa ou mensagem em conversa atribuída
-Configurável por agente: quais eventos geram notificação
+Status: `CRÍTICO`
 
-12.3 — Auditoria
+Meta: operar incidentes e evoluir o produto com segurança.
 
-Tabela audit_logs com: actor_id, action, entity_type, entity_id, diff, created_at
-Registrar em: login, assign, close, reopen, delete contact, change role, template send
-Rota /settings/audit com filtros por data, ator, tipo de entidade
+### 6.1 — Logging estruturado
 
+- [ ] Adotar logger estruturado
+- [ ] Incluir `workspaceId`, `conversationId`, `messageId`, `jobId`
+- [ ] Correlation ID por request e job
+- [ ] Logs padronizados para webhook, send, retry e processor
 
-Ordem de execução recomendada
-Fase 9 (WA + HSM + Import) → Fase 10 (Usuários/Roles/Equipes UI)
-  → Fase 11 (Inbox operacional) → Fase 12 (Settings avançados)
-A Fase 9 desbloqueia tudo. Sem ela, nenhum cliente consegue usar o sistema sem intervenção técnica.
+### 6.2 — Error tracking
 
-Decisões de arquitetura — DEFINIDAS (2026-04-10)
+- [ ] Integrar Sentry no backend
+- [ ] Integrar Sentry no frontend
+- [ ] Capturar erros por tenant e contexto funcional
 
-✅ Storage de mídia: local (disk) — pasta uploads/ no servidor. Migrar para S3/R2 futuramente.
-✅ Aprovação de HSM: polling via cron (BullMQ scheduler) — sem webhook da Meta por ora.
-✅ Multi-número por workspace: múltiplos WhatsappAccount por workspace são suportados. UI e round-robin devem considerar múltiplos números.
-✅ Senha temporária de agente: exibir na tela uma única vez após criação + forçar troca de senha no primeiro login (flag must_change_password no User).
+### 6.3 — Métricas e health checks
 
+- [x] Endpoint de liveness
+- [x] Endpoint de readiness
+- [ ] Métricas Prometheus
+- [ ] Métricas de fila BullMQ
+- [ ] Métricas de throughput de mensagens
+- [ ] Métricas de erro por tipo
 
-Fase FINAL 1 — Logs e LGPD ⬜
+### 6.4 — Testes
 
- [ ] Registro em audit_logs em todas as ações críticas
- [ ] Listagem de logs por workspace e entidade (filtros por data e tipo)
- [ ] Exportação de dados do contato em JSON/CSV (portabilidade)
- [ ] Endpoint para apagar dados do contato (direito ao esquecimento)
- [ ] Retenção configurável de mensagens por workspace
- [ ] Página de privacidade e consentimento para contatos
+- [ ] Unit tests para `WhatsappService`
+- [ ] Unit tests para `MessagesService`
+- [ ] Unit tests para `ConversationsService`
+- [ ] Unit tests para `FlowExecutorService`
+- [ ] Tests de permissão e isolamento de workspace
+- [ ] E2E de webhook
+- [ ] E2E de outbound text/template/media
+- [ ] E2E de follow-up/auto-close
 
+### 6.5 — CI/CD
 
-Fase FINAL 1.2 — SaaS / Produção ⬜
+- [ ] Pipeline com lint
+- [ ] Pipeline com test
+- [ ] Pipeline com build backend
+- [ ] Pipeline com build frontend
+- [ ] Bloqueio de merge em falha
+- [ ] Estratégia de deploy com rollback
 
- [ ] Planos e limites por workspace (usuários, números, volume de mensagens)
- [ ] Onboarding guiado: criação de workspace, conexão WhatsApp, primeiro fluxo
- [ ] Dashboard de métricas: volume de conversas, TMA, taxa de resolução
- [ ] Domínio customizado por workspace (white-label)
- [ ] Deploy com Nginx + SSL + Docker em produção
- [ ] CI/CD com GitHub Actions (lint, test, build, deploy)
- [ ] Monitoramento de erros em produção (Sentry ou similar)
+Critério de saída da fase:
+
+- o sistema é observável, testado e implantável com previsibilidade
+
+---
+
+## Fase 7 — Escala e Inteligência Operacional
+
+Status: `PÓS-MVP`
+
+Meta: preparar o produto para operação maior, integrações e diferenciação funcional.
+
+### 7.1 — Auditoria real
+
+- [ ] Implementar gravação de audit logs
+- [ ] Auditar login
+- [ ] Auditar alterações de usuários/roles/times
+- [ ] Auditar configurações
+- [ ] Auditar templates
+- [ ] Auditar mudança de conversa
+
+### 7.2 — Segurança corporativa
+
+- [ ] Política de senha
+- [ ] Forçar troca de senha no primeiro login de verdade
+- [ ] Recuperação de senha
+- [ ] Sessões ativas por usuário
+- [ ] Revogação de sessões
+- [ ] 2FA opcional
+
+### 7.3 — API e integrações
+
+- [ ] API keys por workspace
+- [ ] Webhooks outbound para clientes
+- [ ] Event delivery com retry
+- [ ] Assinatura de webhook do cliente
+- [ ] Histórico/replay de eventos
+- [ ] Integração com Zapier/n8n
+
+### 7.4 — Escala técnica
+
+- [ ] Separar workers por tipo de fila
+- [ ] Escalar websocket separadamente
+- [ ] Adicionar rate limit por tenant
+- [ ] Adicionar storage externo para mídia
+- [ ] Preparar sharding lógico de filas se necessário
+
+### 7.5 — Analytics e SLA
+
+- [ ] Dashboard de volume por workspace
+- [ ] Dashboard de SLA
+- [ ] Taxa de entrega, leitura e falha
+- [ ] Tempo médio de primeira resposta
+- [ ] Produtividade por operador/time
+
+### 7.6 — Campanhas e reengajamento
+
+- [ ] Segmentação de audiência
+- [ ] Broadcast com templates
+- [ ] Controle de opt-out de campanha
+- [ ] Agendamento
+- [ ] Relatório de campanha
+
+### 7.7 — Assistência inteligente
+
+- [ ] Sugestão de resposta
+- [ ] Resumo automático de conversa
+- [ ] Classificação de intenção
+- [ ] Priorização de atendimento
+- [ ] Transcrição de áudio
+
+Critério de saída da fase:
+
+- produto apto para crescimento operacional, integração e diferenciação competitiva
+
+---
+
+## Backlog técnico transversal
+
+Executar ao longo das fases quando fizer sentido:
+
+- [ ] Padronizar cliente da Meta em um provider único
+- [ ] Modelar payload completo de mensagem em JSON
+- [ ] Revisar índices Prisma para busca e throughput
+- [ ] Criar migração para unicidade de `externalId`
+- [ ] Revisar limites de upload por tipo de mídia
+- [ ] Migrar uploads locais para S3/R2
+- [ ] Adicionar versionamento de flows
+- [ ] Adicionar feature flags por workspace
+
+---
+
+## Definição de base mínima operacional
+
+Esta seção não significa que o produto estará realmente "production-ready" no sentido pleno.
+
+Mesmo após concluir todos os itens abaixo, isso ainda representa apenas o começo de uma operação mais séria:
+
+- uma base mínima para operar com menos risco
+- um núcleo funcional mais confiável
+- um ponto de partida para evoluir o produto
+
+Em outras palavras:
+
+- concluir estes itens não encerra o roadmap
+- concluir estes itens não significa maturidade total de produto
+- concluir estes itens apenas remove os bloqueadores mais graves para a próxima etapa
+
+O sistema só deve ser considerado com uma base mínima operacional quando todos os itens abaixo estiverem concluídos:
+
+- [ ] Segurança crítica concluída
+- [ ] Webhook idempotente
+- [ ] Outbound via fila com retry
+- [ ] Mídia inbound e outbound funcionando
+- [ ] Regra de 24h aplicada
+- [ ] Templates completos e usáveis
+- [ ] Observabilidade implantada
+- [ ] Testes de fluxos críticos cobrindo ingestão, envio e isolamento
+- [ ] Audit logs sendo gravados
+- [ ] Configurações de workspace completas
+- [ ] Sem segredo sensível exposto ao frontend
+- [ ] Sem bloqueadores críticos de segurança ou confiabilidade
+
+---
+
+## Entrega sugerida por sprint
+
+### Sprint 1
+
+- mídia outbound real
+- mídia inbound com download
+- renderização de mídia na UI
+- regra de 24h
+
+### Sprint 2
+
+- templates completos
+- mensagens interativas
+- contexto operacional da conversa
+- assign UI funcional
+
+### Sprint 3
+
+- campos de contato e contexto CRM
+- settings completos do workspace
+- horário comercial
+- automação com novos nós prioritários
+
+### Sprint 4
+
+- hardening JWT
+- hardening webhook
+- RBAC em conversas
+- endpoint backend para testar conta Meta
+
+### Sprint 5
+
+- idempotência inbound
+- outbound via fila
+- persistência de erro Meta
+- reenvio manual
+
+### Sprint 6
+
+- observabilidade
+- testes críticos
+- CI/CD
+
+### Sprint 7
+
+- API keys
+- webhooks para clientes
+- auditoria real
+- segurança corporativa

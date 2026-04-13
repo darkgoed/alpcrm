@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRolePermissionsDto } from './dto/update-role-permissions.dto';
@@ -50,7 +54,9 @@ export class RolesService {
         ...(dto.permissionIds?.length
           ? {
               rolePermissions: {
-                create: dto.permissionIds.map((permissionId) => ({ permissionId })),
+                create: dto.permissionIds.map((permissionId) => ({
+                  permissionId,
+                })),
               },
             }
           : {}),
@@ -61,7 +67,11 @@ export class RolesService {
 
   // ─── Atualizar permissões da role (substitui todas) ──────────────────────────
 
-  async updatePermissions(id: string, workspaceId: string, dto: UpdateRolePermissionsDto) {
+  async updatePermissions(
+    id: string,
+    workspaceId: string,
+    dto: UpdateRolePermissionsDto,
+  ) {
     await this.assertExists(id, workspaceId);
 
     // Apaga todas as permissões atuais e recria (como um checkbox que salva tudo de uma vez)
@@ -69,7 +79,10 @@ export class RolesService {
 
     if (dto.permissionIds.length) {
       await this.prisma.rolePermission.createMany({
-        data: dto.permissionIds.map((permissionId) => ({ roleId: id, permissionId })),
+        data: dto.permissionIds.map((permissionId) => ({
+          roleId: id,
+          permissionId,
+        })),
         skipDuplicates: true,
       });
     }
@@ -97,7 +110,9 @@ export class RolesService {
   // ─── Helper ──────────────────────────────────────────────────────────────────
 
   private async assertExists(id: string, workspaceId: string) {
-    const role = await this.prisma.role.findFirst({ where: { id, workspaceId } });
+    const role = await this.prisma.role.findFirst({
+      where: { id, workspaceId },
+    });
     if (!role) throw new NotFoundException('Role não encontrada');
     return role;
   }

@@ -2,13 +2,19 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bot, FileText, Settings2, Wifi } from 'lucide-react';
+import { Bot, FileText, Settings2, Wifi, Users, Shield, UsersRound, MessageSquareQuote, Building2, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const settingsNav = [
-  { href: '/settings/whatsapp', label: 'WhatsApp', icon: Wifi },
-  { href: '/settings/templates', label: 'Templates HSM', icon: FileText },
-  { href: '/settings', label: 'Automações passivas', icon: Bot, exact: true },
+  { href: '/settings/whatsapp',      label: 'WhatsApp',         icon: Wifi },
+  { href: '/settings/templates',     label: 'Templates HSM',    icon: FileText },
+  { href: '/settings/agents',        label: 'Agentes',          icon: Users },
+  { href: '/settings/roles',         label: 'Roles',            icon: Shield },
+  { href: '/settings/teams',         label: 'Equipes',          icon: UsersRound },
+  { href: '/settings/quick-replies', label: 'Respostas rápidas',icon: MessageSquareQuote },
+  { href: '/settings/workspace',     label: 'Workspace',        icon: Building2 },
+  { href: '/settings/audit',         label: 'Auditoria',        icon: ClipboardList },
+  { href: '/settings',               label: 'Automações',       icon: Bot, exact: true },
 ];
 
 export function SettingsShell({ children }: { children: React.ReactNode }) {

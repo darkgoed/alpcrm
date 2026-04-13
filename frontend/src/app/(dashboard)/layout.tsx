@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { NavRail, ContextSidebar, GlobalSearch } from '@/features/dashboard/components/dashboard-sidebar';
+import { useBrowserNotifications } from '@/hooks/useBrowserNotifications';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -107,7 +108,12 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { token, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Notificações do browser para novas mensagens
+  const activeConvId = pathname.startsWith('/conversations/') ? pathname.split('/')[2] : undefined;
+  useBrowserNotifications(activeConvId);
 
   useEffect(() => {
     if (!isLoading && !token) {

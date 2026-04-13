@@ -6,6 +6,7 @@ import {
   LoaderCircle,
   Lock,
   MessageSquare,
+  Paperclip,
   PhoneCall,
   RotateCcw,
   SendHorizonal,
@@ -15,22 +16,42 @@ import {
   X,
 } from 'lucide-react';
 import {
+  assignConversation,
   closeConversation,
   reopenConversation,
   sendMessage,
+  type SendMessageInput,
   sendNote,
   useConversation,
 } from '@/hooks/useConversations';
+import { useQuickReplies, type QuickReply } from '@/hooks/useQuickReplies';
 import { joinConversation, leaveConversation, useSocket } from '@/hooks/useSocket';
 import type { Message } from '@/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { ConversationMessageBubble } from './message-bubble';
+import { InteractiveMessageComposer } from './interactive-message-composer';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +63,11 @@ interface WorkspaceUser {
   id: string;
   name: string;
   email: string;
+}
+
+interface WorkspaceTeam {
+  id: string;
+  name: string;
 }
 
 interface ContactTag {
@@ -108,6 +134,166 @@ function MentionDropdown({
   );
 }
 
+function AssignmentDialog({
+  conversationId,
+  assignedUserId,
+  assignedUserName,
+  teamId,
+  teamName,
+  onAssigned,
+}: {
+  conversationId: string;
+  assignedUserId: string | null;
+  assignedUserName: string | null;
+  teamId: string | null;
+  teamName: string | null;
+  onAssigned: () => Promise<void>;
+}) {
+  const NONE_VALUE = '__none__';
+  const [open, setOpen] = useState(false);
+  const [users, setUsers] = useState<WorkspaceUser[]>([]);
+  const [teams, setTeams] = useState<WorkspaceTeam[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>(assignedUserId ?? NONE_VALUE);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>(teamId ?? NONE_VALUE);
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    setSelectedUserId(assignedUserId ?? NONE_VALUE);
+    setSelectedTeamId(teamId ?? NONE_VALUE);
+    setLoadingOptions(true);
+    setError(null);
+
+    Promise.all([
+      api.get<WorkspaceUser[]>('/users'),
+      api.get<WorkspaceTeam[]>('/teams'),
+    ])
+      .then(([usersResponse, teamsResponse]) => {
+        setUsers(usersResponse.data);
+        setTeams(teamsResponse.data);
+      })
+      .catch((err: any) => {
+        setError(
+          err?.response?.data?.message ??
+            'Nao foi possivel carregar usuarios e times.',
+        );
+      })
+      .finally(() => setLoadingOptions(false));
+  }, [open, assignedUserId, teamId]);
+
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+
+    try {
+      await assignConversation(
+        conversationId,
+        selectedUserId === NONE_VALUE ? undefined : selectedUserId,
+        selectedTeamId === NONE_VALUE ? undefined : selectedTeamId,
+      );
+      await onAssigned();
+      setOpen(false);
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message ?? 'Nao foi possivel atualizar a atribuicao.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline">
+          <UserRoundCheck className="size-4" />
+          Atribuir
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Atribuir conversa</DialogTitle>
+          <DialogDescription>
+            Defina o operador e o time responsaveis por este atendimento.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="rounded-xl border border-border/70 bg-muted/30 px-4 py-3 text-sm">
+            <p className="font-medium text-foreground">
+              {assignedUserName ?? 'Sem operador atribuido'}
+            </p>
+            <p className="mt-1 text-muted-foreground">
+              {teamName ?? 'Sem time vinculado'}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Operador</label>
+            <Select
+              value={selectedUserId}
+              onValueChange={setSelectedUserId}
+              disabled={loadingOptions || saving}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um operador" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE_VALUE}>Sem operador</SelectItem>
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Time</label>
+            <Select
+              value={selectedTeamId}
+              onValueChange={setSelectedTeamId}
+              disabled={loadingOptions || saving}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um time" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE_VALUE}>Sem time</SelectItem>
+                {teams.map((team) => (
+                  <SelectItem key={team.id} value={team.id}>
+                    {team.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={saving}
+          >
+            Cancelar
+          </Button>
+          <Button onClick={() => void handleSave()} disabled={loadingOptions || saving}>
+            {saving ? <LoaderCircle className="size-4 animate-spin" /> : null}
+            Salvar atribuicao
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function ConversationThread({ params }: ConversationThreadPageProps) {
   const { id } = use(params);
   const { conversation, isLoading, mutate } = useConversation(id);
@@ -115,6 +301,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
   const [text, setText] = useState('');
   const [mode, setMode] = useState<'message' | 'note'>('message');
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -122,6 +309,18 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [contactDetail, setContactDetail] = useState<ContactDetail | null>(null);
+
+  // Quick replies
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [quickReplySearch, setQuickReplySearch] = useState<string | null>(null);
+  const { quickReplies } = useQuickReplies(quickReplySearch ?? undefined);
+  const filteredQR = quickReplySearch !== null
+    ? quickReplies.filter(
+        (qr) =>
+          qr.shortcut.includes(quickReplySearch) ||
+          qr.title.toLowerCase().includes(quickReplySearch.toLowerCase()),
+      ).slice(0, 5)
+    : [];
 
   // Load workspace users for @mention
   useEffect(() => {
@@ -169,10 +368,45 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
 
   function handleTextChange(value: string) {
     setText(value);
+    if (sendError) setSendError(null);
     const cursor = textareaRef.current?.selectionStart ?? value.length;
     const before = value.slice(0, cursor);
-    const match = before.match(/@(\w*)$/);
-    setMentionQuery(match ? match[1] : null);
+
+    // @mention detection
+    const mentionMatch = before.match(/@(\w*)$/);
+    setMentionQuery(mentionMatch ? mentionMatch[1] : null);
+
+    // Quick reply detection: starts with /
+    const qrMatch = value.match(/^\/(\S*)$/);
+    setQuickReplySearch(qrMatch ? qrMatch[1] : null);
+  }
+
+  function applyQuickReply(qr: QuickReply) {
+    setText(qr.body);
+    setQuickReplySearch(null);
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  }
+
+  async function handleFileUpload(file: File) {
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('conversationId', id);
+    setSending(true);
+    setSendError(null);
+    try {
+      const res = await api.post('/messages/media', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const persisted = res.data as Message;
+      setMessages((current) => [...current, persisted]);
+    } catch (err: any) {
+      setSendError(
+        err?.response?.data?.message ?? 'Nao foi possivel enviar o arquivo.',
+      );
+    } finally {
+      setSending(false);
+    }
   }
 
   function handleMentionSelect(user: WorkspaceUser) {
@@ -192,6 +426,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
     if (!content || sending) return;
 
     setSending(true);
+    setSendError(null);
     setText('');
     setMentionQuery(null);
 
@@ -199,9 +434,12 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       try {
         const note = await sendNote(id, content);
         setMessages((current) => (current.some((m) => m.id === note.id) ? current : [...current, note]));
-      } catch {
-        // silently restore text on error
+      } catch (err: any) {
         setText(content);
+        setSendError(
+          err?.response?.data?.message ??
+            'Nao foi possivel salvar a nota interna.',
+        );
       } finally {
         setSending(false);
         textareaRef.current?.focus();
@@ -217,6 +455,11 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       type: 'text',
       content,
       mediaUrl: null,
+      mimeType: null,
+      fileName: null,
+      fileSize: null,
+      interactiveType: null,
+      interactivePayload: null,
       status: 'sent',
       externalId: null,
       createdAt: new Date().toISOString(),
@@ -225,11 +468,83 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
     setMessages((current) => [...current, optimisticMessage]);
 
     try {
-      const persisted = (await sendMessage(id, content)) as Message;
+      const persisted = (await sendMessage({
+        conversationId: id,
+        type: 'text',
+        content,
+      })) as Message;
       setMessages((current) => current.map((item) => (item.id === optimisticMessage.id ? persisted : item)));
       void mutate();
-    } catch {
+    } catch (err: any) {
       setMessages((current) => current.map((item) => (item.id === optimisticMessage.id ? { ...item, status: 'failed' } : item)));
+      setSendError(
+        err?.response?.data?.message ??
+          'Nao foi possivel enviar a mensagem para o WhatsApp.',
+      );
+    } finally {
+      setSending(false);
+      textareaRef.current?.focus();
+    }
+  }
+
+  async function handleInteractiveSend(input: {
+    interactiveType: string;
+    content: string;
+    interactivePayload: Record<string, any>;
+  }) {
+    if (sending) return;
+
+    setSending(true);
+    setSendError(null);
+
+    const optimisticMessage: Message = {
+      id: `temp-interactive-${Date.now()}`,
+      conversationId: id,
+      senderType: 'user',
+      senderId: null,
+      type: 'interactive',
+      content: input.content,
+      mediaUrl: null,
+      mimeType: null,
+      fileName: null,
+      fileSize: null,
+      interactiveType: input.interactiveType,
+      interactivePayload: input.interactivePayload,
+      status: 'sent',
+      externalId: null,
+      createdAt: new Date().toISOString(),
+    };
+
+    setMessages((current) => [...current, optimisticMessage]);
+
+    try {
+      const payload: SendMessageInput = {
+        conversationId: id,
+        type: 'interactive',
+        content: input.content,
+        interactiveType: input.interactiveType,
+        interactivePayload: input.interactivePayload,
+      };
+      const persisted = (await sendMessage(payload)) as Message;
+      setMessages((current) =>
+        current.map((item) =>
+          item.id === optimisticMessage.id ? persisted : item,
+        ),
+      );
+      void mutate();
+    } catch (err: any) {
+      setMessages((current) =>
+        current.map((item) =>
+          item.id === optimisticMessage.id
+            ? { ...item, status: 'failed' }
+            : item,
+        ),
+      );
+      setSendError(
+        err?.response?.data?.message ??
+          'Nao foi possivel enviar a mensagem interativa.',
+      );
+      throw err;
     } finally {
       setSending(false);
       textareaRef.current?.focus();
@@ -256,6 +571,21 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
 
   const contactName = conversation.contact.name ?? conversation.contact.phone;
   const isClosed = conversation.status === 'closed';
+
+  const windowOpen = conversation.lastContactMessageAt
+    ? Date.now() - new Date(conversation.lastContactMessageAt).getTime() < 24 * 60 * 60 * 1000
+    : false;
+  const composerStatus = isClosed
+    ? 'Conversa fechada'
+    : sending
+      ? mode === 'note'
+        ? 'Salvando nota interna'
+        : 'Enviando mensagem'
+      : mode === 'note'
+        ? 'Modo nota interna'
+        : windowOpen
+          ? 'Janela de 24h ativa'
+          : 'Envio livre bloqueado';
 
   return (
     <div className="flex h-full flex-col">
@@ -284,10 +614,16 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
               <PhoneCall className="size-4" />
               Ligar
             </Button>
-            <Button variant="outline">
-              <UserRoundCheck className="size-4" />
-              Atribuir
-            </Button>
+            <AssignmentDialog
+              conversationId={conversation.id}
+              assignedUserId={conversation.assignedUser?.id ?? null}
+              assignedUserName={conversation.assignedUser?.name ?? null}
+              teamId={conversation.team?.id ?? null}
+              teamName={conversation.team?.name ?? null}
+              onAssigned={async () => {
+                await mutate();
+              }}
+            />
             {isClosed ? (
               <Button onClick={handleReopen}>
                 <RotateCcw className="size-4" />
@@ -362,22 +698,28 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                     </p>
                   )}
 
+                  {mode === 'message' && !windowOpen && (
+                    <div className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-[11px] text-orange-700">
+                      Janela de 24h expirada. O cliente não enviou mensagem recentemente. Use um template aprovado para retomar o contato.
+                    </div>
+                  )}
+
                   <div className="relative">
                     <Textarea
                       ref={textareaRef}
                       value={text}
                       onChange={(e) => handleTextChange(e.target.value)}
                       onKeyDown={(event) => {
-                        if (event.key === 'Enter' && !event.shiftKey) {
+                        if (event.key === 'Enter' && !event.shiftKey && quickReplySearch === null) {
                           event.preventDefault();
                           void handleSend();
                         }
-                        if (event.key === 'Escape') setMentionQuery(null);
+                        if (event.key === 'Escape') { setMentionQuery(null); setQuickReplySearch(null); }
                       }}
                       placeholder={
                         mode === 'note'
                           ? 'Adicione uma nota interna... Use @nome para mencionar operadores.'
-                          : 'Digite uma mensagem. Enter envia, Shift + Enter cria nova linha.'
+                          : 'Digite uma mensagem. / para respostas rápidas. Enter envia.'
                       }
                       className={cn(
                         'min-h-24 resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0',
@@ -393,13 +735,68 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                         onSelect={handleMentionSelect}
                       />
                     )}
+
+                    {/* Quick reply dropdown */}
+                    {quickReplySearch !== null && filteredQR.length > 0 && (
+                      <div className="absolute bottom-full left-0 mb-1 w-full rounded-lg border border-border bg-background shadow-lg z-20">
+                        {filteredQR.map((qr) => (
+                          <button
+                            key={qr.id}
+                            onMouseDown={(e) => { e.preventDefault(); applyQuickReply(qr); }}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
+                          >
+                            <code className="text-xs bg-muted px-1 rounded text-primary">/{qr.shortcut}</code>
+                            <span className="text-muted-foreground">{qr.title}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <Separator />
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs text-muted-foreground">
-                      {mode === 'note' ? 'Nota visível só para a equipe.' : 'Fluxo rápido com envio otimista e atualização em tempo real.'}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      {mode === 'message' && (
+                        <>
+                          <InteractiveMessageComposer
+                            disabled={sending}
+                            onSubmit={handleInteractiveSend}
+                          />
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            className="hidden"
+                            accept="image/*,application/pdf,audio/ogg,audio/mpeg,video/mp4"
+                            onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFileUpload(f); e.target.value = ''; }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={sending}
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                            title="Enviar arquivo"
+                          >
+                            <Paperclip className="size-4" />
+                          </button>
+                        </>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {mode === 'note' ? 'Nota visível só para a equipe.' : 'Enter envia · / para respostas rápidas'}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={sending ? 'secondary' : mode === 'note' || windowOpen ? 'outline' : 'warning'}
+                      className={sendError ? 'border-destructive/20 bg-destructive/5 text-destructive' : undefined}
+                    >
+                      {composerStatus}
+                    </Badge>
+                  </div>
+                  {sendError ? (
+                    <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                      {sendError}
+                    </div>
+                  ) : null}
+                  <div className="flex items-center justify-end gap-3">
                     <Button
                       onClick={() => void handleSend()}
                       disabled={!text.trim() || sending}

@@ -1,5 +1,10 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { InviteUserDto } from './dto/invite-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -10,6 +15,7 @@ const USER_SELECT = {
   name: true,
   email: true,
   isActive: true,
+  mustChangePassword: true,
   createdAt: true,
   userRoles: {
     include: {
@@ -53,9 +59,12 @@ export class UsersService {
     const exists = await this.prisma.user.findFirst({
       where: { email: dto.email, workspaceId },
     });
-    if (exists) throw new ConflictException('E-mail já cadastrado neste workspace');
+    if (exists)
+      throw new ConflictException('E-mail já cadastrado neste workspace');
 
-    const password = await bcrypt.hash(dto.password, 10);
+    // Gera senha temporária se não fornecida; retorna plain text uma única vez
+    const rawPassword = dto.password ?? crypto.randomBytes(8).toString('hex');
+    const password = await bcrypt.hash(rawPassword, 10);
 
     const user = await this.prisma.user.create({
       data: {
@@ -63,6 +72,7 @@ export class UsersService {
         name: dto.name,
         email: dto.email,
         password,
+        mustChangePassword: true,
         ...(dto.roleId
           ? { userRoles: { create: { roleId: dto.roleId } } }
           : {}),
@@ -70,7 +80,21 @@ export class UsersService {
       select: USER_SELECT,
     });
 
-    return user;
+    // Retorna senha plain text apenas no momento da criação
+    return { ...user, temporaryPassword: rawPassword };
+  }
+
+  // ─── Redefinir senha ─────────────────────────────────────────────────────────
+
+  async resetPassword(id: string, workspaceId: string) {
+    await this.assertExists(id, workspaceId);
+    const rawPassword = crypto.randomBytes(8).toString('hex');
+    const password = await bcrypt.hash(rawPassword, 10);
+    await this.prisma.user.update({
+      where: { id },
+      data: { password, mustChangePassword: true },
+    });
+    return { temporaryPassword: rawPassword };
   }
 
   // ─── Atualizar usuário ───────────────────────────────────────────────────────
@@ -100,7 +124,9 @@ export class UsersService {
   async assignRole(userId: string, roleId: string, workspaceId: string) {
     await this.assertExists(userId, workspaceId);
 
-    const role = await this.prisma.role.findFirst({ where: { id: roleId, workspaceId } });
+    const role = await this.prisma.role.findFirst({
+      where: { id: roleId, workspaceId },
+    });
     if (!role) throw new NotFoundException('Role não encontrada');
 
     // Upsert — evita duplicata silenciosamente
@@ -124,7 +150,9 @@ export class UsersService {
   // ─── Helper ──────────────────────────────────────────────────────────────────
 
   private async assertExists(id: string, workspaceId: string) {
-    const user = await this.prisma.user.findFirst({ where: { id, workspaceId } });
+    const user = await this.prisma.user.findFirst({
+      where: { id, workspaceId },
+    });
     if (!user) throw new NotFoundException('Usuário não encontrado');
     return user;
   }

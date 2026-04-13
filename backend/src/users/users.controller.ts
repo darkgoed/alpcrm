@@ -1,6 +1,12 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Param, Body, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { InviteUserDto } from './dto/invite-user.dto';
@@ -33,7 +39,11 @@ export class UsersController {
 
   @Patch(':id')
   @RequirePermissions('manage_users')
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto, @CurrentUser() user: any) {
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @CurrentUser() user: any,
+  ) {
     return this.usersService.update(id, user.workspaceId, dto);
   }
 
@@ -41,6 +51,12 @@ export class UsersController {
   @RequirePermissions('manage_users')
   deactivate(@Param('id') id: string, @CurrentUser() user: any) {
     return this.usersService.deactivate(id, user.workspaceId);
+  }
+
+  @Patch(':id/reset-password')
+  @RequirePermissions('manage_users')
+  resetPassword(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.usersService.resetPassword(id, user.workspaceId);
   }
 
   @Post(':id/roles/:roleId')

@@ -34,7 +34,9 @@ export class AutoCloseProcessor extends WorkerHost {
     // Verifica se houve atividade após o agendamento
     const scheduled = new Date(scheduledAt);
     if (conv.lastMessageAt && conv.lastMessageAt > scheduled) {
-      this.logger.log(`[AutoClose] Conversa ${conversationId} teve atividade — não encerrada`);
+      this.logger.log(
+        `[AutoClose] Conversa ${conversationId} teve atividade — não encerrada`,
+      );
       return;
     }
 
@@ -67,6 +69,8 @@ export class AutoCloseProcessor extends WorkerHost {
       message: msg,
     });
 
-    this.logger.log(`[AutoClose] Conversa ${conversationId} encerrada por inatividade`);
+    this.logger.log(
+      `[AutoClose] Conversa ${conversationId} encerrada por inatividade`,
+    );
   }
 }

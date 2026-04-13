@@ -1,4 +1,13 @@
-import { IsString, IsOptional, IsArray, IsInt, ValidateNested, IsUUID, IsHexColor, Min } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsArray,
+  IsInt,
+  ValidateNested,
+  IsUUID,
+  IsHexColor,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreatePipelineDto {

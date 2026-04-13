@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   LogOut,
   MessageSquareMore,
+  Plus,
   RefreshCcw,
   Search,
   Settings,
@@ -18,7 +19,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useConversations, useMessageSearch } from '@/hooks/useConversations';
+import { useContacts } from '@/hooks/useContacts';
 import { useSocket } from '@/hooks/useSocket';
+import { api } from '@/lib/api';
 import type { Conversation } from '@/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -256,6 +259,205 @@ function ConversationListItem({
   );
 }
 
+// ─── Nova Conversa Dialog ─────────────────────────────────────────────────────
+
+function NovaConversaDialog({ onCreated }: { onCreated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [contactSearch, setContactSearch] = useState('');
+  const [selectedContact, setSelectedContact] = useState<any>(null);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [accountId, setAccountId] = useState('');
+  const [templateId, setTemplateId] = useState('');
+  const [variables, setVariables] = useState<string[]>([]);
+  const [headerVariables, setHeaderVariables] = useState<string[]>([]);
+  const [buttonVariables, setButtonVariables] = useState<string[]>([]);
+  const [headerMediaUrl, setHeaderMediaUrl] = useState('');
+  const [sending, setSending] = useState(false);
+  const router = useRouter();
+
+  const { contacts } = useContacts();
+  const filtered = contacts.filter(
+    (c) =>
+      c.name?.toLowerCase().includes(contactSearch.toLowerCase()) ||
+      c.phone.includes(contactSearch),
+  ).slice(0, 8);
+
+  useEffect(() => {
+    if (!open) return;
+    api.get('/workspaces/whatsapp-accounts').then((r) => setAccounts(r.data));
+    api.get('/templates').then((r) => setTemplates((r.data as any[]).filter((t) => t.status === 'APPROVED')));
+  }, [open]);
+
+  useEffect(() => {
+    const tpl = templates.find((t) => t.id === templateId);
+    if (tpl) {
+      const bodyCount = (tpl.body.match(/\{\{(\d+)\}\}/g) ?? []).length;
+      const headerCount = tpl.headerText ? (tpl.headerText.match(/\{\{(\d+)\}\}/g) ?? []).length : 0;
+      const urlButtons = Array.isArray(tpl.buttons)
+        ? tpl.buttons.filter((button: { type?: string }) => button.type === 'URL')
+        : [];
+      setVariables(Array.from({ length: bodyCount }, () => ''));
+      setHeaderVariables(Array.from({ length: headerCount }, () => ''));
+      setButtonVariables(Array.from({ length: urlButtons.length }, () => ''));
+      setHeaderMediaUrl('');
+    } else {
+      setVariables([]);
+      setHeaderVariables([]);
+      setButtonVariables([]);
+      setHeaderMediaUrl('');
+    }
+  }, [templateId, templates]);
+
+  async function handleSend() {
+    if (!selectedContact || !accountId || !templateId) return;
+    setSending(true);
+    try {
+      const res = await api.post('/conversations/initiate', {
+        contactId: selectedContact.id,
+        whatsappAccountId: accountId,
+        templateId,
+        variables: variables.length ? variables : undefined,
+        headerVariables: headerVariables.length ? headerVariables : undefined,
+        buttonVariables: buttonVariables.length ? buttonVariables : undefined,
+        headerMediaUrl: headerMediaUrl || undefined,
+      });
+      setOpen(false);
+      onCreated();
+      router.push(`/conversations/${res.data.conversation.id}`);
+    } finally { setSending(false); }
+  }
+
+  if (!open) {
+    return (
+      <Button variant="ghost" size="icon" className="size-7" onClick={() => setOpen(true)} title="Nova conversa">
+        <Plus className="size-3.5" />
+      </Button>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setOpen(false)}>
+      <div className="bg-background rounded-xl shadow-xl border border-border w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold">Nova Conversa Outbound</p>
+          <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+        </div>
+
+        {/* Contato */}
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Contato</label>
+          {selectedContact ? (
+            <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+              <span className="text-sm">{selectedContact.name ?? selectedContact.phone}</span>
+              <button onClick={() => setSelectedContact(null)} className="text-muted-foreground"><X className="size-3" /></button>
+            </div>
+          ) : (
+            <>
+              <Input placeholder="Buscar por nome ou telefone" value={contactSearch} onChange={(e) => setContactSearch(e.target.value)} />
+              {contactSearch && (
+                <div className="rounded-md border border-border divide-y divide-border max-h-40 overflow-y-auto">
+                  {filtered.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => { setSelectedContact(c); setContactSearch(''); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                    >
+                      {c.name ?? c.phone} <span className="text-xs text-muted-foreground">{c.phone}</span>
+                    </button>
+                  ))}
+                  {filtered.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">Nenhum contato encontrado.</p>}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Conta WhatsApp */}
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Conta WhatsApp</label>
+          <select
+            value={accountId}
+            onChange={(e) => setAccountId(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+          >
+            <option value="">Selecionar conta</option>
+            {accounts.map((a) => <option key={a.id} value={a.id}>{a.name ?? a.displayPhoneNumber}</option>)}
+          </select>
+        </div>
+
+        {/* Template */}
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Template HSM (aprovado)</label>
+          <select
+            value={templateId}
+            onChange={(e) => setTemplateId(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+          >
+            <option value="">Selecionar template</option>
+            {templates.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.language})</option>)}
+          </select>
+        </div>
+
+        {/* Variáveis do template */}
+        {variables.map((v, i) => (
+          <div key={i} className="space-y-1">
+            <label className="text-xs text-muted-foreground">Variável {`{{${i + 1}}}`}</label>
+            <Input
+              value={v}
+              onChange={(e) => setVariables((prev) => prev.map((val, idx) => idx === i ? e.target.value : val))}
+              placeholder={`Valor para {{${i + 1}}}`}
+            />
+          </div>
+        ))}
+
+        {headerVariables.map((v, i) => (
+          <div key={`header-${i}`} className="space-y-1">
+            <label className="text-xs text-muted-foreground">Header {`{{${i + 1}}}`}</label>
+            <Input
+              value={v}
+              onChange={(e) => setHeaderVariables((prev) => prev.map((val, idx) => idx === i ? e.target.value : val))}
+              placeholder={`Valor para header {{${i + 1}}}`}
+            />
+          </div>
+        ))}
+
+        {templates.find((t) => t.id === templateId)?.headerFormat &&
+        templates.find((t) => t.id === templateId)?.headerFormat !== 'TEXT' ? (
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">URL da mídia do header</label>
+            <Input
+              value={headerMediaUrl}
+              onChange={(e) => setHeaderMediaUrl(e.target.value)}
+              placeholder="https://..."
+            />
+          </div>
+        ) : null}
+
+        {buttonVariables.map((v, i) => (
+          <div key={`button-${i}`} className="space-y-1">
+            <label className="text-xs text-muted-foreground">Botão URL {i + 1}</label>
+            <Input
+              value={v}
+              onChange={(e) => setButtonVariables((prev) => prev.map((val, idx) => idx === i ? e.target.value : val))}
+              placeholder="Valor do sufixo da URL"
+            />
+          </div>
+        ))}
+
+        <Button
+          className="w-full"
+          disabled={!selectedContact || !accountId || !templateId || sending}
+          onClick={handleSend}
+        >
+          {sending ? <span className="animate-spin mr-2">⟳</span> : null}
+          Iniciar conversa
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Inbox Rail (inside ContextSidebar) ───────────────────────────────────────
 
 function InboxRail() {
@@ -305,9 +507,12 @@ function InboxRail() {
       <div className="space-y-3 px-3 py-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-foreground">Fila de atendimento</p>
-          <Button variant="ghost" size="icon" className="size-7" onClick={() => void mutate()} aria-label="Atualizar">
-            <RefreshCcw className="size-3.5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <NovaConversaDialog onCreated={() => void mutate()} />
+            <Button variant="ghost" size="icon" className="size-7" onClick={() => void mutate()} aria-label="Atualizar">
+              <RefreshCcw className="size-3.5" />
+            </Button>
+          </div>
         </div>
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />

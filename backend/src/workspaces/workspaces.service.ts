@@ -1,8 +1,18 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateWorkspaceSettingsDto } from './dto/workspace-settings.dto';
-import { CreateFollowUpRuleDto, UpdateFollowUpRuleDto } from './dto/follow-up-rule.dto';
-import { CreateWhatsappAccountDto, UpdateWhatsappAccountDto } from './dto/whatsapp-account.dto';
+import {
+  CreateFollowUpRuleDto,
+  UpdateFollowUpRuleDto,
+} from './dto/follow-up-rule.dto';
+import {
+  CreateWhatsappAccountDto,
+  UpdateWhatsappAccountDto,
+} from './dto/whatsapp-account.dto';
 
 @Injectable()
 export class WorkspacesService {
@@ -40,15 +50,23 @@ export class WorkspacesService {
     });
   }
 
-  async updateFollowUpRule(workspaceId: string, id: string, dto: UpdateFollowUpRuleDto) {
-    const rule = await this.prisma.followUpRule.findFirst({ where: { id, workspaceId } });
+  async updateFollowUpRule(
+    workspaceId: string,
+    id: string,
+    dto: UpdateFollowUpRuleDto,
+  ) {
+    const rule = await this.prisma.followUpRule.findFirst({
+      where: { id, workspaceId },
+    });
     if (!rule) throw new NotFoundException('Regra não encontrada');
 
     return this.prisma.followUpRule.update({ where: { id }, data: dto });
   }
 
   async deleteFollowUpRule(workspaceId: string, id: string) {
-    const rule = await this.prisma.followUpRule.findFirst({ where: { id, workspaceId } });
+    const rule = await this.prisma.followUpRule.findFirst({
+      where: { id, workspaceId },
+    });
     if (!rule) throw new NotFoundException('Regra não encontrada');
 
     await this.prisma.followUpRule.delete({ where: { id } });
@@ -73,11 +91,17 @@ export class WorkspacesService {
     });
   }
 
-  async createWhatsappAccount(workspaceId: string, dto: CreateWhatsappAccountDto) {
+  async createWhatsappAccount(
+    workspaceId: string,
+    dto: CreateWhatsappAccountDto,
+  ) {
     const existing = await this.prisma.whatsappAccount.findFirst({
       where: { workspaceId, phoneNumber: dto.phoneNumber },
     });
-    if (existing) throw new ConflictException('Já existe uma conta com esse número neste workspace');
+    if (existing)
+      throw new ConflictException(
+        'Já existe uma conta com esse número neste workspace',
+      );
 
     return this.prisma.whatsappAccount.create({
       data: { workspaceId, ...dto },
@@ -93,8 +117,14 @@ export class WorkspacesService {
     });
   }
 
-  async updateWhatsappAccount(workspaceId: string, id: string, dto: UpdateWhatsappAccountDto) {
-    const account = await this.prisma.whatsappAccount.findFirst({ where: { id, workspaceId } });
+  async updateWhatsappAccount(
+    workspaceId: string,
+    id: string,
+    dto: UpdateWhatsappAccountDto,
+  ) {
+    const account = await this.prisma.whatsappAccount.findFirst({
+      where: { id, workspaceId },
+    });
     if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
 
     return this.prisma.whatsappAccount.update({
@@ -113,9 +143,49 @@ export class WorkspacesService {
   }
 
   async deleteWhatsappAccount(workspaceId: string, id: string) {
-    const account = await this.prisma.whatsappAccount.findFirst({ where: { id, workspaceId } });
+    const account = await this.prisma.whatsappAccount.findFirst({
+      where: { id, workspaceId },
+    });
     if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
 
     await this.prisma.whatsappAccount.delete({ where: { id } });
+  }
+
+  // ─── Audit Logs ───────────────────────────────────────────────────────────────
+
+  async listAuditLogs(
+    workspaceId: string,
+    filters: {
+      entity?: string;
+      userId?: string;
+      from?: Date;
+      to?: Date;
+      take?: number;
+      cursor?: string;
+    },
+  ) {
+    const { entity, userId, from, to, take = 50, cursor } = filters;
+
+    return this.prisma.auditLog.findMany({
+      where: {
+        workspaceId,
+        ...(entity ? { entity } : {}),
+        ...(userId ? { userId } : {}),
+        ...(from || to
+          ? {
+              createdAt: {
+                ...(from ? { gte: from } : {}),
+                ...(to ? { lte: to } : {}),
+              },
+            }
+          : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      take,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+      },
+    });
   }
 }

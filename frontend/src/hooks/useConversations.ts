@@ -29,12 +29,17 @@ export function useConversation(id: string | null) {
   return { conversation: data, isLoading: !data && !error, mutate };
 }
 
-export async function sendMessage(conversationId: string, content: string) {
-  const { data } = await api.post('/messages', {
-    conversationId,
-    type: 'text',
-    content,
-  });
+export interface SendMessageInput {
+  conversationId: string;
+  type?: Message['type'];
+  content?: string;
+  mediaUrl?: string;
+  interactiveType?: string;
+  interactivePayload?: Record<string, any>;
+}
+
+export async function sendMessage(input: SendMessageInput) {
+  const { data } = await api.post('/messages', input);
   return data;
 }
 

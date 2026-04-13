@@ -1,5 +1,9 @@
 import {
-  Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logger,
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
@@ -16,7 +20,9 @@ export class WebhookSignatureGuard implements CanActivate {
 
     // Em ambiente de dev sem assinatura configurada, passa direto
     if (!signature) {
-      this.logger.warn('Webhook recebido sem assinatura — aceitando (modo dev)');
+      this.logger.warn(
+        'Webhook recebido sem assinatura — aceitando (modo dev)',
+      );
       return true;
     }
 
@@ -27,10 +33,9 @@ export class WebhookSignatureGuard implements CanActivate {
     const rawBody: Buffer = req.rawBody;
     if (!rawBody) return true;
 
-    const expected = 'sha256=' + crypto
-      .createHmac('sha256', appSecret)
-      .update(rawBody)
-      .digest('hex');
+    const expected =
+      'sha256=' +
+      crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex');
 
     const valid = crypto.timingSafeEqual(
       Buffer.from(signature),
@@ -38,7 +43,9 @@ export class WebhookSignatureGuard implements CanActivate {
     );
 
     if (!valid) {
-      this.logger.error('Assinatura inválida no webhook — possível requisição falsa');
+      this.logger.error(
+        'Assinatura inválida no webhook — possível requisição falsa',
+      );
       throw new UnauthorizedException('Assinatura do webhook inválida');
     }
 

@@ -1,9 +1,80 @@
 'use client';
 
-import { Check, CheckCheck, Lock, Paperclip } from 'lucide-react';
+import { Check, CheckCheck, Download, Lock, Paperclip } from 'lucide-react';
 import type { Message } from '@/types';
 import { cn } from '@/lib/utils';
 import { formatTime } from '@/lib/dateUtils';
+
+function formatBytes(bytes: number | null) {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function MediaContent({ message }: { message: Message }) {
+  const { type, mediaUrl, content, mimeType, fileName, fileSize } = message;
+
+  if (!mediaUrl) {
+    return (
+      <span className="inline-flex items-center gap-2 text-sm italic opacity-80">
+        <Paperclip className="size-4" />
+        Mídia não disponível
+      </span>
+    );
+  }
+
+  if (type === 'image') {
+    return (
+      <div className="space-y-1.5">
+        <a href={mediaUrl} target="_blank" rel="noopener noreferrer">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={mediaUrl}
+            alt={fileName ?? 'imagem'}
+            className="max-w-[260px] rounded-xl object-cover"
+          />
+        </a>
+        {content && <p className="text-sm leading-6">{content}</p>}
+      </div>
+    );
+  }
+
+  if (type === 'audio') {
+    return (
+      <audio controls className="max-w-[260px]">
+        <source src={mediaUrl} type={mimeType ?? 'audio/ogg'} />
+      </audio>
+    );
+  }
+
+  if (type === 'video') {
+    return (
+      <div className="space-y-1.5">
+        <video controls className="max-w-[260px] rounded-xl">
+          <source src={mediaUrl} type={mimeType ?? 'video/mp4'} />
+        </video>
+        {content && <p className="text-sm leading-6">{content}</p>}
+      </div>
+    );
+  }
+
+  // document / fallback
+  return (
+    <a
+      href={mediaUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      download={fileName ?? true}
+      className="inline-flex items-center gap-2 rounded-lg border border-current/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
+    >
+      <Paperclip className="size-4 shrink-0" />
+      <span className="min-w-0 truncate">{fileName ?? 'documento'}</span>
+      {fileSize ? <span className="shrink-0 text-xs opacity-70">{formatBytes(fileSize)}</span> : null}
+      <Download className="size-3.5 shrink-0 opacity-70" />
+    </a>
+  );
+}
 
 // ─── Highlight @mentions in note content ──────────────────────────────────────
 
@@ -65,13 +136,17 @@ export function ConversationMessageBubble({ message }: { message: Message }) {
             : 'rounded-bl-md border border-border/70 bg-white text-foreground',
         )}
       >
-        {message.content ? (
-          <p className="whitespace-pre-wrap leading-6">{message.content}</p>
+        {message.type === 'text' || !message.mediaUrl ? (
+          message.content ? (
+            <p className="whitespace-pre-wrap leading-6">{message.content}</p>
+          ) : (
+            <span className="inline-flex items-center gap-2 text-sm italic opacity-80">
+              <Paperclip className="size-4" />
+              Mídia enviada
+            </span>
+          )
         ) : (
-          <span className="inline-flex items-center gap-2 text-sm italic opacity-80">
-            <Paperclip className="size-4" />
-            Mídia enviada
-          </span>
+          <MediaContent message={message} />
         )}
         <div className={cn('mt-2 flex items-center justify-end gap-1 text-[11px]', isOutgoing ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
           <span>{formatTime(message.createdAt)}</span>

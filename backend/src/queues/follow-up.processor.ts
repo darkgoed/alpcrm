@@ -28,7 +28,14 @@ export class FollowUpProcessor extends WorkerHost {
   }
 
   async process(job: Job<FollowUpJobData>) {
-    const { conversationId, workspaceId, contactId, ruleId, message, scheduledAt } = job.data;
+    const {
+      conversationId,
+      workspaceId,
+      contactId,
+      ruleId,
+      message,
+      scheduledAt,
+    } = job.data;
 
     // Busca conversa atualizada
     const conv = await this.prisma.conversation.findUnique({
@@ -37,7 +44,9 @@ export class FollowUpProcessor extends WorkerHost {
     });
 
     if (!conv || conv.status === 'closed') {
-      this.logger.log(`[FollowUp] Conversa ${conversationId} fechada — job ignorado`);
+      this.logger.log(
+        `[FollowUp] Conversa ${conversationId} fechada — job ignorado`,
+      );
       return;
     }
 
@@ -52,12 +61,16 @@ export class FollowUpProcessor extends WorkerHost {
     });
 
     if (lastContactMsg) {
-      this.logger.log(`[FollowUp] Contato respondeu após agendamento — job ignorado`);
+      this.logger.log(
+        `[FollowUp] Contato respondeu após agendamento — job ignorado`,
+      );
       return;
     }
 
     // Verifica se a regra ainda está ativa
-    const rule = await this.prisma.followUpRule.findUnique({ where: { id: ruleId } });
+    const rule = await this.prisma.followUpRule.findUnique({
+      where: { id: ruleId },
+    });
     if (!rule?.isActive) return;
 
     // Envia mensagem de follow-up
@@ -89,7 +102,9 @@ export class FollowUpProcessor extends WorkerHost {
         message: saved,
       });
 
-      this.logger.log(`[FollowUp] Mensagem enviada para conversa ${conversationId}`);
+      this.logger.log(
+        `[FollowUp] Mensagem enviada para conversa ${conversationId}`,
+      );
     } catch (err) {
       this.logger.error(`[FollowUp] Falha ao enviar: ${err}`);
       throw err; // BullMQ fará retry automático

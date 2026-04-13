@@ -1,7 +1,17 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventsGateway } from '../gateway/events.gateway';
+import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { AssignConversationDto } from './dto/assign-conversation.dto';
+import { InitiateConversationDto } from './dto/initiate-conversation.dto';
 import { ConversationStatus } from '@prisma/client';
 
 @Injectable()
@@ -9,6 +19,8 @@ export class ConversationsService {
   constructor(
     private prisma: PrismaService,
     private eventsGateway: EventsGateway,
+    @Inject(forwardRef(() => WhatsappService))
+    private whatsappService: WhatsappService,
   ) {}
 
   // ─── Listar conversas do workspace ──────────────────────────────────────────
@@ -32,7 +44,9 @@ export class ConversationsService {
         ...(canViewAll ? {} : { assignedUserId: userId }),
         ...(filters.status ? { status: filters.status } : {}),
         ...(filters.teamId ? { teamId: filters.teamId } : {}),
-        ...(filters.assignedUserId ? { assignedUserId: filters.assignedUserId } : {}),
+        ...(filters.assignedUserId
+          ? { assignedUserId: filters.assignedUserId }
+          : {}),
       },
       include: {
         contact: true,
@@ -49,7 +63,12 @@ export class ConversationsService {
 
   // ─── Buscar uma conversa com todas as mensagens ──────────────────────────────
 
-  async findOne(id: string, workspaceId: string, userId: string, permissions: string[]) {
+  async findOne(
+    id: string,
+    workspaceId: string,
+    userId: string,
+    permissions: string[],
+  ) {
     const conversation = await this.prisma.conversation.findFirst({
       where: { id, workspaceId },
       include: {
@@ -106,8 +125,14 @@ export class ConversationsService {
 
   // ─── Adicionar nota interna ──────────────────────────────────────────────────
 
-  async addNote(id: string, workspaceId: string, userId: string, content: string) {
-    if (!content?.trim()) throw new BadRequestException('Conteúdo da nota é obrigatório');
+  async addNote(
+    id: string,
+    workspaceId: string,
+    userId: string,
+    content: string,
+  ) {
+    if (!content?.trim())
+      throw new BadRequestException('Conteúdo da nota é obrigatório');
     const conv = await this.assertExists(id, workspaceId);
 
     const note = await this.prisma.message.create({
@@ -129,11 +154,163 @@ export class ConversationsService {
     return note;
   }
 
+  // ─── Iniciar conversa outbound via template HSM ──────────────────────────────
+
+  async initiateConversation(
+    dto: InitiateConversationDto,
+    workspaceId: string,
+    userId: string,
+  ) {
+    const contact = await this.prisma.contact.findFirst({
+      where: { id: dto.contactId, workspaceId },
+    });
+    if (!contact) throw new NotFoundException('Contato não encontrado');
+
+    const account = await this.prisma.whatsappAccount.findFirst({
+      where: { id: dto.whatsappAccountId, workspaceId },
+    });
+    if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
+
+    const template = await this.prisma.messageTemplate.findFirst({
+      where: { id: dto.templateId, workspaceId },
+    });
+    if (!template) throw new NotFoundException('Template não encontrado');
+    if (template.status !== 'APPROVED') {
+      throw new BadRequestException('Template não aprovado pela Meta');
+    }
+
+    // Reutiliza conversa aberta se existir; senão cria nova
+    let conversation = await this.prisma.conversation.findFirst({
+      where: { contactId: contact.id, workspaceId, status: 'open' },
+    });
+
+    if (!conversation) {
+      conversation = await this.prisma.conversation.create({
+        data: {
+          workspaceId,
+          contactId: contact.id,
+          whatsappAccountId: account.id,
+          status: 'open',
+          isBotActive: false,
+          assignedUserId: userId,
+        },
+      });
+    }
+
+    // Montar variáveis do template
+    const components = this.buildTemplateComponents(template, dto);
+
+    // Enviar template via WhatsApp
+    let externalId = '';
+    try {
+      externalId = await this.whatsappService.sendTemplateMessage(
+        account.id,
+        contact.phone,
+        template.name,
+        template.language,
+        components,
+      );
+    } catch (err) {
+      // salva mensagem como failed mesmo assim
+    }
+
+    // Salvar mensagem no banco
+    const message = await this.prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        senderType: 'user',
+        senderId: userId,
+        type: 'text',
+        content: template.body,
+        status: externalId ? 'sent' : 'failed',
+        externalId: externalId || null,
+      },
+    });
+
+    await this.prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { lastMessageAt: new Date() },
+    });
+
+    this.eventsGateway.emitToWorkspace(workspaceId, 'new_message', {
+      conversationId: conversation.id,
+      message,
+    });
+
+    return { conversation, message };
+  }
+
   // ─── Helper ──────────────────────────────────────────────────────────────────
 
   private async assertExists(id: string, workspaceId: string) {
-    const conv = await this.prisma.conversation.findFirst({ where: { id, workspaceId } });
+    const conv = await this.prisma.conversation.findFirst({
+      where: { id, workspaceId },
+    });
     if (!conv) throw new NotFoundException('Conversa não encontrada');
     return conv;
+  }
+
+  private buildTemplateComponents(
+    template: {
+      headerFormat: string | null;
+      buttons: Prisma.JsonValue | null;
+    },
+    dto: InitiateConversationDto,
+  ) {
+    const components: any[] = [];
+    const bodyVariables = dto.variables ?? [];
+
+    if (bodyVariables.length) {
+      components.push({
+        type: 'body',
+        parameters: bodyVariables.map((value) => ({
+          type: 'text',
+          text: value,
+        })),
+      });
+    }
+
+    if (template.headerFormat === 'TEXT' && dto.headerVariables?.length) {
+      components.push({
+        type: 'header',
+        parameters: dto.headerVariables.map((value) => ({
+          type: 'text',
+          text: value,
+        })),
+      });
+    }
+
+    if (
+      template.headerFormat &&
+      template.headerFormat !== 'TEXT' &&
+      dto.headerMediaUrl
+    ) {
+      const mediaType = template.headerFormat.toLowerCase();
+      components.push({
+        type: 'header',
+        parameters: [
+          {
+            type: mediaType,
+            [mediaType]: { link: dto.headerMediaUrl },
+          },
+        ],
+      });
+    }
+
+    const buttons = Array.isArray(template.buttons) ? template.buttons : [];
+    buttons.forEach((button: any, index) => {
+      if (button?.type !== 'URL') return;
+      const value = dto.buttonVariables?.[index];
+      if (!value) return;
+
+      components.push({
+        type: 'button',
+        sub_type: 'url',
+        index: String(index),
+        parameters: [{ type: 'text', text: value }],
+      });
+    });
+
+    return components;
   }
 }

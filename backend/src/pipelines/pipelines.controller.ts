@@ -40,7 +40,11 @@ export class PipelinesController {
   }
 
   @Patch(':id')
-  updatePipeline(@CurrentUser() user: any, @Param('id') id: string, @Body() dto: UpdatePipelineDto) {
+  updatePipeline(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: UpdatePipelineDto,
+  ) {
     return this.pipelinesService.updatePipeline(user.workspaceId, id, dto);
   }
 
@@ -60,7 +64,11 @@ export class PipelinesController {
   // ─── Stages ───────────────────────────────────────────────────────────────────
 
   @Post(':id/stages')
-  createStage(@CurrentUser() user: any, @Param('id') pipelineId: string, @Body() dto: CreateStageDto) {
+  createStage(
+    @CurrentUser() user: any,
+    @Param('id') pipelineId: string,
+    @Body() dto: CreateStageDto,
+  ) {
     return this.pipelinesService.createStage(user.workspaceId, pipelineId, dto);
   }
 
@@ -71,7 +79,12 @@ export class PipelinesController {
     @Param('stageId') stageId: string,
     @Body() dto: UpdateStageDto,
   ) {
-    return this.pipelinesService.updateStage(user.workspaceId, pipelineId, stageId, dto);
+    return this.pipelinesService.updateStage(
+      user.workspaceId,
+      pipelineId,
+      stageId,
+      dto,
+    );
   }
 
   @Delete(':id/stages/:stageId')
@@ -81,7 +94,11 @@ export class PipelinesController {
     @Param('id') pipelineId: string,
     @Param('stageId') stageId: string,
   ) {
-    return this.pipelinesService.deleteStage(user.workspaceId, pipelineId, stageId);
+    return this.pipelinesService.deleteStage(
+      user.workspaceId,
+      pipelineId,
+      stageId,
+    );
   }
 
   @Patch(':id/stages/reorder')
@@ -90,13 +107,21 @@ export class PipelinesController {
     @Param('id') pipelineId: string,
     @Body() dto: ReorderStagesDto,
   ) {
-    return this.pipelinesService.reorderStages(user.workspaceId, pipelineId, dto);
+    return this.pipelinesService.reorderStages(
+      user.workspaceId,
+      pipelineId,
+      dto,
+    );
   }
 
   // ─── Mover contato ────────────────────────────────────────────────────────────
 
   @Patch(':id/move')
-  moveContact(@CurrentUser() user: any, @Param('id') pipelineId: string, @Body() dto: MoveContactDto) {
+  moveContact(
+    @CurrentUser() user: any,
+    @Param('id') pipelineId: string,
+    @Body() dto: MoveContactDto,
+  ) {
     return this.pipelinesService.moveContact(user.workspaceId, pipelineId, dto);
   }
 
@@ -107,6 +132,10 @@ export class PipelinesController {
     @Param('id') pipelineId: string,
     @Param('contactId') contactId: string,
   ) {
-    return this.pipelinesService.removeContactFromPipeline(user.workspaceId, pipelineId, contactId);
+    return this.pipelinesService.removeContactFromPipeline(
+      user.workspaceId,
+      pipelineId,
+      contactId,
+    );
   }
 }

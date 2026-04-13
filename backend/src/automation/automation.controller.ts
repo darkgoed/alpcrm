@@ -1,6 +1,14 @@
 import {
-  Controller, Get, Post, Put, Delete, Patch,
-  Param, Body, UseGuards, Request,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Patch,
+  Param,
+  Body,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { FlowsService } from './flows.service';
 import { CreateFlowDto, UpdateFlowDto } from './dto/create-flow.dto';
@@ -27,7 +35,11 @@ export class AutomationController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateFlowDto, @Request() req: any) {
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateFlowDto,
+    @Request() req: any,
+  ) {
     return this.flows.update(id, dto, req.user.workspaceId);
   }
 

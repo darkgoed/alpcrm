@@ -58,7 +58,12 @@ export class FlowsService {
         const created: string[] = [];
         for (const n of nodes) {
           const node = await this.prisma.flowNode.create({
-            data: { flowId: id, type: n.type, config: n.config, order: n.order },
+            data: {
+              flowId: id,
+              type: n.type,
+              config: n.config,
+              order: n.order,
+            },
           });
           created.push(node.id);
         }

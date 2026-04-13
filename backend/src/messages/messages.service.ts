@@ -1,9 +1,13 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+
+const WINDOW_24H_MS = 24 * 60 * 60 * 1000;
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { EventsGateway } from '../gateway/events.gateway';
@@ -13,6 +17,8 @@ import { SendMessageDto } from './dto/send-message.dto';
 
 @Injectable()
 export class MessagesService {
+  private readonly logger = new Logger(MessagesService.name);
+
   constructor(
     private prisma: PrismaService,
     private whatsappService: WhatsappService,
@@ -53,7 +59,12 @@ export class MessagesService {
 
   // ─── Busca full-text em mensagens do workspace ──────────────────────────────
 
-  async search(q: string, workspaceId: string, userId: string, permissions: string[]) {
+  async search(
+    q: string,
+    workspaceId: string,
+    userId: string,
+    permissions: string[],
+  ) {
     if (!q?.trim()) return [];
     const canViewAll = permissions.includes('view_all_conversations');
 
@@ -79,8 +90,20 @@ export class MessagesService {
 
   // ─── Enviar mensagem (operador → contato) ───────────────────────────────────
 
-  async send(dto: SendMessageDto, workspaceId: string, userId: string, permissions: string[] = []) {
-    if (!dto.content && !dto.mediaUrl) {
+  async send(
+    dto: SendMessageDto,
+    workspaceId: string,
+    userId: string,
+    permissions: string[] = [],
+  ) {
+    const isInteractive = dto.type === 'interactive';
+    if (isInteractive) {
+      if (!dto.interactiveType || !dto.interactivePayload) {
+        throw new BadRequestException(
+          'Mensagem interativa deve incluir tipo e payload',
+        );
+      }
+    } else if (!dto.content && !dto.mediaUrl) {
       throw new BadRequestException('Mensagem deve ter conteúdo ou mídia');
     }
 
@@ -95,24 +118,55 @@ export class MessagesService {
 
     if (!conversation) throw new NotFoundException('Conversa não encontrada');
     if (conversation.status === 'closed') {
-      throw new BadRequestException('Não é possível enviar mensagem em conversa fechada');
+      throw new BadRequestException(
+        'Não é possível enviar mensagem em conversa fechada',
+      );
     }
 
     // ── Lock de conversa ──────────────────────────────────────────────────────
     // Apenas o operador atribuído pode responder.
     // Quem tem view_all_conversations (admin/supervisor) pode responder qualquer uma.
     const canViewAll = permissions.includes('view_all_conversations');
-    if (!canViewAll && conversation.assignedUserId && conversation.assignedUserId !== userId) {
+    if (
+      !canViewAll &&
+      conversation.assignedUserId &&
+      conversation.assignedUserId !== userId
+    ) {
       throw new ForbiddenException('Conversa atribuída a outro operador');
     }
 
     // Parar bot se estiver ativo — operador assumiu
     if (conversation.isBotActive) {
-      await this.flowExecutor.stopBotForConversation(dto.conversationId, conversation.contactId);
+      await this.flowExecutor.stopBotForConversation(
+        dto.conversationId,
+        conversation.contactId,
+      );
     }
 
     // Cancelar follow-ups pendentes — operador respondeu
-    this.scheduler.cancelFollowUps(dto.conversationId, workspaceId).catch(() => null);
+    this.scheduler
+      .cancelFollowUps(dto.conversationId, workspaceId)
+      .catch(() => null);
+
+    // ── Verificar janela de 24h ───────────────────────────────────────────────
+    const isMediaType = ['image', 'audio', 'video', 'document'].includes(
+      dto.type ?? '',
+    );
+    const isFreeMessage =
+      dto.type === 'text' || !dto.type || isMediaType || isInteractive;
+
+    if (isFreeMessage) {
+      const lastContact = conversation.lastContactMessageAt;
+      const windowOpen =
+        lastContact &&
+        Date.now() - new Date(lastContact).getTime() < WINDOW_24H_MS;
+
+      if (!windowOpen) {
+        throw new ForbiddenException(
+          'Janela de 24h expirada. Use um template aprovado para iniciar contato.',
+        );
+      }
+    }
 
     // Salvar mensagem no banco com status "sent" (otimista)
     const message = await this.prisma.message.create({
@@ -123,6 +177,12 @@ export class MessagesService {
         type: dto.type ?? 'text',
         content: dto.content ?? null,
         mediaUrl: dto.mediaUrl ?? null,
+        interactiveType: dto.interactiveType ?? null,
+        interactivePayload: dto.interactivePayload
+          ? (JSON.parse(
+              JSON.stringify(dto.interactivePayload),
+            ) as Prisma.InputJsonValue)
+          : undefined,
         status: 'sent',
       },
     });
@@ -139,27 +199,47 @@ export class MessagesService {
       message,
     });
 
-    // Enviar pela API do WhatsApp (apenas texto por enquanto)
-    if (dto.type === 'text' || !dto.type) {
-      try {
-        const externalId = await this.whatsappService.sendTextMessage(
+    // ── Enviar pela API do WhatsApp ───────────────────────────────────────────
+    try {
+      let externalId: string;
+
+      if (dto.type === 'text' || !dto.type) {
+        externalId = await this.whatsappService.sendTextMessage(
           conversation.whatsappAccountId,
           conversation.contact.phone,
           dto.content!,
         );
+      } else if (isMediaType) {
+        externalId = await this.whatsappService.sendMediaMessage(
+          conversation.whatsappAccountId,
+          conversation.contact.phone,
+          dto.type as 'image' | 'document' | 'audio' | 'video',
+          dto.mediaUrl!,
+          dto.content ?? undefined,
+        );
+      } else if (isInteractive) {
+        externalId = await this.whatsappService.sendInteractiveMessage(
+          conversation.whatsappAccountId,
+          conversation.contact.phone,
+          dto.interactiveType!,
+          dto.interactivePayload!,
+        );
+      } else {
+        externalId = '';
+      }
 
-        // Atualizar com o ID externo retornado pelo WhatsApp
+      if (externalId) {
         await this.prisma.message.update({
           where: { id: message.id },
           data: { externalId },
         });
-      } catch (err) {
-        // Marcar como falha mas não reverter — operador vê o erro no frontend
-        await this.prisma.message.update({
-          where: { id: message.id },
-          data: { status: 'failed' },
-        });
       }
+    } catch (err) {
+      this.logger.error(`Erro ao enviar mensagem: ${err}`);
+      await this.prisma.message.update({
+        where: { id: message.id },
+        data: { status: 'failed' },
+      });
     }
 
     return message;

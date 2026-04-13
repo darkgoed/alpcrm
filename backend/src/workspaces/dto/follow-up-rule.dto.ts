@@ -1,4 +1,11 @@
-import { IsString, IsInt, IsOptional, IsBoolean, Min, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsInt,
+  IsOptional,
+  IsBoolean,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export class CreateFollowUpRuleDto {
   @IsString()

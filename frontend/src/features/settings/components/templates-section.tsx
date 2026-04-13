@@ -25,7 +25,10 @@ import {
   refreshTemplate,
   deleteTemplate,
   type MessageTemplate,
+  type TemplateButton,
+  type TemplateButtonType,
   type TemplateCategory,
+  type TemplateHeaderFormat,
 } from '@/hooks/useTemplates';
 import { useWhatsappAccounts } from '@/hooks/useWhatsappAccounts';
 
@@ -42,6 +45,45 @@ const LANGUAGES = [
   { value: 'en_US', label: 'English (US)' },
   { value: 'es', label: 'Español' },
 ];
+
+const HEADER_FORMATS: { value: TemplateHeaderFormat; label: string }[] = [
+  { value: 'TEXT', label: 'Texto' },
+  { value: 'IMAGE', label: 'Imagem' },
+  { value: 'VIDEO', label: 'Vídeo' },
+  { value: 'DOCUMENT', label: 'Documento' },
+];
+
+const BUTTON_TYPES: { value: TemplateButtonType; label: string }[] = [
+  { value: 'QUICK_REPLY', label: 'Resposta rápida' },
+  { value: 'URL', label: 'URL CTA' },
+  { value: 'PHONE_NUMBER', label: 'Ligar' },
+];
+
+const REJECTION_REASON_LABELS: Record<string, string> = {
+  ABUSIVE_CONTENT: 'Conteúdo abusivo ou sensível.',
+  INVALID_FORMAT: 'Formato inválido para o template.',
+  PROMOTIONAL_CONTENT: 'Conteúdo promocional fora das regras da categoria.',
+  TAG_CONTENT_MISMATCH: 'O conteúdo não combina com a categoria do template.',
+  SCAM: 'Conteúdo classificado como golpe ou fraude.',
+  POLICY_VIOLATION: 'Violação de política da Meta.',
+};
+
+function formatRejectedReason(reason: string) {
+  const normalized = reason.trim();
+  const label = REJECTION_REASON_LABELS[normalized];
+
+  if (!label) {
+    return {
+      summary: normalized.replaceAll('_', ' '),
+      detail: null,
+    };
+  }
+
+  return {
+    summary: label,
+    detail: normalized,
+  };
+}
 
 function StatusBadge({ status }: { status: MessageTemplate['status'] }) {
   if (status === 'APPROVED')
@@ -101,6 +143,12 @@ function TemplateCard({
   }
 
   const categoryLabel = CATEGORIES.find((c) => c.value === template.category)?.label ?? template.category;
+  const headerLabel = template.headerFormat
+    ? HEADER_FORMATS.find((item) => item.value === template.headerFormat)?.label ?? template.headerFormat
+    : null;
+  const rejection = template.rejectedReason
+    ? formatRejectedReason(template.rejectedReason)
+    : null;
 
   return (
     <div className="rounded-xl border border-border/70 bg-background">
@@ -149,20 +197,84 @@ function TemplateCard({
         </div>
       </div>
 
+      {rejection && !expanded && (
+        <div className="px-4 pb-3">
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2">
+            <p className="text-xs font-semibold text-destructive">Motivo da rejeição</p>
+            <p className="text-xs text-muted-foreground">{rejection.summary}</p>
+          </div>
+        </div>
+      )}
+
       {expanded && (
         <>
           <Separator />
           <div className="px-4 py-3 space-y-3">
+            {template.headerFormat && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Header</p>
+                <div className="rounded-lg bg-muted px-3 py-2 text-xs space-y-1">
+                  <p><span className="font-medium">Formato:</span> {headerLabel}</p>
+                  {template.headerText && <p className="whitespace-pre-wrap">{template.headerText}</p>}
+                  {template.headerMediaHandle && (
+                    <p className="break-all text-muted-foreground">Handle: {template.headerMediaHandle}</p>
+                  )}
+                </div>
+              </div>
+            )}
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Corpo do template</p>
               <pre className="rounded-lg bg-muted px-3 py-2 text-xs font-mono whitespace-pre-wrap leading-relaxed">
                 {template.body}
               </pre>
             </div>
-            {template.rejectedReason && (
+            {template.footerText && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Footer</p>
+                <p className="rounded-lg bg-muted px-3 py-2 text-xs whitespace-pre-wrap">{template.footerText}</p>
+              </div>
+            )}
+            {(template.buttons?.length ?? 0) > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Botões</p>
+                <div className="space-y-1.5">
+                  {template.buttons?.map((button, index) => (
+                    <div key={`${button.type}-${index}`} className="rounded-lg bg-muted px-3 py-2 text-xs">
+                      <p className="font-medium">
+                        {BUTTON_TYPES.find((item) => item.value === button.type)?.label ?? button.type}: {button.text}
+                      </p>
+                      {button.url && <p className="break-all text-muted-foreground">{button.url}</p>}
+                      {button.phoneNumber && <p className="text-muted-foreground">{button.phoneNumber}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {template.variableExamples && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Exemplos de variáveis</p>
+                <div className="rounded-lg bg-muted px-3 py-2 text-xs space-y-1">
+                  {template.variableExamples.headerText?.length ? (
+                    <p>Header: {template.variableExamples.headerText.join(', ')}</p>
+                  ) : null}
+                  {template.variableExamples.bodyText?.length ? (
+                    <p>Body: {template.variableExamples.bodyText.join(', ')}</p>
+                  ) : null}
+                  {template.variableExamples.buttonText?.length ? (
+                    <p>Botões: {template.variableExamples.buttonText.join(', ')}</p>
+                  ) : null}
+                </div>
+              </div>
+            )}
+            {rejection && (
               <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2">
                 <p className="text-xs font-semibold text-destructive mb-0.5">Motivo da rejeição</p>
-                <p className="text-xs text-muted-foreground">{template.rejectedReason}</p>
+                <p className="text-xs text-muted-foreground">{rejection.summary}</p>
+                {rejection.detail ? (
+                  <p className="mt-1 text-[11px] font-mono text-muted-foreground/80">
+                    Código Meta: {rejection.detail}
+                  </p>
+                ) : null}
               </div>
             )}
             {template.metaId && (
@@ -184,7 +296,17 @@ interface NewTemplateForm {
   name: string;
   category: TemplateCategory;
   language: string;
+  headerFormat: TemplateHeaderFormat | '';
+  headerText: string;
+  headerMediaHandle: string;
   body: string;
+  footerText: string;
+  buttons: TemplateButton[];
+  variableExamples: {
+    headerText: string;
+    bodyText: string;
+    buttonText: string;
+  };
 }
 
 function NewTemplateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: () => void }) {
@@ -194,7 +316,17 @@ function NewTemplateForm({ onCreated, onCancel }: { onCreated: () => void; onCan
     name: '',
     category: 'MARKETING',
     language: 'pt_BR',
+    headerFormat: '',
+    headerText: '',
+    headerMediaHandle: '',
     body: '',
+    footerText: '',
+    buttons: [],
+    variableExamples: {
+      headerText: '',
+      bodyText: '',
+      buttonText: '',
+    },
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -207,14 +339,61 @@ function NewTemplateForm({ onCreated, onCancel }: { onCreated: () => void; onCan
   // Preview: substitui {{1}}, {{2}} por exemplos
   const preview = form.body.replace(/\{\{(\d+)\}\}/g, (_, n) => `[variável ${n}]`);
 
+  function setButton(index: number, patch: Partial<TemplateButton>) {
+    set('buttons', form.buttons.map((button, current) => (
+      current === index ? { ...button, ...patch } : button
+    )));
+  }
+
+  function addButton() {
+    if (form.buttons.length >= 3) return;
+    set('buttons', [...form.buttons, { type: 'QUICK_REPLY', text: '' }]);
+  }
+
+  function removeButton(index: number) {
+    set('buttons', form.buttons.filter((_, current) => current !== index));
+  }
+
+  function parseExamples(value: string) {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
   async function handleSave() {
     if (!form.whatsappAccountId) return setError('Selecione uma conta WhatsApp');
     if (!form.name) return setError('Informe o nome do template');
     if (!form.body) return setError('Informe o corpo do template');
+    if (form.headerFormat === 'TEXT' && !form.headerText) {
+      return setError('Informe o texto do header');
+    }
+    if (form.headerFormat && form.headerFormat !== 'TEXT' && !form.headerMediaHandle) {
+      return setError('Informe o media handle do header');
+    }
+    if (form.buttons.some((button) => !button.text)) {
+      return setError('Todos os botões precisam de texto');
+    }
 
     setSaving(true);
     try {
-      await createTemplate(form);
+      await createTemplate({
+        whatsappAccountId: form.whatsappAccountId,
+        name: form.name,
+        category: form.category,
+        language: form.language,
+        headerFormat: form.headerFormat || undefined,
+        headerText: form.headerText || undefined,
+        headerMediaHandle: form.headerMediaHandle || undefined,
+        body: form.body,
+        footerText: form.footerText || undefined,
+        buttons: form.buttons.length ? form.buttons : undefined,
+        variableExamples: {
+          headerText: parseExamples(form.variableExamples.headerText),
+          bodyText: parseExamples(form.variableExamples.bodyText),
+          buttonText: parseExamples(form.variableExamples.buttonText),
+        },
+      });
       onCreated();
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Erro ao criar template');
@@ -284,7 +463,45 @@ function NewTemplateForm({ onCreated, onCancel }: { onCreated: () => void; onCan
             ))}
           </select>
         </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Header</label>
+          <select
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={form.headerFormat}
+            onChange={(e) => set('headerFormat', e.target.value as TemplateHeaderFormat | '')}
+          >
+            <option value="">Sem header</option>
+            {HEADER_FORMATS.map((format) => (
+              <option key={format.value} value={format.value}>{format.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
+
+      {form.headerFormat === 'TEXT' && (
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Texto do header</label>
+          <Input
+            placeholder="Ex: Pedido {{1}}"
+            value={form.headerText}
+            onChange={(e) => set('headerText', e.target.value)}
+          />
+        </div>
+      )}
+
+      {form.headerFormat && form.headerFormat !== 'TEXT' && (
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">
+            Media handle do header
+          </label>
+          <Input
+            placeholder="Handle retornado pela Meta para IMAGE/VIDEO/DOCUMENT"
+            value={form.headerMediaHandle}
+            onChange={(e) => set('headerMediaHandle', e.target.value)}
+          />
+        </div>
+      )}
 
       {/* Corpo */}
       <div className="space-y-1.5">
@@ -300,6 +517,89 @@ function NewTemplateForm({ onCreated, onCancel }: { onCreated: () => void; onCan
           value={form.body}
           onChange={(e) => set('body', e.target.value)}
         />
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-muted-foreground">Footer</label>
+        <Input
+          placeholder="Ex: Responda SAIR para não receber mais mensagens"
+          value={form.footerText}
+          onChange={(e) => set('footerText', e.target.value)}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-medium text-muted-foreground">Botões</label>
+          <Button type="button" size="sm" variant="ghost" onClick={addButton} disabled={form.buttons.length >= 3}>
+            <Plus className="size-4" />
+            Adicionar botão
+          </Button>
+        </div>
+        {form.buttons.map((button, index) => (
+          <div key={index} className="rounded-lg border border-border/70 bg-background p-3 space-y-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
+              <select
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={button.type}
+                onChange={(e) => setButton(index, { type: e.target.value as TemplateButtonType, url: undefined, phoneNumber: undefined })}
+              >
+                {BUTTON_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>{type.label}</option>
+                ))}
+              </select>
+              <Input
+                placeholder="Texto do botão"
+                value={button.text}
+                onChange={(e) => setButton(index, { text: e.target.value })}
+              />
+              <Button type="button" size="icon" variant="ghost" onClick={() => removeButton(index)}>
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
+            {button.type === 'URL' && (
+              <Input
+                placeholder="https://exemplo.com/pedido/{{1}}"
+                value={button.url ?? ''}
+                onChange={(e) => setButton(index, { url: e.target.value })}
+              />
+            )}
+            {button.type === 'PHONE_NUMBER' && (
+              <Input
+                placeholder="+5511999999999"
+                value={button.phoneNumber ?? ''}
+                onChange={(e) => setButton(index, { phoneNumber: e.target.value })}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Exemplos header</label>
+          <Input
+            placeholder="Maria, Pedido 42"
+            value={form.variableExamples.headerText}
+            onChange={(e) => set('variableExamples', { ...form.variableExamples, headerText: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Exemplos body</label>
+          <Input
+            placeholder="Maria, #1234"
+            value={form.variableExamples.bodyText}
+            onChange={(e) => set('variableExamples', { ...form.variableExamples, bodyText: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Exemplos botões URL</label>
+          <Input
+            placeholder="1234"
+            value={form.variableExamples.buttonText}
+            onChange={(e) => set('variableExamples', { ...form.variableExamples, buttonText: e.target.value })}
+          />
+        </div>
       </div>
 
       {/* Preview */}

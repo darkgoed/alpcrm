@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
+import { HealthController } from './health/health.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
@@ -18,6 +19,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { QueuesModule } from './queues/queues.module';
 import { TemplatesModule } from './templates/templates.module';
+import { QuickRepliesModule } from './quick-replies/quick-replies.module';
 
 @Module({
   imports: [
@@ -38,8 +40,9 @@ import { TemplatesModule } from './templates/templates.module';
     GatewayModule,
     QueuesModule,
     TemplatesModule,
+    QuickRepliesModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [AppService],
 })
 export class AppModule {}

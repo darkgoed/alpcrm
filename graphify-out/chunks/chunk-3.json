@@ -1,0 +1,666 @@
+{
+  "nodes": [
+    {
+      "id": "templates_controller",
+      "label": "TemplatesController",
+      "file_type": "code",
+      "source_file": "backend/src/templates/templates.controller.ts",
+      "source_location": "lines 21-50",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "templates_service",
+      "label": "TemplatesService",
+      "file_type": "code",
+      "source_file": "backend/src/templates/templates.service.ts",
+      "source_location": "lines 31-281",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "create_template_dto",
+      "label": "CreateTemplateDto",
+      "file_type": "code",
+      "source_file": "backend/src/templates/dto/create-template.dto.ts",
+      "source_location": "lines 1-17",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "users_controller",
+      "label": "UsersController",
+      "file_type": "code",
+      "source_file": "backend/src/users/users.controller.ts",
+      "source_location": "lines 19-81",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "users_service",
+      "label": "UsersService",
+      "file_type": "code",
+      "source_file": "backend/src/users/users.service.ts",
+      "source_location": "lines 31-159",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "invite_user_dto",
+      "label": "InviteUserDto",
+      "file_type": "code",
+      "source_file": "backend/src/users/dto/invite-user.dto.ts",
+      "source_location": "lines 1-16",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "whatsapp_controller",
+      "label": "WhatsappController",
+      "file_type": "code",
+      "source_file": "backend/src/whatsapp/whatsapp.controller.ts",
+      "source_location": "lines 18-46",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "whatsapp_module",
+      "label": "WhatsApp Module",
+      "file_type": "code",
+      "source_file": "backend/src/whatsapp/whatsapp.module.ts",
+      "source_location": "lines 11-21",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "whatsapp_service",
+      "label": "WhatsappService",
+      "file_type": "code",
+      "source_file": "backend/src/whatsapp/whatsapp.service.ts",
+      "source_location": "lines 23-339",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "whatsapp_webhook_payload",
+      "label": "WhatsApp Webhook Payload",
+      "file_type": "code",
+      "source_file": "backend/src/whatsapp/dto/webhook.dto.ts",
+      "source_location": "lines 1-14",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "whatsapp_message",
+      "label": "WhatsApp Message Payload",
+      "file_type": "code",
+      "source_file": "backend/src/whatsapp/dto/webhook.dto.ts",
+      "source_location": "lines 29-37",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "whatsapp_contact",
+      "label": "WhatsApp Contact Payload",
+      "file_type": "code",
+      "source_file": "backend/src/whatsapp/dto/webhook.dto.ts",
+      "source_location": "lines 25-27",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "whatsapp_status",
+      "label": "WhatsApp Status Payload",
+      "file_type": "code",
+      "source_file": "backend/src/whatsapp/dto/webhook.dto.ts",
+      "source_location": "lines 39-41",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "workspaces_controller",
+      "label": "WorkspacesController",
+      "file_type": "code",
+      "source_file": "backend/src/workspaces/workspaces.controller.ts",
+      "source_location": "lines 29-145",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "workspaces_service",
+      "label": "WorkspacesService",
+      "file_type": "code",
+      "source_file": "backend/src/workspaces/workspaces.service.ts",
+      "source_location": "lines 17-190",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "update_workspace_settings_dto",
+      "label": "UpdateWorkspaceSettingsDto",
+      "file_type": "code",
+      "source_file": "backend/src/workspaces/dto/workspace-settings.dto.ts",
+      "source_location": "lines 1-20",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "create_follow_up_rule_dto",
+      "label": "CreateFollowUpRuleDto",
+      "file_type": "code",
+      "source_file": "backend/src/workspaces/dto/follow-up-rule.dto.ts",
+      "source_location": "lines 1-18",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "update_follow_up_rule_dto",
+      "label": "UpdateFollowUpRuleDto",
+      "file_type": "code",
+      "source_file": "backend/src/workspaces/dto/follow-up-rule.dto.ts",
+      "source_location": "lines 19-28",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "conversation_thread_component",
+      "label": "ConversationThread Component",
+      "file_type": "code",
+      "source_file": "frontend/src/features/conversations/components/conversation-thread.tsx",
+      "source_location": "lines 113-420",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "conversation_message_bubble_component",
+      "label": "ConversationMessageBubble Component",
+      "file_type": "code",
+      "source_file": "frontend/src/features/conversations/components/message-bubble.tsx",
+      "source_location": "lines 98-168",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "frontend_message_type",
+      "label": "Frontend Message Type",
+      "file_type": "code",
+      "source_file": "frontend/src/types/index.ts",
+      "source_location": "lines 15-29",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "frontend_conversation_type",
+      "label": "Frontend Conversation Type",
+      "file_type": "code",
+      "source_file": "frontend/src/types/index.ts",
+      "source_location": "lines 31-47",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "follow_up_dtos_report",
+      "label": "Follow-Up Rule DTOs",
+      "file_type": "document",
+      "source_file": "graphify-out/GRAPH_REPORT.md",
+      "source_location": "lines 243-245",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "workspace_settings_dto_report",
+      "label": "Workspace Settings DTO",
+      "file_type": "document",
+      "source_file": "graphify-out/GRAPH_REPORT.md",
+      "source_location": "lines 247-249",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "conversation_thread_report",
+      "label": "Conversation Thread",
+      "file_type": "document",
+      "source_file": "graphify-out/GRAPH_REPORT.md",
+      "source_location": "lines 267-269",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "operator_reply_flow",
+      "label": "Operator Reply Flow",
+      "file_type": "document",
+      "source_file": "graphify-out/GRAPH_REPORT.md",
+      "source_location": "lines 35-37",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "templates_controller",
+      "target": "templates_service",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/templates/templates.controller.ts",
+      "source_location": "lines 27-49",
+      "weight": 1.0
+    },
+    {
+      "source": "templates_controller",
+      "target": "create_template_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/templates/templates.controller.ts",
+      "source_location": "lines 32-34",
+      "weight": 1.0
+    },
+    {
+      "source": "templates_service",
+      "target": "create_template_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/templates/templates.service.ts",
+      "source_location": "lines 80-138",
+      "weight": 1.0
+    },
+    {
+      "source": "users_controller",
+      "target": "users_service",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/users/users.controller.ts",
+      "source_location": "lines 24-79",
+      "weight": 1.0
+    },
+    {
+      "source": "users_controller",
+      "target": "invite_user_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/users/users.controller.ts",
+      "source_location": "lines 34-37",
+      "weight": 1.0
+    },
+    {
+      "source": "users_service",
+      "target": "invite_user_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/users/users.service.ts",
+      "source_location": "lines 58-84",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_module",
+      "target": "whatsapp_controller",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/whatsapp/whatsapp.module.ts",
+      "source_location": "lines 11-20",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_module",
+      "target": "whatsapp_service",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/whatsapp/whatsapp.module.ts",
+      "source_location": "lines 11-20",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_controller",
+      "target": "whatsapp_service",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/whatsapp/whatsapp.controller.ts",
+      "source_location": "lines 25-45",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_controller",
+      "target": "whatsapp_webhook_payload",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/whatsapp/whatsapp.controller.ts",
+      "source_location": "lines 37-45",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_service",
+      "target": "whatsapp_webhook_payload",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/whatsapp/whatsapp.service.ts",
+      "source_location": "lines 52-87",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_service",
+      "target": "whatsapp_message",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/whatsapp/whatsapp.service.ts",
+      "source_location": "lines 91-219",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_service",
+      "target": "whatsapp_contact",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/whatsapp/whatsapp.service.ts",
+      "source_location": "lines 91-120",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_service",
+      "target": "whatsapp_status",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/whatsapp/whatsapp.service.ts",
+      "source_location": "lines 267-300",
+      "weight": 1.0
+    },
+    {
+      "source": "workspaces_controller",
+      "target": "workspaces_service",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/workspaces/workspaces.controller.ts",
+      "source_location": "lines 36-143",
+      "weight": 1.0
+    },
+    {
+      "source": "workspaces_controller",
+      "target": "update_workspace_settings_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/workspaces/workspaces.controller.ts",
+      "source_location": "lines 42-48",
+      "weight": 1.0
+    },
+    {
+      "source": "workspaces_controller",
+      "target": "create_follow_up_rule_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/workspaces/workspaces.controller.ts",
+      "source_location": "lines 59-65",
+      "weight": 1.0
+    },
+    {
+      "source": "workspaces_controller",
+      "target": "update_follow_up_rule_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/workspaces/workspaces.controller.ts",
+      "source_location": "lines 68-76",
+      "weight": 1.0
+    },
+    {
+      "source": "workspaces_service",
+      "target": "update_workspace_settings_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/workspaces/workspaces.service.ts",
+      "source_location": "lines 23-35",
+      "weight": 1.0
+    },
+    {
+      "source": "workspaces_service",
+      "target": "create_follow_up_rule_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/workspaces/workspaces.service.ts",
+      "source_location": "lines 47-50",
+      "weight": 1.0
+    },
+    {
+      "source": "workspaces_service",
+      "target": "update_follow_up_rule_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/workspaces/workspaces.service.ts",
+      "source_location": "lines 53-64",
+      "weight": 1.0
+    },
+    {
+      "source": "conversation_thread_component",
+      "target": "conversation_message_bubble_component",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/features/conversations/components/conversation-thread.tsx",
+      "source_location": "lines 35, 364-366",
+      "weight": 1.0
+    },
+    {
+      "source": "conversation_thread_component",
+      "target": "frontend_message_type",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/features/conversations/components/conversation-thread.tsx",
+      "source_location": "lines 27, 116-117, 255-278",
+      "weight": 1.0
+    },
+    {
+      "source": "conversation_thread_component",
+      "target": "frontend_conversation_type",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.82,
+      "source_file": "frontend/src/features/conversations/components/conversation-thread.tsx",
+      "source_location": "lines 113-117, 145-156, 303-308",
+      "weight": 1.0
+    },
+    {
+      "source": "conversation_thread_component",
+      "target": "users_controller",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/features/conversations/components/conversation-thread.tsx",
+      "source_location": "lines 140-143",
+      "weight": 1.0
+    },
+    {
+      "source": "conversation_message_bubble_component",
+      "target": "frontend_message_type",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/features/conversations/components/message-bubble.tsx",
+      "source_location": "lines 4, 15-16, 98-100",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_message_type",
+      "target": "whatsapp_message",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.72,
+      "source_file": "frontend/src/types/index.ts",
+      "source_location": "lines 15-29",
+      "weight": 1.0
+    },
+    {
+      "source": "follow_up_dtos_report",
+      "target": "create_follow_up_rule_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "graphify-out/GRAPH_REPORT.md",
+      "source_location": "lines 243-245, 69",
+      "weight": 1.0
+    },
+    {
+      "source": "follow_up_dtos_report",
+      "target": "update_follow_up_rule_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "graphify-out/GRAPH_REPORT.md",
+      "source_location": "lines 243-245, 69",
+      "weight": 1.0
+    },
+    {
+      "source": "workspace_settings_dto_report",
+      "target": "update_workspace_settings_dto",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "graphify-out/GRAPH_REPORT.md",
+      "source_location": "lines 247-249",
+      "weight": 1.0
+    },
+    {
+      "source": "conversation_thread_report",
+      "target": "conversation_thread_component",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "graphify-out/GRAPH_REPORT.md",
+      "source_location": "lines 267-269",
+      "weight": 1.0
+    },
+    {
+      "source": "conversation_thread_report",
+      "target": "conversation_message_bubble_component",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "graphify-out/GRAPH_REPORT.md",
+      "source_location": "lines 267-269",
+      "weight": 1.0
+    },
+    {
+      "source": "operator_reply_flow",
+      "target": "whatsapp_service",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "graphify-out/GRAPH_REPORT.md",
+      "source_location": "lines 35-37",
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "workspace_settings_full_stack",
+      "label": "Workspace Settings Full-Stack",
+      "nodes": [
+        "workspaces_controller",
+        "workspaces_service",
+        "update_workspace_settings_dto"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.88,
+      "source_file": "graphify-out/GRAPH_REPORT.md"
+    },
+    {
+      "id": "whatsapp_webhook_payload_model",
+      "label": "WhatsApp Webhook Payload Model",
+      "nodes": [
+        "whatsapp_webhook_payload",
+        "whatsapp_message",
+        "whatsapp_contact",
+        "whatsapp_status"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/whatsapp/dto/webhook.dto.ts"
+    },
+    {
+      "id": "conversation_ui_message_flow",
+      "label": "Conversation UI Message Flow",
+      "nodes": [
+        "conversation_thread_component",
+        "conversation_message_bubble_component",
+        "frontend_message_type"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "frontend/src/features/conversations/components/conversation-thread.tsx"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

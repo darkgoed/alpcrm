@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsEmail, IsArray, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEmail,
+  IsArray,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateContactDto {
   @IsString()

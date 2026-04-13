@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CreatePipelineDto,
@@ -30,22 +34,39 @@ export class PipelinesService {
     });
   }
 
-  async updatePipeline(workspaceId: string, id: string, dto: UpdatePipelineDto) {
-    const pipeline = await this.prisma.pipeline.findFirst({ where: { id, workspaceId } });
+  async updatePipeline(
+    workspaceId: string,
+    id: string,
+    dto: UpdatePipelineDto,
+  ) {
+    const pipeline = await this.prisma.pipeline.findFirst({
+      where: { id, workspaceId },
+    });
     if (!pipeline) throw new NotFoundException('Pipeline não encontrado');
-    return this.prisma.pipeline.update({ where: { id }, data: { name: dto.name } });
+    return this.prisma.pipeline.update({
+      where: { id },
+      data: { name: dto.name },
+    });
   }
 
   async deletePipeline(workspaceId: string, id: string) {
-    const pipeline = await this.prisma.pipeline.findFirst({ where: { id, workspaceId } });
+    const pipeline = await this.prisma.pipeline.findFirst({
+      where: { id, workspaceId },
+    });
     if (!pipeline) throw new NotFoundException('Pipeline não encontrado');
     await this.prisma.pipeline.delete({ where: { id } });
   }
 
   // ─── Stages ───────────────────────────────────────────────────────────────────
 
-  async createStage(workspaceId: string, pipelineId: string, dto: CreateStageDto) {
-    const pipeline = await this.prisma.pipeline.findFirst({ where: { id: pipelineId, workspaceId } });
+  async createStage(
+    workspaceId: string,
+    pipelineId: string,
+    dto: CreateStageDto,
+  ) {
+    const pipeline = await this.prisma.pipeline.findFirst({
+      where: { id: pipelineId, workspaceId },
+    });
     if (!pipeline) throw new NotFoundException('Pipeline não encontrado');
 
     // Ordem padrão = último + 1
@@ -57,11 +78,21 @@ export class PipelinesService {
     const order = dto.order ?? (lastStage ? lastStage.order + 1 : 0);
 
     return this.prisma.stage.create({
-      data: { pipelineId, name: dto.name, color: dto.color ?? '#6366f1', order },
+      data: {
+        pipelineId,
+        name: dto.name,
+        color: dto.color ?? '#6366f1',
+        order,
+      },
     });
   }
 
-  async updateStage(workspaceId: string, pipelineId: string, stageId: string, dto: UpdateStageDto) {
+  async updateStage(
+    workspaceId: string,
+    pipelineId: string,
+    stageId: string,
+    dto: UpdateStageDto,
+  ) {
     const stage = await this.prisma.stage.findFirst({
       where: { id: stageId, pipelineId, pipeline: { workspaceId } },
     });
@@ -77,8 +108,14 @@ export class PipelinesService {
     await this.prisma.stage.delete({ where: { id: stageId } });
   }
 
-  async reorderStages(workspaceId: string, pipelineId: string, dto: ReorderStagesDto) {
-    const pipeline = await this.prisma.pipeline.findFirst({ where: { id: pipelineId, workspaceId } });
+  async reorderStages(
+    workspaceId: string,
+    pipelineId: string,
+    dto: ReorderStagesDto,
+  ) {
+    const pipeline = await this.prisma.pipeline.findFirst({
+      where: { id: pipelineId, workspaceId },
+    });
     if (!pipeline) throw new NotFoundException('Pipeline não encontrado');
 
     await this.prisma.$transaction(
@@ -122,14 +159,25 @@ export class PipelinesService {
 
   // ─── Mover contato entre stages ───────────────────────────────────────────────
 
-  async moveContact(workspaceId: string, pipelineId: string, dto: MoveContactDto) {
-    const pipeline = await this.prisma.pipeline.findFirst({ where: { id: pipelineId, workspaceId } });
+  async moveContact(
+    workspaceId: string,
+    pipelineId: string,
+    dto: MoveContactDto,
+  ) {
+    const pipeline = await this.prisma.pipeline.findFirst({
+      where: { id: pipelineId, workspaceId },
+    });
     if (!pipeline) throw new NotFoundException('Pipeline não encontrado');
 
-    const stage = await this.prisma.stage.findFirst({ where: { id: dto.stageId, pipelineId } });
-    if (!stage) throw new BadRequestException('Stage não pertence a este pipeline');
+    const stage = await this.prisma.stage.findFirst({
+      where: { id: dto.stageId, pipelineId },
+    });
+    if (!stage)
+      throw new BadRequestException('Stage não pertence a este pipeline');
 
-    const contact = await this.prisma.contact.findFirst({ where: { id: dto.contactId, workspaceId } });
+    const contact = await this.prisma.contact.findFirst({
+      where: { id: dto.contactId, workspaceId },
+    });
     if (!contact) throw new NotFoundException('Contato não encontrado');
 
     return this.prisma.contactPipeline.upsert({
@@ -141,10 +189,18 @@ export class PipelinesService {
 
   // ─── Remover contato do pipeline ──────────────────────────────────────────────
 
-  async removeContactFromPipeline(workspaceId: string, pipelineId: string, contactId: string) {
-    const pipeline = await this.prisma.pipeline.findFirst({ where: { id: pipelineId, workspaceId } });
+  async removeContactFromPipeline(
+    workspaceId: string,
+    pipelineId: string,
+    contactId: string,
+  ) {
+    const pipeline = await this.prisma.pipeline.findFirst({
+      where: { id: pipelineId, workspaceId },
+    });
     if (!pipeline) throw new NotFoundException('Pipeline não encontrado');
 
-    await this.prisma.contactPipeline.deleteMany({ where: { contactId, pipelineId } });
+    await this.prisma.contactPipeline.deleteMany({
+      where: { contactId, pipelineId },
+    });
   }
 }

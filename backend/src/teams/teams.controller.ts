@@ -1,6 +1,12 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Param, Body, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
 } from '@nestjs/common';
 import { TeamsService } from './teams.service';
 import { CreateTeamDto } from './dto/create-team.dto';
@@ -33,7 +39,11 @@ export class TeamsController {
 
   @Patch(':id')
   @RequirePermissions('manage_teams')
-  update(@Param('id') id: string, @Body() dto: UpdateTeamDto, @CurrentUser() user: any) {
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateTeamDto,
+    @CurrentUser() user: any,
+  ) {
     return this.teamsService.update(id, user.workspaceId, dto);
   }
 

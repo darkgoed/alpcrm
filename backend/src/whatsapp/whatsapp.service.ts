@@ -1,5 +1,13 @@
-import { Injectable, Logger, NotFoundException, forwardRef, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  forwardRef,
+  Inject,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { promises as fs } from 'fs';
+import { join, extname } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { TeamsService } from '../teams/teams.service';
 import { FlowExecutorService } from '../automation/flow-executor.service';
@@ -10,7 +18,7 @@ import {
   WhatsappContact,
   WhatsappStatus,
 } from './dto/webhook.dto';
-import { MessageType, MessageStatus } from '@prisma/client';
+import { MessageType, MessageStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class WhatsappService {
@@ -28,7 +36,10 @@ export class WhatsappService {
   // ─── Verificação do webhook (GET) ───────────────────────────────────────────
 
   verifyWebhook(mode: string, token: string, challenge: string): string {
-    const verifyToken = this.config.get<string>('WHATSAPP_VERIFY_TOKEN', 'crm_verify_token');
+    const verifyToken = this.config.get<string>(
+      'WHATSAPP_VERIFY_TOKEN',
+      'crm_verify_token',
+    );
     if (mode === 'subscribe' && token === verifyToken) {
       this.logger.log('Webhook verificado com sucesso');
       return challenge;
@@ -38,7 +49,10 @@ export class WhatsappService {
 
   // ─── Processamento do webhook (POST) ────────────────────────────────────────
 
-  async processWebhook(payload: WhatsappWebhookPayload, onMessage: (data: any) => void) {
+  async processWebhook(
+    payload: WhatsappWebhookPayload,
+    onMessage: (data: any) => void,
+  ) {
     if (payload.object !== 'whatsapp_business_account') return;
 
     for (const entry of payload.entry) {
@@ -53,7 +67,12 @@ export class WhatsappService {
           const contacts = value.contacts ?? [];
           for (const msg of value.messages) {
             const contact = contacts.find((c) => c.wa_id === msg.from);
-            await this.handleIncomingMessage(phoneNumberId, msg, contact, onMessage);
+            await this.handleIncomingMessage(
+              phoneNumberId,
+              msg,
+              contact,
+              onMessage,
+            );
           }
         }
 
@@ -81,7 +100,9 @@ export class WhatsappService {
     });
 
     if (!account) {
-      this.logger.warn(`Nenhuma conta WhatsApp encontrada para phone_number_id: ${phoneNumberId}`);
+      this.logger.warn(
+        `Nenhuma conta WhatsApp encontrada para phone_number_id: ${phoneNumberId}`,
+      );
       return;
     }
 
@@ -112,7 +133,9 @@ export class WhatsappService {
 
     if (!conversation) {
       // Round-robin: buscar equipe padrão do workspace e distribuir para membro com menor carga
-      const defaultTeam = await this.prisma.team.findFirst({ where: { workspaceId } });
+      const defaultTeam = await this.prisma.team.findFirst({
+        where: { workspaceId },
+      });
       let assignedUserId: string | null = null;
       let teamId: string | null = null;
 
@@ -120,7 +143,9 @@ export class WhatsappService {
         teamId = defaultTeam.id;
         assignedUserId = await this.teamsService.getNextMember(defaultTeam.id);
         if (assignedUserId) {
-          this.logger.log(`Conversa atribuída via round-robin ao usuário ${assignedUserId}`);
+          this.logger.log(
+            `Conversa atribuída via round-robin ao usuário ${assignedUserId}`,
+          );
         }
       }
 
@@ -138,9 +163,49 @@ export class WhatsappService {
     }
 
     // 4. Salvar mensagem
+    const normalizedInteractive = this.normalizeInboundInteractiveMessage(msg);
     const messageType = this.mapMessageType(msg.type);
-    const content = msg.text?.body ?? msg.document?.filename ?? null;
-    const mediaId = msg.image?.id ?? msg.audio?.id ?? msg.video?.id ?? msg.document?.id ?? null;
+    const content =
+      normalizedInteractive?.content ??
+      msg.text?.body ??
+      msg.image?.caption ??
+      msg.video?.caption ??
+      null;
+
+    // Baixar mídia inbound da Meta, se houver
+    const metaMediaId =
+      msg.image?.id ??
+      msg.audio?.id ??
+      msg.video?.id ??
+      msg.document?.id ??
+      null;
+
+    const inboundMime =
+      msg.image?.mime_type ??
+      msg.audio?.mime_type ??
+      msg.video?.mime_type ??
+      msg.document?.mime_type ??
+      null;
+
+    let mediaUrl: string | null = null;
+    let mimeType: string | null = inboundMime;
+    let fileName: string | null = msg.document?.filename ?? null;
+    let fileSize: number | null = null;
+
+    if (metaMediaId) {
+      const downloaded = await this.downloadAndSaveMedia(
+        account.token,
+        metaMediaId,
+        inboundMime,
+        msg.document?.filename,
+      );
+      if (downloaded) {
+        mediaUrl = downloaded.url;
+        mimeType = downloaded.mimeType;
+        fileName = downloaded.fileName;
+        fileSize = downloaded.fileSize;
+      }
+    }
 
     const message = await this.prisma.message.create({
       data: {
@@ -149,24 +214,37 @@ export class WhatsappService {
         senderId: contact.id,
         type: messageType,
         content,
-        mediaUrl: mediaId ? `media:${mediaId}` : null,
+        mediaUrl,
+        mimeType,
+        fileName,
+        fileSize,
+        interactiveType: normalizedInteractive?.interactiveType ?? null,
+        interactivePayload: normalizedInteractive?.interactivePayload,
         status: 'delivered',
         externalId: msg.id,
       },
     });
 
-    // 5. Atualizar lastMessageAt da conversa
+    // 5. Atualizar lastMessageAt e lastContactMessageAt da conversa
     await this.prisma.conversation.update({
       where: { id: conversation.id },
-      data: { lastMessageAt: new Date() },
+      data: { lastMessageAt: new Date(), lastContactMessageAt: new Date() },
     });
 
-    this.logger.log(`Mensagem recebida de ${msg.from} → conversa ${conversation.id}`);
+    this.logger.log(
+      `Mensagem recebida de ${msg.from} → conversa ${conversation.id}`,
+    );
 
     // 5a. Agendar follow-up e auto-close (reinicia timers a cada mensagem do contato)
-    this.scheduler.cancelFollowUps(conversation.id, workspaceId).catch(() => null);
-    this.scheduler.scheduleFollowUps(conversation.id, workspaceId, contact.id).catch(() => null);
-    this.scheduler.scheduleAutoClose(conversation.id, workspaceId).catch(() => null);
+    this.scheduler
+      .cancelFollowUps(conversation.id, workspaceId)
+      .catch(() => null);
+    this.scheduler
+      .scheduleFollowUps(conversation.id, workspaceId, contact.id)
+      .catch(() => null);
+    this.scheduler
+      .scheduleAutoClose(conversation.id, workspaceId)
+      .catch(() => null);
 
     // 6. Emitir evento para o WebSocket
     onMessage({
@@ -184,7 +262,7 @@ export class WhatsappService {
         conversation.id,
         workspaceId,
         contact.id,
-        msg.text?.body ?? null,
+        content,
         isNewConv,
         this.sendTextMessage.bind(this),
       )
@@ -230,7 +308,11 @@ export class WhatsappService {
 
   // ─── Enviar mensagem pelo WhatsApp Cloud API ─────────────────────────────────
 
-  async sendTextMessage(accountId: string, to: string, text: string): Promise<string> {
+  async sendTextMessage(
+    accountId: string,
+    to: string,
+    text: string,
+  ): Promise<string> {
     const account = await this.prisma.whatsappAccount.findUnique({
       where: { id: accountId },
     });
@@ -263,6 +345,207 @@ export class WhatsappService {
     return data.messages?.[0]?.id ?? '';
   }
 
+  // ─── Enviar template HSM (outbound / janela de 24h) ─────────────────────────
+
+  async sendTemplateMessage(
+    accountId: string,
+    to: string,
+    templateName: string,
+    language: string,
+    components: any[],
+  ): Promise<string> {
+    const account = await this.prisma.whatsappAccount.findUnique({
+      where: { id: accountId },
+    });
+    if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
+
+    const url = `https://graph.facebook.com/v19.0/${account.metaAccountId}/messages`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${account.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to,
+        type: 'template',
+        template: {
+          name: templateName,
+          language: { code: language },
+          components,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      this.logger.error(`Erro ao enviar template: ${err}`);
+      throw new Error(`WhatsApp API error: ${err}`);
+    }
+
+    const data: any = await response.json();
+    return data.messages?.[0]?.id ?? '';
+  }
+
+  // ─── Enviar mídia ─────────────────────────────────────────────────────────────
+
+  async sendMediaMessage(
+    accountId: string,
+    to: string,
+    mediaType: 'image' | 'document' | 'audio' | 'video',
+    mediaUrl: string,
+    caption?: string,
+  ): Promise<string> {
+    const account = await this.prisma.whatsappAccount.findUnique({
+      where: { id: accountId },
+    });
+    if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
+
+    const url = `https://graph.facebook.com/v19.0/${account.metaAccountId}/messages`;
+    const mediaPayload: any = { link: mediaUrl };
+    if (caption && (mediaType === 'image' || mediaType === 'document')) {
+      mediaPayload.caption = caption;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${account.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to,
+        type: mediaType,
+        [mediaType]: mediaPayload,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      this.logger.error(`Erro ao enviar mídia: ${err}`);
+      throw new Error(`WhatsApp API error: ${err}`);
+    }
+
+    const data: any = await response.json();
+    return data.messages?.[0]?.id ?? '';
+  }
+
+  async sendInteractiveMessage(
+    accountId: string,
+    to: string,
+    interactiveType: string,
+    payload: Record<string, any>,
+  ): Promise<string> {
+    const account = await this.prisma.whatsappAccount.findUnique({
+      where: { id: accountId },
+    });
+    if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
+
+    const interactive = this.buildInteractivePayload(interactiveType, payload);
+    const url = `https://graph.facebook.com/v19.0/${account.metaAccountId}/messages`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${account.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to,
+        type: 'interactive',
+        interactive,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      this.logger.error(`Erro ao enviar mensagem interativa: ${err}`);
+      throw new Error(`WhatsApp API error: ${err}`);
+    }
+
+    const data: any = await response.json();
+    return data.messages?.[0]?.id ?? '';
+  }
+
+  // ─── Download de mídia inbound da Meta ───────────────────────────────────────
+
+  private async downloadAndSaveMedia(
+    token: string,
+    mediaId: string,
+    knownMime: string | null,
+    knownFileName?: string | null,
+  ): Promise<{
+    url: string;
+    mimeType: string;
+    fileName: string;
+    fileSize: number;
+  } | null> {
+    try {
+      // 1. Buscar URL de download da Meta
+      const infoRes = await fetch(
+        `https://graph.facebook.com/v19.0/${mediaId}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!infoRes.ok) return null;
+      const info = (await infoRes.json()) as {
+        url: string;
+        mime_type?: string;
+        file_size?: number;
+      };
+
+      const downloadUrl: string = info.url;
+      const mimeType: string =
+        info.mime_type ?? knownMime ?? 'application/octet-stream';
+      const fileSize: number = info.file_size ?? 0;
+
+      // 2. Baixar o conteúdo binário
+      const mediaRes = await fetch(downloadUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!mediaRes.ok) return null;
+
+      // 3. Determinar extensão e nome de arquivo
+      const mimeExt: Record<string, string> = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp',
+        'audio/ogg': 'ogg',
+        'audio/mpeg': 'mp3',
+        'audio/mp4': 'm4a',
+        'video/mp4': 'mp4',
+        'video/3gpp': '3gp',
+        'application/pdf': 'pdf',
+      };
+      const ext =
+        mimeExt[mimeType] ?? mimeType.split('/')[1]?.split(';')[0] ?? 'bin';
+      const generatedName: string =
+        knownFileName ?? `${crypto.randomUUID()}.${ext}`;
+      const storedName: string = `${crypto.randomUUID()}${extname(generatedName) || `.${ext}`}`;
+
+      // 4. Salvar em uploads/
+      const uploadsDir = join(process.cwd(), 'uploads');
+      await fs.mkdir(uploadsDir, { recursive: true });
+      const buffer = Buffer.from(await mediaRes.arrayBuffer());
+      await fs.writeFile(join(uploadsDir, storedName), buffer);
+
+      const apiBase = this.config.get<string>(
+        'API_BASE_URL',
+        'http://localhost:3000',
+      );
+      return {
+        url: `${apiBase}/api/uploads/${storedName}`,
+        mimeType,
+        fileName: generatedName,
+        fileSize: fileSize || buffer.length,
+      };
+    } catch (err) {
+      this.logger.error(`Erro ao baixar mídia ${mediaId}: ${err}`);
+      return null;
+    }
+  }
+
   // ─── Helper ──────────────────────────────────────────────────────────────────
 
   private mapMessageType(type: string): MessageType {
@@ -272,7 +555,146 @@ export class WhatsappService {
       audio: 'audio',
       video: 'video',
       document: 'document',
+      interactive: 'interactive',
+      button: 'interactive',
     };
     return map[type] ?? 'text';
+  }
+
+  private normalizeInboundInteractiveMessage(msg: WhatsappMessage):
+    | {
+        content: string | null;
+        interactiveType: string;
+        interactivePayload: Prisma.InputJsonValue;
+      }
+    | null {
+    if (msg.type === 'button' && msg.button) {
+      return {
+        content: msg.button.text,
+        interactiveType: 'button_reply',
+        interactivePayload: {
+          replyId: msg.button.payload ?? msg.button.text,
+          title: msg.button.text,
+        },
+      };
+    }
+
+    if (msg.type !== 'interactive' || !msg.interactive) {
+      return null;
+    }
+
+    if (msg.interactive.type === 'button_reply' && msg.interactive.button_reply) {
+      return {
+        content: msg.interactive.button_reply.title,
+        interactiveType: 'button_reply',
+        interactivePayload: {
+          replyId: msg.interactive.button_reply.id,
+          title: msg.interactive.button_reply.title,
+        },
+      };
+    }
+
+    if (msg.interactive.type === 'list_reply' && msg.interactive.list_reply) {
+      return {
+        content: msg.interactive.list_reply.title,
+        interactiveType: 'list_reply',
+        interactivePayload: {
+          replyId: msg.interactive.list_reply.id,
+          title: msg.interactive.list_reply.title,
+          description: msg.interactive.list_reply.description ?? null,
+        },
+      };
+    }
+
+    return {
+      content: null,
+      interactiveType: msg.interactive.type,
+      interactivePayload: JSON.parse(JSON.stringify(msg.interactive)),
+    };
+  }
+
+  private buildInteractivePayload(
+    interactiveType: string,
+    payload: Record<string, any>,
+  ) {
+    if (interactiveType === 'reply_buttons') {
+      const buttons = Array.isArray(payload.buttons) ? payload.buttons : [];
+      if (!payload.body || buttons.length === 0) {
+        throw new Error('Reply buttons exigem body e ao menos um botão');
+      }
+
+      return {
+        type: 'button',
+        ...(payload.headerText
+          ? { header: { type: 'text', text: payload.headerText } }
+          : {}),
+        body: { text: payload.body },
+        ...(payload.footer ? { footer: { text: payload.footer } } : {}),
+        action: {
+          buttons: buttons.slice(0, 3).map((button: any) => ({
+            type: 'reply',
+            reply: {
+              id: button.id,
+              title: button.title,
+            },
+          })),
+        },
+      };
+    }
+
+    if (interactiveType === 'list') {
+      const sections = Array.isArray(payload.sections) ? payload.sections : [];
+      if (!payload.body || !payload.buttonText || sections.length === 0) {
+        throw new Error('List message exige body, buttonText e sections');
+      }
+
+      return {
+        type: 'list',
+        ...(payload.headerText
+          ? { header: { type: 'text', text: payload.headerText } }
+          : {}),
+        body: { text: payload.body },
+        ...(payload.footer ? { footer: { text: payload.footer } } : {}),
+        action: {
+          button: payload.buttonText,
+          sections: sections.map((section: any) => ({
+            title: section.title,
+            rows: Array.isArray(section.rows)
+              ? section.rows.map((row: any) => ({
+                  id: row.id,
+                  title: row.title,
+                  ...(row.description
+                    ? { description: row.description }
+                    : {}),
+                }))
+              : [],
+          })),
+        },
+      };
+    }
+
+    if (interactiveType === 'cta_url') {
+      if (!payload.body || !payload.buttonText || !payload.url) {
+        throw new Error('CTA URL exige body, buttonText e url');
+      }
+
+      return {
+        type: 'cta_url',
+        ...(payload.headerText
+          ? { header: { type: 'text', text: payload.headerText } }
+          : {}),
+        body: { text: payload.body },
+        ...(payload.footer ? { footer: { text: payload.footer } } : {}),
+        action: {
+          name: 'cta_url',
+          parameters: {
+            display_text: payload.buttonText,
+            url: payload.url,
+          },
+        },
+      };
+    }
+
+    throw new Error(`Tipo interativo não suportado: ${interactiveType}`);
   }
 }
