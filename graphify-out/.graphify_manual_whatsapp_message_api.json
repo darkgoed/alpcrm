@@ -1,0 +1,326 @@
+{
+  "nodes": [
+    {
+      "id": "whatsapp_cloud_message_api_doc",
+      "label": "WhatsApp Cloud API - Message API",
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 1-1883",
+      "file_type": "document"
+    },
+    {
+      "id": "whatsapp_messages_endpoint",
+      "label": "POST /{Version}/{Phone-Number-ID}/messages",
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 50-74",
+      "file_type": "document"
+    },
+    {
+      "id": "whatsapp_message_request_payload",
+      "label": "WhatsApp Message Request Payload",
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 65-74, 1343-1635",
+      "file_type": "document"
+    },
+    {
+      "id": "whatsapp_message_status_tracking",
+      "label": "WhatsApp Message Status Tracking",
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 21, 1863-1865",
+      "file_type": "document"
+    },
+    {
+      "id": "whatsapp_template_message_support",
+      "label": "Template Message Support",
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 21, 1613-1635, 1831",
+      "file_type": "document"
+    },
+    {
+      "id": "whatsapp_interactive_flow_support",
+      "label": "Interactive and Flow Message Support",
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 21, 1831",
+      "file_type": "document"
+    },
+    {
+      "id": "whatsapp_bearer_access_token",
+      "label": "Bearer Access Token Requirement",
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 23, 66, 1883",
+      "file_type": "document"
+    },
+    {
+      "id": "whatsapp_business_permissions",
+      "label": "WhatsApp Business Messaging Permissions",
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 31-40",
+      "file_type": "document"
+    },
+    {
+      "id": "whatsapp_phone_number_id",
+      "label": "Phone Number ID",
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 50-66, 795",
+      "file_type": "document"
+    },
+    {
+      "id": "whatsapp_message_id_wamid",
+      "label": "WhatsApp Message ID (wamid)",
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 91-94, 1865",
+      "file_type": "document"
+    }
+  ],
+  "edges": [
+    {
+      "source": "whatsapp_cloud_message_api_doc",
+      "target": "whatsapp_messages_endpoint",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 50-74",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_cloud_message_api_doc",
+      "target": "whatsapp_message_request_payload",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 65-74, 1343-1635",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_cloud_message_api_doc",
+      "target": "whatsapp_message_status_tracking",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 21, 1863-1865",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_cloud_message_api_doc",
+      "target": "whatsapp_template_message_support",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 21, 1613-1635, 1831",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_cloud_message_api_doc",
+      "target": "whatsapp_interactive_flow_support",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 21, 1831",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_cloud_message_api_doc",
+      "target": "whatsapp_bearer_access_token",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 23, 66, 1883",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_cloud_message_api_doc",
+      "target": "whatsapp_business_permissions",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 31-40",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_cloud_message_api_doc",
+      "target": "whatsapp_phone_number_id",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 50-66, 795",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_cloud_message_api_doc",
+      "target": "whatsapp_message_id_wamid",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 91-94, 1865",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_messages_endpoint",
+      "target": "whatsapp_message_request_payload",
+      "relation": "requires",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 65-74",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_messages_endpoint",
+      "target": "whatsapp_bearer_access_token",
+      "relation": "requires",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 66, 1883",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_messages_endpoint",
+      "target": "whatsapp_phone_number_id",
+      "relation": "requires",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 50-66, 795",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_messages_endpoint",
+      "target": "whatsapp_message_id_wamid",
+      "relation": "returns",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 91-94",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_message_request_payload",
+      "target": "messages_service",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.86,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 65-74, 1343-1635",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_messages_endpoint",
+      "target": "whatsapp_service",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.88,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 50-74",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_messages_endpoint",
+      "target": "messages_service",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.91,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 50-74",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_template_message_support",
+      "target": "templates_service",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 1613-1635, 1831",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_interactive_flow_support",
+      "target": "flow_executor_service",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.78,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 21, 1831",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_message_status_tracking",
+      "target": "whatsapp_webhook_payload",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.89,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 21, 1863-1865",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_message_status_tracking",
+      "target": "whatsapp_service",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.82,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 21, 1863-1865",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_message_id_wamid",
+      "target": "messages_service",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 91-94",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_bearer_access_token",
+      "target": "whatsapp_service",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 23, 66, 1883",
+      "weight": 1.0
+    },
+    {
+      "source": "whatsapp_business_permissions",
+      "target": "whatsapp_service",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.84,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md",
+      "source_location": "lines 31-40",
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "whatsapp_cloud_message_api_surface",
+      "label": "WhatsApp Cloud Message API Surface",
+      "nodes": [
+        "whatsapp_cloud_message_api_doc",
+        "whatsapp_messages_endpoint",
+        "messages_service",
+        "whatsapp_service",
+        "templates_service",
+        "whatsapp_webhook_payload"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "clippings/WhatsApp Cloud API - Message API.md"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}
