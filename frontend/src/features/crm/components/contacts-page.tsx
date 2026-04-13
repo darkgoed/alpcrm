@@ -1,7 +1,7 @@
 'use client';
 
 import { useDeferredValue, useEffect, useState } from 'react';
-import { Briefcase, Building2, CheckCircle2, Loader2, Mail, Phone, Plus, Search, Tag as TagIcon, Trash2, Upload, UserPlus } from 'lucide-react';
+import { Briefcase, Building2, CheckCircle2, Layers3, Loader2, Mail, Phone, Plus, Save, Search, Tag as TagIcon, Trash2, Upload, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAgents } from '@/hooks/useAgents';
 import {
   useContacts,
+  usePipelines,
+  useSavedSegments,
   useTags,
   createContact,
   updateContact,
@@ -18,9 +20,13 @@ import {
   addTag,
   removeTag,
   createTag,
+  saveSegment,
+  deleteSegment,
+  applyBulkContactAction,
   importPreview,
   importConfirm,
   type Contact,
+  type ContactFilters,
   type Tag,
   type ImportPreviewResult,
 } from '@/hooks/useContacts';
@@ -423,19 +429,23 @@ function ContactRow({
   agents,
   tags,
   contacts,
+  selected,
   onDelete,
   onTagAdded,
   onTagRemoved,
   onUpdated,
+  onToggleSelected,
 }: {
   contact: Contact;
   agents: Array<{ id: string; name: string; isActive: boolean }>;
   tags: Tag[];
   contacts: Contact[];
+  selected: boolean;
   onDelete: () => void;
   onTagAdded: () => void;
   onTagRemoved: () => void;
   onUpdated: () => void;
+  onToggleSelected: () => void;
 }) {
   const name = contact.name ?? contact.phone;
   const initials = name.slice(0, 2).toUpperCase();
@@ -519,8 +529,15 @@ function ContactRow({
   }
 
   return (
-    <div className="rounded-xl border border-border/70 bg-background px-4 py-3 transition-colors hover:border-primary/30 hover:bg-accent/30">
+    <div className={`rounded-xl border px-4 py-3 transition-colors hover:border-primary/30 hover:bg-accent/30 ${selected ? 'border-primary/40 bg-primary/5' : 'border-border/70 bg-background'}`}>
       <div className="flex items-start gap-4">
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={onToggleSelected}
+        className="mt-2 size-4 rounded border-border text-primary"
+        aria-label={`Selecionar contato ${name}`}
+      />
       <Avatar className="size-10 shrink-0 border border-border/70">
         <AvatarFallback className="bg-primary/10 text-primary text-xs">{initials}</AvatarFallback>
       </Avatar>

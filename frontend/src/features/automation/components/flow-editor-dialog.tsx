@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Bot, Clock3, LoaderCircle, MessageSquarePlus, Plus, Trash2 } from 'lucide-react';
 import { createFlow, updateFlow, type Flow } from '@/hooks/useAutomation';
+import { usePipelines, useTags } from '@/hooks/useContacts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -44,13 +45,41 @@ export function FlowEditorDialog({ open, onOpenChange, onSaved, flow }: FlowEdit
   const [triggerValue, setTriggerValue] = useState(flow?.triggerValue ?? '');
   const [nodes, setNodes] = useState<FlowNodeDraft[]>(buildDraftNodes(flow));
   const [saving, setSaving] = useState(false);
+  const { tags } = useTags();
+  const { pipelines } = usePipelines();
+  const [selectedTagId, setSelectedTagId] = useState('');
+  const [selectedPipelineId, setSelectedPipelineId] = useState('');
+  const [selectedStageId, setSelectedStageId] = useState('');
 
   useEffect(() => {
     setName(flow?.name ?? '');
     setTriggerType(flow?.triggerType ?? 'new_conversation');
     setTriggerValue(flow?.triggerValue ?? '');
     setNodes(buildDraftNodes(flow));
+    setSelectedTagId(flow?.triggerType === 'tag_applied' ? flow.triggerValue ?? '' : '');
+    setSelectedStageId(flow?.triggerType === 'stage_changed' ? flow.triggerValue ?? '' : '');
   }, [flow, open]);
+
+  useEffect(() => {
+    if (triggerType !== 'stage_changed') {
+      setSelectedPipelineId('');
+      return;
+    }
+
+    const stageId = selectedStageId || (flow?.triggerType === 'stage_changed' ? flow.triggerValue ?? '' : '');
+    if (!stageId) return;
+
+    const ownerPipeline = pipelines.find((pipeline) =>
+      pipeline.stages.some((stage) => stage.id === stageId),
+    );
+
+    if (ownerPipeline) {
+      setSelectedPipelineId(ownerPipeline.id);
+    }
+  }, [flow?.triggerType, flow?.triggerValue, pipelines, selectedStageId, triggerType]);
+
+  const selectedPipeline =
+    pipelines.find((pipeline) => pipeline.id === selectedPipelineId) ?? null;
 
   function addNode(type: FlowNodeDraft['type']) {
     setNodes((current) => [
@@ -79,9 +108,25 @@ export function FlowEditorDialog({ open, onOpenChange, onSaved, flow }: FlowEdit
     const payload = {
       name: name.trim(),
       triggerType,
-      triggerValue: triggerType === 'keyword' ? triggerValue.trim() : undefined,
+      triggerValue:
+        triggerType === 'keyword'
+          ? triggerValue.trim()
+          : triggerType === 'tag_applied'
+            ? selectedTagId || undefined
+            : triggerType === 'stage_changed'
+              ? selectedStageId || undefined
+              : undefined,
       nodes,
     };
+
+    if (
+      (triggerType === 'keyword' && !payload.triggerValue) ||
+      (triggerType === 'tag_applied' && !selectedTagId) ||
+      (triggerType === 'stage_changed' && !selectedStageId)
+    ) {
+      setSaving(false);
+      return;
+    }
 
     try {
       if (flow) {
@@ -121,6 +166,8 @@ export function FlowEditorDialog({ open, onOpenChange, onSaved, flow }: FlowEdit
                   <SelectItem value="new_conversation">Nova conversa</SelectItem>
                   <SelectItem value="keyword">Palavra-chave</SelectItem>
                   <SelectItem value="always">Toda mensagem</SelectItem>
+                  <SelectItem value="tag_applied">Tag aplicada</SelectItem>
+                  <SelectItem value="stage_changed">Mudança de stage</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -133,6 +180,64 @@ export function FlowEditorDialog({ open, onOpenChange, onSaved, flow }: FlowEdit
                   onChange={(event) => setTriggerValue(event.target.value)}
                   placeholder="Ex: oi, catálogo, suporte"
                 />
+              </div>
+            ) : null}
+            {triggerType === 'tag_applied' ? (
+              <div className="space-y-2">
+                <Label htmlFor="trigger-tag">Tag</Label>
+                <select
+                  id="trigger-tag"
+                  value={selectedTagId}
+                  onChange={(event) => setSelectedTagId(event.target.value)}
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">Selecione uma tag</option>
+                  {tags.map((tag) => (
+                    <option key={tag.id} value={tag.id}>
+                      {tag.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+            {triggerType === 'stage_changed' ? (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="trigger-pipeline">Pipeline</Label>
+                  <select
+                    id="trigger-pipeline"
+                    value={selectedPipelineId}
+                    onChange={(event) => {
+                      setSelectedPipelineId(event.target.value);
+                      setSelectedStageId('');
+                    }}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="">Selecione um pipeline</option>
+                    {pipelines.map((pipeline) => (
+                      <option key={pipeline.id} value={pipeline.id}>
+                        {pipeline.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="trigger-stage">Stage</Label>
+                  <select
+                    id="trigger-stage"
+                    value={selectedStageId}
+                    onChange={(event) => setSelectedStageId(event.target.value)}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    disabled={!selectedPipeline}
+                  >
+                    <option value="">Selecione um stage</option>
+                    {selectedPipeline?.stages.map((stage) => (
+                      <option key={stage.id} value={stage.id}>
+                        {stage.name}
+                      </option>
+                    )) ?? null}
+                  </select>
+                </div>
               </div>
             ) : null}
 

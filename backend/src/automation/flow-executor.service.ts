@@ -1,7 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { FlowTriggerType } from '@prisma/client';
+import { Flow, FlowTriggerType } from '@prisma/client';
 import { SchedulerService } from '../queues/scheduler.service';
+
+type FlowTriggerContext = {
+  incomingText?: string | null;
+  isNewConversation?: boolean;
+  eventType?: FlowTriggerType;
+  eventValue?: string | null;
+};
 
 @Injectable()
 export class FlowExecutorService {
@@ -31,43 +38,49 @@ export class FlowExecutorService {
       const matches = this.checkTrigger(
         flow.triggerType,
         flow.triggerValue,
-        incomingText,
-        isNewConversation,
+        {
+          incomingText,
+          isNewConversation,
+        },
       );
       if (!matches) continue;
 
-      const existingState = await this.prisma.contactFlowState.findUnique({
-        where: { contactId_flowId: { contactId, flowId: flow.id } },
-      });
+      await this.startFlow(flow, conversationId, contactId, sendFn);
+    }
+  }
 
-      if (existingState?.isActive) continue;
-      if (flow.nodes.length === 0) continue;
+  async triggerForContactEvent(
+    workspaceId: string,
+    contactId: string,
+    eventType: FlowTriggerType,
+    eventValue: string,
+  ) {
+    const conversation = await this.findConversationForAutomation(
+      workspaceId,
+      contactId,
+    );
 
-      const firstNode = flow.nodes[0];
-
-      await this.prisma.contactFlowState.upsert({
-        where: { contactId_flowId: { contactId, flowId: flow.id } },
-        create: {
-          contactId,
-          flowId: flow.id,
-          currentNodeId: firstNode.id,
-          isActive: true,
-        },
-        update: { currentNodeId: firstNode.id, isActive: true },
-      });
-
-      await this.prisma.conversation.update({
-        where: { id: conversationId },
-        data: { isBotActive: true },
-      });
-
-      await this.executeNode(
-        firstNode.id,
-        conversationId,
-        contactId,
-        flow.id,
-        sendFn,
+    if (!conversation) {
+      this.logger.warn(
+        `[Bot] Nenhuma conversa utilizável para contato ${contactId} no trigger ${eventType}`,
       );
+      return;
+    }
+
+    const sendFn = this.createSendFn();
+    const flows = await this.prisma.flow.findMany({
+      where: { workspaceId, isActive: true, triggerType: eventType },
+      include: { nodes: { orderBy: { order: 'asc' } } },
+    });
+
+    for (const flow of flows) {
+      const matches = this.checkTrigger(flow.triggerType, flow.triggerValue, {
+        eventType,
+        eventValue,
+      });
+      if (!matches) continue;
+
+      await this.startFlow(flow, conversation.id, contactId, sendFn);
     }
   }
 
@@ -85,30 +98,7 @@ export class FlowExecutorService {
     });
     if (!conversation) return;
 
-    // Recria sendFn usando dados da conta WhatsApp
-    const sendFn = async (accountId: string, to: string, text: string) => {
-      const account = await this.prisma.whatsappAccount.findUnique({
-        where: { id: accountId },
-      });
-      if (!account) throw new Error('Conta WhatsApp não encontrada');
-
-      const url = `https://graph.facebook.com/v19.0/${account.metaAccountId}/messages`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${account.token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to,
-          type: 'text',
-          text: { body: text },
-        }),
-      });
-      const data: any = await response.json();
-      return data.messages?.[0]?.id ?? '';
-    };
+    const sendFn = this.createSendFn();
 
     await this.executeNode(nodeId, conversationId, contactId, flowId, sendFn);
   }
@@ -266,14 +256,100 @@ export class FlowExecutorService {
   private checkTrigger(
     triggerType: FlowTriggerType,
     triggerValue: string | null,
-    incomingText: string | null,
-    isNewConversation: boolean,
+    context: FlowTriggerContext,
   ): boolean {
-    if (triggerType === 'new_conversation') return isNewConversation;
+    if (triggerType === 'new_conversation') return Boolean(context.isNewConversation);
     if (triggerType === 'always') return true;
-    if (triggerType === 'keyword' && triggerValue && incomingText) {
-      return incomingText.toLowerCase().includes(triggerValue.toLowerCase());
+    if (triggerType === 'keyword' && triggerValue && context.incomingText) {
+      return context.incomingText
+        .toLowerCase()
+        .includes(triggerValue.toLowerCase());
+    }
+    if (
+      (triggerType === 'tag_applied' || triggerType === 'stage_changed') &&
+      context.eventType === triggerType
+    ) {
+      return triggerValue === context.eventValue;
     }
     return false;
+  }
+
+  private async startFlow(
+    flow: Flow & { nodes: Array<{ id: string }> },
+    conversationId: string,
+    contactId: string,
+    sendFn: (accountId: string, to: string, text: string) => Promise<string>,
+  ) {
+    const existingState = await this.prisma.contactFlowState.findUnique({
+      where: { contactId_flowId: { contactId, flowId: flow.id } },
+    });
+
+    if (existingState?.isActive) return;
+    if (flow.nodes.length === 0) return;
+
+    const firstNode = flow.nodes[0];
+
+    await this.prisma.contactFlowState.upsert({
+      where: { contactId_flowId: { contactId, flowId: flow.id } },
+      create: {
+        contactId,
+        flowId: flow.id,
+        currentNodeId: firstNode.id,
+        isActive: true,
+      },
+      update: { currentNodeId: firstNode.id, isActive: true },
+    });
+
+    await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: { isBotActive: true },
+    });
+
+    await this.executeNode(firstNode.id, conversationId, contactId, flow.id, sendFn);
+  }
+
+  private async findConversationForAutomation(
+    workspaceId: string,
+    contactId: string,
+  ) {
+    const openConversation = await this.prisma.conversation.findFirst({
+      where: { workspaceId, contactId, status: 'open' },
+      orderBy: [{ lastMessageAt: 'desc' }, { createdAt: 'desc' }],
+      select: { id: true },
+    });
+
+    if (openConversation) return openConversation;
+
+    return this.prisma.conversation.findFirst({
+      where: { workspaceId, contactId },
+      orderBy: [{ lastMessageAt: 'desc' }, { createdAt: 'desc' }],
+      select: { id: true },
+    });
+  }
+
+  private createSendFn() {
+    return async (accountId: string, to: string, text: string) => {
+      const account = await this.prisma.whatsappAccount.findUnique({
+        where: { id: accountId },
+      });
+      if (!account) throw new Error('Conta WhatsApp não encontrada');
+
+      const url = `https://graph.facebook.com/v19.0/${account.metaAccountId}/messages`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${account.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to,
+          type: 'text',
+          text: { body: text },
+        }),
+      });
+      const data: any = await response.json();
+      return data.messages?.[0]?.id ?? '';
+    };
   }
 }

@@ -26,6 +26,14 @@ export interface Contact {
   conversations: Array<{ id: string; status: string }>;
 }
 
+export interface ContactFilters {
+  search?: string;
+  tagIds?: string[];
+  pipelineId?: string;
+  stageId?: string;
+  conversationStatus?: 'open' | 'closed' | 'none';
+}
+
 export interface Stage {
   id: string;
   pipelineId: string;
@@ -51,18 +59,32 @@ export interface KanbanPipeline extends Pipeline {
   stages: KanbanStage[];
 }
 
+export interface SavedSegment {
+  id: string;
+  name: string;
+  filters: ContactFilters;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const fetcher = (url: string) => api.get(url).then((r) => r.data);
 
 const EMPTY_CONTACTS: Contact[] = [];
 const EMPTY_TAGS: Tag[] = [];
 const EMPTY_PIPELINES: Pipeline[] = [];
+const EMPTY_SEGMENTS: SavedSegment[] = [];
 
-export function useContacts(filters?: { search?: string; tagId?: string; pipelineId?: string; stageId?: string }) {
+export function useContacts(filters?: ContactFilters) {
   const params = new URLSearchParams();
   if (filters?.search) params.set('search', filters.search);
-  if (filters?.tagId) params.set('tagId', filters.tagId);
+  for (const tagId of filters?.tagIds ?? []) {
+    params.append('tagIds', tagId);
+  }
   if (filters?.pipelineId) params.set('pipelineId', filters.pipelineId);
   if (filters?.stageId) params.set('stageId', filters.stageId);
+  if (filters?.conversationStatus) {
+    params.set('conversationStatus', filters.conversationStatus);
+  }
   const qs = params.toString();
 
   const { data, mutate, error } = useSWR<Contact[]>(`/contacts${qs ? `?${qs}` : ''}`, fetcher);
@@ -72,6 +94,19 @@ export function useContacts(filters?: { search?: string; tagId?: string; pipelin
 export function useTags() {
   const { data, mutate, error } = useSWR<Tag[]>('/contacts/tags/list', fetcher);
   return { tags: data ?? EMPTY_TAGS, mutate, error };
+}
+
+export function useSavedSegments() {
+  const { data, mutate, error } = useSWR<SavedSegment[]>(
+    '/contacts/segments',
+    fetcher,
+  );
+  return {
+    segments: data ?? EMPTY_SEGMENTS,
+    mutate,
+    error,
+    isLoading: !data && !error,
+  };
 }
 
 export function usePipelines() {
@@ -132,6 +167,41 @@ export async function addTag(contactId: string, tagId: string) {
 
 export async function removeTag(contactId: string, tagId: string) {
   await api.delete(`/contacts/${contactId}/tags/${tagId}`);
+}
+
+export async function saveSegment(payload: {
+  name: string;
+  search?: string;
+  tagIds?: string[];
+  pipelineId?: string;
+  stageId?: string;
+  conversationStatus?: 'open' | 'closed' | 'none';
+}) {
+  const r = await api.post('/contacts/segments', payload);
+  return r.data as SavedSegment;
+}
+
+export async function deleteSegment(id: string) {
+  await api.delete(`/contacts/segments/${id}`);
+}
+
+export async function applyBulkContactAction(payload: {
+  contactIds: string[];
+  addTagIds?: string[];
+  removeTagIds?: string[];
+  ownerId?: string | null;
+  clearOwner?: boolean;
+  lifecycleStage?: 'lead' | 'qualified' | 'customer' | 'inactive';
+  pipelineId?: string;
+  stageId?: string;
+}) {
+  const r = await api.post('/contacts/bulk/actions', payload);
+  return r.data as {
+    updatedContacts: number;
+    tagsAdded: number;
+    tagsRemoved: number;
+    movedToStage: number;
+  };
 }
 
 // ─── Importação CSV ──────────────────────────────────────────────────────────

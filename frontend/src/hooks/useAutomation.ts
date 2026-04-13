@@ -18,7 +18,12 @@ export interface Flow {
   workspaceId: string;
   name: string;
   isActive: boolean;
-  triggerType: 'new_conversation' | 'keyword' | 'always';
+  triggerType:
+    | 'new_conversation'
+    | 'keyword'
+    | 'always'
+    | 'tag_applied'
+    | 'stage_changed';
   triggerValue: string | null;
   nodes: FlowNode[];
 }
