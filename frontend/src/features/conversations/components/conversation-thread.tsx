@@ -104,6 +104,14 @@ interface TimelineEntry {
   message: Message;
 }
 
+interface ResponseMetrics {
+  firstResponseMs: number | null;
+  averageResponseMs: number | null;
+  lastResponseMs: number | null;
+  pendingResponseMs: number | null;
+  responseCount: number;
+}
+
 function getInitials(value: string) {
   return value
     .split(' ')
@@ -119,6 +127,55 @@ function formatFullDateTime(dateStr: string) {
     dateStyle: 'short',
     timeStyle: 'short',
   });
+}
+
+function formatDuration(durationMs: number) {
+  const totalMinutes = Math.max(1, Math.round(durationMs / 60000));
+
+  if (totalMinutes < 60) return `${totalMinutes}min`;
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours < 24) return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}min`;
+
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+
+  return remainingHours === 0 ? `${days}d` : `${days}d ${remainingHours}h`;
+}
+
+function calculateResponseMetrics(messages: Message[]): ResponseMetrics {
+  let firstContactMessageAt: string | null = null;
+  const responseTimes: number[] = [];
+
+  for (const message of messages) {
+    if (message.senderType === 'contact' && !firstContactMessageAt) {
+      firstContactMessageAt = message.createdAt;
+      continue;
+    }
+
+    if (message.senderType === 'user' && firstContactMessageAt) {
+      responseTimes.push(
+        new Date(message.createdAt).getTime() -
+          new Date(firstContactMessageAt).getTime(),
+      );
+      firstContactMessageAt = null;
+    }
+  }
+
+  return {
+    firstResponseMs: responseTimes[0] ?? null,
+    averageResponseMs: responseTimes.length
+      ? responseTimes.reduce((sum, value) => sum + value, 0) /
+        responseTimes.length
+      : null,
+    lastResponseMs: responseTimes.at(-1) ?? null,
+    pendingResponseMs: firstContactMessageAt
+      ? Date.now() - new Date(firstContactMessageAt).getTime()
+      : null,
+    responseCount: responseTimes.length,
+  };
 }
 
 // ─── @Mention dropdown ────────────────────────────────────────────────────────
@@ -645,6 +702,10 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       .sort(
         (left, right) => new Date(right).getTime() - new Date(left).getTime(),
       )[0] ?? conversation.lastContactMessageAt;
+  const currentConversationResponseMetrics = calculateResponseMetrics(messages);
+  const contactResponseMetrics = calculateResponseMetrics(
+    (contactDetail?.conversations ?? []).flatMap((item) => item.messages),
+  );
 
   const windowOpen = conversation.lastContactMessageAt
     ? Date.now() - new Date(conversation.lastContactMessageAt).getTime() < 24 * 60 * 60 * 1000
@@ -1012,6 +1073,40 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                   {lastCustomerInteraction
                     ? `${formatDistanceToNow(lastCustomerInteraction)} (${formatTime(lastCustomerInteraction)})`
                     : 'sem registro'}
+                </li>
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">SLA e resposta</p>
+              <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                <li>
+                  Primeira resposta da conversa:{' '}
+                  {currentConversationResponseMetrics.firstResponseMs
+                    ? formatDuration(
+                        currentConversationResponseMetrics.firstResponseMs,
+                      )
+                    : 'sem resposta registrada'}
+                </li>
+                <li>
+                  Media de resposta do contato:{' '}
+                  {contactResponseMetrics.averageResponseMs
+                    ? formatDuration(contactResponseMetrics.averageResponseMs)
+                    : 'sem base suficiente'}
+                </li>
+                <li>
+                  Ultima resposta registrada:{' '}
+                  {contactResponseMetrics.lastResponseMs
+                    ? formatDuration(contactResponseMetrics.lastResponseMs)
+                    : 'sem resposta registrada'}
+                </li>
+                <li>
+                  SLA atual:{' '}
+                  {currentConversationResponseMetrics.pendingResponseMs
+                    ? `cliente aguardando ha ${formatDuration(currentConversationResponseMetrics.pendingResponseMs)}`
+                    : 'sem pendencia de resposta'}
+                </li>
+                <li>
+                  Respostas analisadas: {contactResponseMetrics.responseCount}
                 </li>
               </ul>
             </div>

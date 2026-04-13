@@ -124,7 +124,7 @@ Meta: dar ao operador um CRM realmente utilizável no dia a dia.
 
 - [x] Exibir timeline completa do contato, não só da conversa atual
 - [x] Exibir histórico de conversas encerradas
-- [ ] Exibir SLA e tempos de resposta
+- [x] Exibir SLA e tempos de resposta
 - [x] Exibir última interação do cliente
 - [ ] Exibir origem do contato e opt-in
 
