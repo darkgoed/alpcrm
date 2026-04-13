@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "8c94a673676d3060",
+        "id": "b26b6eccbfe8f041",
         "type": "tabs",
         "children": [
           {
-            "id": "deb96e6f6e9cf3f6",
+            "id": "c782efb9b7c1d7e8",
             "type": "leaf",
             "state": {
               "type": "empty",
@@ -177,8 +177,11 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "deb96e6f6e9cf3f6",
+  "active": "c782efb9b7c1d7e8",
   "lastOpenFiles": [
+    "clippings/Whatsapp Cloud API/WhatsApp Business API - WhatsApp Account Number API.md",
+    "clippings/Whatsapp Cloud API/Códigos de erro  Documentação do desenvolvedor.md",
+    "clippings/Whatsapp Cloud API/WhatsApp Business Account - Assigned Users Management API.md",
     "backend/README.md",
     "clippings/Whatsapp Cloud API/WhatsApp Business Account Official Business Account Status API.md",
     "clippings/Whatsapp Cloud API/WhatsApp Cloud API - WhatsApp Business QR Code Management API.md",
@@ -203,9 +206,6 @@
     "clippings/Whatsapp Cloud API/WhatsApp Cloud API - Block API.md",
     "graphify-out/obsidian/_COMMUNITY_Community 1.md",
     "graphify-out/obsidian/useSocket.ts.md",
-    "graphify-out/obsidian/useSocket().md",
-    "graphify-out/obsidian/useRoles.ts.md",
-    "graphify-out/obsidian/useRoles().md",
     "graphify-out/obsidian",
     "graphify-out/Sem título.canvas"
   ]
