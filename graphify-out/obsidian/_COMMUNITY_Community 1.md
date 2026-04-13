@@ -56,7 +56,7 @@ members: 87
 - [[TemplatesModule]] - code - backend/src/templates/templates.module.ts
 - [[WebhookSignatureGuard]] - code - backend/src/common/guards/webhook-signature.guard.ts
 - [[WhatsApp Business Messaging Permissions]] - document - clippings/WhatsApp Cloud API - Message API.md
-- [[WhatsApp Cloud API - Message API]] - document - clippings/WhatsApp Cloud API - Message API.md
+- [[graphify-out/obsidian/WhatsApp Cloud API - Message API]] - document - clippings/WhatsApp Cloud API - Message API.md
 - [[WhatsApp Contact Payload]] - code - backend/src/whatsapp/dto/webhook.dto.ts
 - [[WhatsApp Message ID (wamid)]] - document - clippings/WhatsApp Cloud API - Message API.md
 - [[WhatsApp Message Request Payload]] - document - clippings/WhatsApp Cloud API - Message API.md

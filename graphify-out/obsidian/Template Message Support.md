@@ -12,7 +12,7 @@ tags:
 # Template Message Support
 
 ## Connections
-- [[WhatsApp Cloud API - Message API]] - `references` [EXTRACTED]
+- [[graphify-out/obsidian/WhatsApp Cloud API - Message API]] - `references` [EXTRACTED]
 - [[templates.service.ts]] - `rationale_for` [INFERRED]
 
 #graphify/document #graphify/INFERRED #community/Community_1

@@ -14,7 +14,7 @@ tags:
 ## Connections
 - [[Bearer Access Token Requirement]] - `requires` [EXTRACTED]
 - [[Phone Number ID]] - `requires` [EXTRACTED]
-- [[WhatsApp Cloud API - Message API]] - `references` [EXTRACTED]
+- [[graphify-out/obsidian/WhatsApp Cloud API - Message API]] - `references` [EXTRACTED]
 - [[WhatsApp Message ID (wamid)]] - `returns` [EXTRACTED]
 - [[WhatsApp Message Request Payload]] - `requires` [EXTRACTED]
 - [[messages.service.ts]] - `rationale_for` [INFERRED]

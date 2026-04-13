@@ -13,7 +13,7 @@ tags:
 
 ## Connections
 - [[POST {Version}{Phone-Number-ID}messages]] - `returns` [EXTRACTED]
-- [[WhatsApp Cloud API - Message API]] - `references` [EXTRACTED]
+- [[graphify-out/obsidian/WhatsApp Cloud API - Message API]] - `references` [EXTRACTED]
 - [[messages.service.ts]] - `conceptually_related_to` [INFERRED]
 
 #graphify/document #graphify/EXTRACTED #community/Community_1

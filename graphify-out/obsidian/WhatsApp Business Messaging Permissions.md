@@ -12,7 +12,7 @@ tags:
 # WhatsApp Business Messaging Permissions
 
 ## Connections
-- [[WhatsApp Cloud API - Message API]] - `references` [EXTRACTED]
+- [[graphify-out/obsidian/WhatsApp Cloud API - Message API]] - `references` [EXTRACTED]
 - [[whatsapp.service.ts]] - `rationale_for` [INFERRED]
 
 #graphify/document #graphify/INFERRED #community/Community_1

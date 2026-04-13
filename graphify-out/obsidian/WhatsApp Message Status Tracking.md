@@ -12,7 +12,7 @@ tags:
 # WhatsApp Message Status Tracking
 
 ## Connections
-- [[WhatsApp Cloud API - Message API]] - `references` [EXTRACTED]
+- [[graphify-out/obsidian/WhatsApp Cloud API - Message API]] - `references` [EXTRACTED]
 - [[WhatsApp Webhook Payload]] - `rationale_for` [INFERRED]
 - [[whatsapp.service.ts]] - `conceptually_related_to` [INFERRED]
 

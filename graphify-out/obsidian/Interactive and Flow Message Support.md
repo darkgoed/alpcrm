@@ -12,7 +12,7 @@ tags:
 # Interactive and Flow Message Support
 
 ## Connections
-- [[WhatsApp Cloud API - Message API]] - `references` [EXTRACTED]
+- [[graphify-out/obsidian/WhatsApp Cloud API - Message API]] - `references` [EXTRACTED]
 - [[flow-executor.service.ts]] - `conceptually_related_to` [INFERRED]
 
 #graphify/document #graphify/INFERRED #community/Community_1
