@@ -97,6 +97,7 @@ export class MessagesService {
     userId: string,
     permissions: string[] = [],
   ) {
+    this.assertPermission(['respond_conversation'], permissions);
     const isInteractive = dto.type === 'interactive';
     if (isInteractive) {
       if (!dto.interactiveType || !dto.interactivePayload) {
@@ -256,5 +257,15 @@ export class MessagesService {
     }
 
     return message;
+  }
+
+  private assertPermission(required: string[], permissions: string[]) {
+    const hasAll = required.every((permission) =>
+      permissions.includes(permission),
+    );
+
+    if (!hasAll) {
+      throw new ForbiddenException('Permissão insuficiente');
+    }
   }
 }

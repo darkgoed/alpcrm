@@ -12,10 +12,12 @@ import { ConversationsService } from './conversations.service';
 import { AssignConversationDto } from './dto/assign-conversation.dto';
 import { InitiateConversationDto } from './dto/initiate-conversation.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ConversationStatus } from '@prisma/client';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('conversations')
 export class ConversationsController {
   constructor(private readonly conversationsService: ConversationsService) {}
@@ -46,22 +48,34 @@ export class ConversationsController {
   }
 
   @Patch(':id/assign')
+  @RequirePermissions('assign_conversation')
   assign(
     @Param('id') id: string,
     @CurrentUser() user: any,
     @Body() dto: AssignConversationDto,
   ) {
-    return this.conversationsService.assign(id, user.workspaceId, dto);
+    return this.conversationsService.assign(
+      id,
+      user.workspaceId,
+      dto,
+      user.permissions,
+    );
   }
 
   @Patch(':id/close')
+  @RequirePermissions('close_conversation')
   close(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.conversationsService.close(id, user.workspaceId);
+    return this.conversationsService.close(id, user.workspaceId, user.permissions);
   }
 
   @Patch(':id/reopen')
+  @RequirePermissions('close_conversation')
   reopen(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.conversationsService.reopen(id, user.workspaceId);
+    return this.conversationsService.reopen(
+      id,
+      user.workspaceId,
+      user.permissions,
+    );
   }
 
   @Patch(':id/read')
@@ -75,6 +89,7 @@ export class ConversationsController {
   }
 
   @Post(':id/notes')
+  @RequirePermissions('manage_internal_notes')
   addNote(
     @Param('id') id: string,
     @CurrentUser() user: any,
@@ -85,10 +100,12 @@ export class ConversationsController {
       user.workspaceId,
       user.userId,
       content,
+      user.permissions,
     );
   }
 
   @Post('initiate')
+  @RequirePermissions('initiate_outbound_conversation')
   initiateConversation(
     @Body() dto: InitiateConversationDto,
     @CurrentUser() user: any,
@@ -97,6 +114,7 @@ export class ConversationsController {
       dto,
       user.workspaceId,
       user.userId,
+      user.permissions,
     );
   }
 }

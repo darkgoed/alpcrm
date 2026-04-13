@@ -92,7 +92,13 @@ export class ConversationsService {
 
   // ─── Atribuir conversa ───────────────────────────────────────────────────────
 
-  async assign(id: string, workspaceId: string, dto: AssignConversationDto) {
+  async assign(
+    id: string,
+    workspaceId: string,
+    dto: AssignConversationDto,
+    permissions: string[] = [],
+  ) {
+    this.assertPermission(['assign_conversation'], permissions);
     await this.assertExists(id, workspaceId);
     return this.prisma.conversation.update({
       where: { id },
@@ -105,7 +111,8 @@ export class ConversationsService {
 
   // ─── Fechar conversa ────────────────────────────────────────────────────────
 
-  async close(id: string, workspaceId: string) {
+  async close(id: string, workspaceId: string, permissions: string[] = []) {
+    this.assertPermission(['close_conversation'], permissions);
     await this.assertExists(id, workspaceId);
     return this.prisma.conversation.update({
       where: { id },
@@ -115,7 +122,8 @@ export class ConversationsService {
 
   // ─── Reabrir conversa ───────────────────────────────────────────────────────
 
-  async reopen(id: string, workspaceId: string) {
+  async reopen(id: string, workspaceId: string, permissions: string[] = []) {
+    this.assertPermission(['close_conversation'], permissions);
     await this.assertExists(id, workspaceId);
     return this.prisma.conversation.update({
       where: { id },
@@ -167,7 +175,9 @@ export class ConversationsService {
     workspaceId: string,
     userId: string,
     content: string,
+    permissions: string[] = [],
   ) {
+    this.assertPermission(['manage_internal_notes'], permissions);
     if (!content?.trim())
       throw new BadRequestException('Conteúdo da nota é obrigatório');
     const conv = await this.assertExists(id, workspaceId);
@@ -197,7 +207,9 @@ export class ConversationsService {
     dto: InitiateConversationDto,
     workspaceId: string,
     userId: string,
+    permissions: string[] = [],
   ) {
+    this.assertPermission(['initiate_outbound_conversation'], permissions);
     const contact = await this.prisma.contact.findFirst({
       where: { id: dto.contactId, workspaceId },
     });
@@ -285,6 +297,16 @@ export class ConversationsService {
     });
     if (!conv) throw new NotFoundException('Conversa não encontrada');
     return conv;
+  }
+
+  private assertPermission(required: string[], permissions: string[]) {
+    const hasAll = required.every((permission) =>
+      permissions.includes(permission),
+    );
+
+    if (!hasAll) {
+      throw new ForbiddenException('Permissão insuficiente');
+    }
   }
 
   private buildTemplateComponents(

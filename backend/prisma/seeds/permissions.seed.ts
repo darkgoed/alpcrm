@@ -13,6 +13,8 @@ export const SYSTEM_PERMISSIONS = [
   { key: 'assign_conversation',      description: 'Atribuir conversa a um operador ou equipe' },
   { key: 'respond_conversation',     description: 'Responder uma conversa atribuída' },
   { key: 'close_conversation',       description: 'Fechar e reabrir conversas' },
+  { key: 'manage_internal_notes',    description: 'Adicionar notas internas em conversas' },
+  { key: 'initiate_outbound_conversation', description: 'Iniciar conversa outbound via template aprovado' },
 
   // Usuários
   { key: 'manage_users',             description: 'Convidar, editar e desativar operadores' },

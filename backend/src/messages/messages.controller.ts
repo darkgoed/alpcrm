@@ -17,6 +17,8 @@ import { v4 as uuid } from 'uuid';
 import { MessagesService } from './messages.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 const ALLOWED_MIME = new Set([
@@ -47,7 +49,7 @@ const MEDIA_TYPE_MAP: Record<string, string> = {
 
 const uploadsDir = join(process.cwd(), 'uploads');
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('messages')
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
@@ -81,6 +83,7 @@ export class MessagesController {
   }
 
   @Post()
+  @RequirePermissions('respond_conversation')
   send(@Body() dto: SendMessageDto, @CurrentUser() user: any) {
     return this.messagesService.send(
       dto,
@@ -91,6 +94,7 @@ export class MessagesController {
   }
 
   @Post('media')
+  @RequirePermissions('respond_conversation')
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
