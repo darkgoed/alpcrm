@@ -1,16 +1,33 @@
 import useSWR from 'swr';
 import { api } from '@/lib/api';
 
+export type FlowNodeType =
+  | 'message'
+  | 'condition'
+  | 'delay'
+  | 'wait_for_reply'
+  | 'branch'
+  | 'tag_contact'
+  | 'move_stage'
+  | 'assign_to'
+  | 'send_template'
+  | 'webhook_call';
+
 export interface FlowNode {
   id: string;
   flowId: string;
-  type: 'message' | 'condition' | 'delay';
-  config: {
-    content?: string;
-    ms?: number;
-  };
+  type: FlowNodeType;
+  config: Record<string, unknown>;
   order: number;
   nextId: string | null;
+}
+
+export interface FlowEdge {
+  id: string;
+  flowId: string;
+  fromNodeId: string;
+  toNodeId: string;
+  label: string | null;
 }
 
 export interface Flow {
@@ -23,9 +40,24 @@ export interface Flow {
     | 'keyword'
     | 'always'
     | 'tag_applied'
-    | 'stage_changed';
+    | 'stage_changed'
+    | 'button_reply';
   triggerValue: string | null;
   nodes: FlowNode[];
+  edges: FlowEdge[];
+}
+
+export interface FlowNodeDraft {
+  clientId: string;
+  type: FlowNodeType;
+  config: Record<string, unknown>;
+  order: number;
+}
+
+export interface FlowEdgeDraft {
+  fromClientId: string;
+  toClientId: string;
+  label?: string;
 }
 
 export interface FlowPayload {
@@ -33,10 +65,12 @@ export interface FlowPayload {
   triggerType: Flow['triggerType'];
   triggerValue?: string;
   nodes: Array<{
-    type: 'message' | 'delay';
-    config: FlowNode['config'];
+    clientId?: string;
+    type: FlowNodeType;
+    config: Record<string, unknown>;
     order: number;
   }>;
+  edges?: FlowEdgeDraft[];
 }
 
 const fetcher = (url: string) => api.get(url).then((r) => r.data);

@@ -16,13 +16,35 @@ export class CreateFlowNodeDto {
   type: FlowNodeType;
 
   @IsObject()
-  config: Record<string, any>;
-  // message: { content: string }
-  // delay:   { ms: number }
-  // condition: { field: string, operator: string, value: string }
+  config: Record<string, unknown>;
+  // message:         { content: string }
+  // delay:           { ms: number }
+  // wait_for_reply:  { variableName?: string, timeoutMs?: number }
+  // condition/branch:{ field: string, operator: string, value: string }
+  // tag_contact:     { tagId: string, action: 'add'|'remove' }
+  // move_stage:      { stageId: string }
+  // assign_to:       { userId?: string, teamId?: string }
+  // send_template:   { templateName: string, languageCode?: string, components?: unknown[] }
+  // webhook_call:    { url: string, method?: string, saveResponseAs?: string }
 
   @IsNumber()
   order: number;
+
+  @IsOptional()
+  @IsString()
+  clientId?: string; // id temporário do cliente para referência nos edges
+}
+
+export class CreateFlowEdgeDto {
+  @IsString()
+  fromClientId: string; // clientId do nó de origem
+
+  @IsString()
+  toClientId: string; // clientId do nó de destino
+
+  @IsOptional()
+  @IsString()
+  label?: string; // 'yes' | 'no' | valor de branch | null para edge padrão
 }
 
 export class CreateFlowDto {
@@ -46,6 +68,12 @@ export class CreateFlowDto {
   @ValidateNested({ each: true })
   @Type(() => CreateFlowNodeDto)
   nodes?: CreateFlowNodeDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateFlowEdgeDto)
+  edges?: CreateFlowEdgeDto[];
 }
 
 export class UpdateFlowDto extends CreateFlowDto {}

@@ -306,19 +306,20 @@ export class WhatsappService {
       unreadCount: (conversation.unreadCount ?? 0) + 1,
     });
 
-    // 7. Disparar automação (flows)
+    // 7. Retomar wait_for_reply ou disparar novo flow
     const isNewConv = !existingConversation;
     this.flowExecutor
-      .triggerForConversation(
-        conversation.id,
-        workspaceId,
-        contact.id,
-        content,
-        isNewConv,
-        (accountId: string, to: string, text: string) =>
-          this.sendTextMessage(accountId, to, text),
+      .resumeWaitingFlows(conversation.id, contact.id, content ?? '')
+      .then(() =>
+        this.flowExecutor.triggerForConversation(
+          conversation.id,
+          workspaceId,
+          contact.id,
+          content,
+          isNewConv,
+        ),
       )
-      .catch((err) => this.logger.error(`[Bot] Erro ao disparar flow: ${err}`));
+      .catch((err) => this.logger.error(`[Bot] Erro ao processar flow: ${err}`));
   }
 
   // ─── Atualização de status ───────────────────────────────────────────────────
