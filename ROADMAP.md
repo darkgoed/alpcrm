@@ -247,21 +247,21 @@ Meta: corrigir riscos de acesso indevido, configuração insegura e entrada fals
 
 ### 4.2 — Hardening do webhook
 
-- [ ] Exigir assinatura válida da Meta em produção
-- [ ] Proibir bypass silencioso quando `WHATSAPP_APP_SECRET` estiver ausente
-- [ ] Garantir `rawBody` obrigatório para rota de webhook
+- [x] Exigir assinatura válida da Meta em produção
+- [x] Proibir bypass silencioso quando `WHATSAPP_APP_SECRET` estiver ausente
+- [x] Garantir `rawBody` obrigatório para rota de webhook
 - [ ] Validar origem esperada do payload
 - [ ] Registrar tentativas inválidas com contexto suficiente
 - [ ] Adicionar proteção contra replay de webhook
 
 ### 4.3 — RBAC real nas ações sensíveis
 
-- [ ] Exigir permissão explícita para atribuir conversa
-- [ ] Exigir permissão explícita para fechar/reabrir conversa
-- [ ] Exigir permissão explícita para iniciar conversa outbound
-- [ ] Exigir permissão explícita para notas internas
+- [x] Exigir permissão explícita para atribuir conversa
+- [x] Exigir permissão explícita para fechar/reabrir conversa
+- [x] Exigir permissão explícita para iniciar conversa outbound
+- [x] Exigir permissão explícita para notas internas
 - [ ] Exigir permissão explícita para ler usuários, roles e times
-- [ ] Revalidar autorização no service layer, não só no controller
+- [ ] Revalidar autorização no service layer, não só no controller <!-- parcial: conversas sensíveis e envio já revalidam permissão no service; falta expandir para leitura e demais superfícies -->
 
 ### 4.4 — Segurança de websocket
 
