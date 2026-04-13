@@ -218,6 +218,7 @@ model Contact {
   contactPipelines ContactPipeline[]
   flowStates       ContactFlowState[]
   notes            ContactNote[]
+  flowExecLogs     FlowExecutionLog[]
 
   @@unique([workspaceId, phone])
   @@map("contacts")
@@ -402,6 +403,13 @@ enum FlowNodeType {
   message
   condition
   delay
+  wait_for_reply
+  branch
+  tag_contact
+  move_stage
+  assign_to
+  send_template
+  webhook_call
 }
 
 enum FlowTriggerType {
@@ -410,6 +418,7 @@ enum FlowTriggerType {
   always
   tag_applied
   stage_changed
+  button_reply
 }
 
 model Flow {
@@ -418,11 +427,15 @@ model Flow {
   name         String
   isActive     Boolean         @default(false) @map("is_active")
   triggerType  FlowTriggerType @default(new_conversation) @map("trigger_type")
-  triggerValue String?         @map("trigger_value") // keyword (se triggerType = keyword)
+  triggerValue String?         @map("trigger_value")
+  version      Int             @default(1)
+  publishedAt  DateTime?       @map("published_at")
 
   workspace  Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   nodes      FlowNode[]
+  edges      FlowEdge[]
   flowStates ContactFlowState[]
+  execLogs   FlowExecutionLog[]
 
   @@map("flows")
 }
@@ -431,24 +444,46 @@ model FlowNode {
   id     String       @id @default(uuid())
   flowId String       @map("flow_id")
   type   FlowNodeType
-  config Json         // conteúdo do nó (mensagem, condição, delay em ms)
-  nextId String?      @map("next_id") // próximo nó
+  config Json
+  // nextId kept for backwards-compat with legacy linear flows; edges are authoritative for new flows
+  nextId String?      @map("next_id")
   order  Int          @default(0)
 
-  flow       Flow               @relation(fields: [flowId], references: [id], onDelete: Cascade)
-  flowStates ContactFlowState[]
+  flow        Flow               @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  flowStates  ContactFlowState[]
+  edgesFrom   FlowEdge[]         @relation("EdgeFrom")
+  edgesTo     FlowEdge[]         @relation("EdgeTo")
+  execEntries FlowExecutionLog[]
 
   @@map("flow_nodes")
 }
 
+// Conexão direcional entre nós. label = condição/branch key (null = always)
+model FlowEdge {
+  id         String  @id @default(uuid())
+  flowId     String  @map("flow_id")
+  fromNodeId String  @map("from_node_id")
+  toNodeId   String  @map("to_node_id")
+  label      String? // "yes" | "no" | valor de opção de branch | null
+
+  flow     Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  fromNode FlowNode @relation("EdgeFrom", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNode   FlowNode @relation("EdgeTo", fields: [toNodeId], references: [id], onDelete: Cascade)
+
+  @@map("flow_edges")
+}
+
 model ContactFlowState {
-  id            String   @id @default(uuid())
-  contactId     String   @map("contact_id")
-  flowId        String   @map("flow_id")
-  currentNodeId String?  @map("current_node_id")
-  isActive      Boolean  @default(true) @map("is_active")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id              String   @id @default(uuid())
+  contactId       String   @map("contact_id")
+  flowId          String   @map("flow_id")
+  currentNodeId   String?  @map("current_node_id")
+  isActive        Boolean  @default(true) @map("is_active")
+  waitingForReply Boolean  @default(false) @map("waiting_for_reply")
+  replyTimeoutAt  DateTime? @map("reply_timeout_at")
+  variables       Json     @default("{}") // store de variáveis do flow
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
   flow        Flow      @relation(fields: [flowId], references: [id], onDelete: Cascade)
@@ -456,6 +491,25 @@ model ContactFlowState {
 
   @@unique([contactId, flowId])
   @@map("contact_flow_state")
+}
+
+// Histórico de execução de flows por contato
+model FlowExecutionLog {
+  id            String   @id @default(uuid())
+  flowId        String   @map("flow_id")
+  contactId     String   @map("contact_id")
+  nodeId        String?  @map("node_id")
+  event         String   // started | node_executed | waiting | completed | cancelled | error
+  detail        Json     @default("{}")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  flow    Flow      @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  contact Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  node    FlowNode? @relation(fields: [nodeId], references: [id], onDelete: SetNull)
+
+  @@index([flowId, contactId])
+  @@index([contactId, createdAt])
+  @@map("flow_execution_logs")
 }
 
 model ContactNote {
