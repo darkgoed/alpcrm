@@ -9,36 +9,57 @@ import 'dotenv/config';
 
 export const SYSTEM_PERMISSIONS = [
   // Conversas
-  { key: 'view_all_conversations',   description: 'Ver todas as conversas do workspace' },
-  { key: 'assign_conversation',      description: 'Atribuir conversa a um operador ou equipe' },
-  { key: 'respond_conversation',     description: 'Responder uma conversa atribuída' },
-  { key: 'close_conversation',       description: 'Fechar e reabrir conversas' },
-  { key: 'manage_internal_notes',    description: 'Adicionar notas internas em conversas' },
-  { key: 'initiate_outbound_conversation', description: 'Iniciar conversa outbound via template aprovado' },
+  {
+    key: 'view_all_conversations',
+    description: 'Ver todas as conversas do workspace',
+  },
+  {
+    key: 'assign_conversation',
+    description: 'Atribuir conversa a um operador ou equipe',
+  },
+  {
+    key: 'respond_conversation',
+    description: 'Responder uma conversa atribuída',
+  },
+  { key: 'close_conversation', description: 'Fechar e reabrir conversas' },
+  {
+    key: 'manage_internal_notes',
+    description: 'Adicionar notas internas em conversas',
+  },
+  {
+    key: 'initiate_outbound_conversation',
+    description: 'Iniciar conversa outbound via template aprovado',
+  },
 
   // Usuários
-  { key: 'manage_users',             description: 'Convidar, editar e desativar operadores' },
+  {
+    key: 'manage_users',
+    description: 'Convidar, editar e desativar operadores',
+  },
 
   // Roles
-  { key: 'manage_roles',             description: 'Criar e editar roles e permissões' },
+  { key: 'manage_roles', description: 'Criar e editar roles e permissões' },
 
   // Equipes
-  { key: 'manage_teams',             description: 'Criar equipes e gerenciar membros' },
+  { key: 'manage_teams', description: 'Criar equipes e gerenciar membros' },
 
   // WhatsApp
-  { key: 'manage_whatsapp_accounts', description: 'Adicionar e remover contas WhatsApp' },
+  {
+    key: 'manage_whatsapp_accounts',
+    description: 'Adicionar e remover contas WhatsApp',
+  },
 
   // Contatos
-  { key: 'manage_contacts',          description: 'Editar e excluir contatos' },
+  { key: 'manage_contacts', description: 'Editar e excluir contatos' },
 
   // Pipeline
-  { key: 'manage_pipelines',         description: 'Criar e editar pipelines e stages' },
+  { key: 'manage_pipelines', description: 'Criar e editar pipelines e stages' },
 
   // Automação
-  { key: 'manage_flows',             description: 'Criar e editar fluxos de automação' },
+  { key: 'manage_flows', description: 'Criar e editar fluxos de automação' },
 
   // Workspace
-  { key: 'manage_workspace',         description: 'Configurações gerais do workspace' },
+  { key: 'manage_workspace', description: 'Configurações gerais do workspace' },
 ];
 
 async function main() {
@@ -60,4 +81,7 @@ async function main() {
   await prisma.$disconnect();
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

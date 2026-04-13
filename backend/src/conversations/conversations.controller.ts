@@ -65,7 +65,11 @@ export class ConversationsController {
   @Patch(':id/close')
   @RequirePermissions('close_conversation')
   close(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.conversationsService.close(id, user.workspaceId, user.permissions);
+    return this.conversationsService.close(
+      id,
+      user.workspaceId,
+      user.permissions,
+    );
   }
 
   @Patch(':id/reopen')
