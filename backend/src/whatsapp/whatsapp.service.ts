@@ -19,6 +19,7 @@ import {
   WhatsappStatus,
 } from './dto/webhook.dto';
 import { MessageType, MessageStatus, Prisma } from '@prisma/client';
+import { isWithinBusinessHours } from '../common/utils/business-hours.util';
 
 interface WhatsappSendResponse {
   messages?: Array<{ id?: string }>;
@@ -286,6 +287,15 @@ export class WhatsappService {
       .scheduleAutoClose(conversation.id, workspaceId)
       .catch(() => null);
 
+    // 5b. Mensagem automática de fora de horário
+    await this.sendOutOfHoursMessageIfNeeded(
+      workspaceId,
+      account.id,
+      contact,
+      conversation.id,
+      onMessage,
+    );
+
     // 6. Emitir evento para o WebSocket
     onMessage({
       event: 'new_message',
@@ -346,6 +356,80 @@ export class WhatsappService {
       messageId: message.id,
       status: mapped,
     });
+  }
+
+  // ─── Horário comercial ───────────────────────────────────────────────────────
+
+  private async sendOutOfHoursMessageIfNeeded(
+    workspaceId: string,
+    accountId: string,
+    contact: { id: string; phone: string },
+    conversationId: string,
+    onMessage: (data: any) => void,
+  ): Promise<void> {
+    const settings = await this.prisma.workspaceSettings.findUnique({
+      where: { workspaceId },
+      select: { businessHours: true, timezone: true, outOfHoursMessage: true },
+    });
+
+    if (!settings?.outOfHoursMessage) return;
+
+    const withinHours = isWithinBusinessHours(
+      settings.businessHours as Record<
+        string,
+        { enabled: boolean; open: string; close: string }
+      > | null,
+      settings.timezone ?? 'America/Sao_Paulo',
+    );
+
+    if (withinHours) return;
+
+    // Evitar envio repetido: pular se a última mensagem do sistema é a mesma
+    const lastSystemMsg = await this.prisma.message.findFirst({
+      where: { conversationId, senderType: 'system' },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (lastSystemMsg?.content === settings.outOfHoursMessage) return;
+
+    try {
+      const externalId = await this.sendTextMessage(
+        accountId,
+        contact.phone,
+        settings.outOfHoursMessage,
+      );
+
+      const outOfHoursMsg = await this.prisma.message.create({
+        data: {
+          conversationId,
+          senderType: 'system',
+          type: 'text',
+          content: settings.outOfHoursMessage,
+          status: 'sent',
+          externalId,
+        },
+      });
+
+      await this.prisma.conversation.update({
+        where: { id: conversationId },
+        data: { lastMessageAt: new Date() },
+      });
+
+      onMessage({
+        event: 'new_message',
+        workspaceId,
+        conversationId,
+        message: outOfHoursMsg,
+        contact,
+        unreadCount: 0,
+      });
+
+      this.logger.log(
+        `[OutOfHours] Mensagem automática enviada para conversa ${conversationId}`,
+      );
+    } catch (err) {
+      this.logger.warn(`[OutOfHours] Falha ao enviar mensagem automática: ${err}`);
+    }
   }
 
   // ─── Enviar mensagem pelo WhatsApp Cloud API ─────────────────────────────────
