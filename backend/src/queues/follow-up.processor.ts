@@ -5,6 +5,7 @@ import { FOLLOW_UP_QUEUE } from './queues.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { EventsGateway } from '../gateway/events.gateway';
+import { isWithinBusinessHours } from '../common/utils/business-hours.util';
 
 export interface FollowUpJobData {
   conversationId: string;
@@ -72,6 +73,28 @@ export class FollowUpProcessor extends WorkerHost {
       where: { id: ruleId },
     });
     if (!rule?.isActive) return;
+
+    // Respeita horário comercial do workspace
+    const settings = await this.prisma.workspaceSettings.findUnique({
+      where: { workspaceId },
+      select: { businessHours: true, timezone: true },
+    });
+
+    if (
+      settings?.businessHours &&
+      !isWithinBusinessHours(
+        settings.businessHours as Record<
+          string,
+          { enabled: boolean; open: string; close: string }
+        >,
+        settings.timezone ?? 'America/Sao_Paulo',
+      )
+    ) {
+      this.logger.log(
+        `[FollowUp] Fora do horário comercial — conversa ${conversationId} ignorada`,
+      );
+      return;
+    }
 
     // Envia mensagem de follow-up
     try {

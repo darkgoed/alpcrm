@@ -151,7 +151,7 @@ Meta: dar ao operador um CRM realmente utilizável no dia a dia.
 - [x] Persistir `logoUrl`
 - [x] Persistir `businessHours`
 - [x] Persistir `outOfHoursMessage`
-- [ ] Aplicar essas configs em follow-up e automação
+- [x] Aplicar essas configs em follow-up e automação
 
 ### 2.6 — Horário comercial
 

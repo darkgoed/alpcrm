@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Flow, FlowTriggerType } from '@prisma/client';
 import { SchedulerService } from '../queues/scheduler.service';
+import { isWithinBusinessHours } from '../common/utils/business-hours.util';
 
 type FlowTriggerContext = {
   incomingText?: string | null;
@@ -123,6 +124,43 @@ export class FlowExecutorService {
     const config = node.config as Record<string, any>;
 
     if (node.type === 'message') {
+      // Respeita horário comercial do workspace
+      const wsSettings = await this.prisma.workspaceSettings.findUnique({
+        where: { workspaceId: conversation.workspaceId },
+        select: { businessHours: true, timezone: true },
+      });
+
+      if (
+        wsSettings?.businessHours &&
+        !isWithinBusinessHours(
+          wsSettings.businessHours as Record<
+            string,
+            { enabled: boolean; open: string; close: string }
+          >,
+          wsSettings.timezone ?? 'America/Sao_Paulo',
+        )
+      ) {
+        this.logger.log(
+          `[Bot] Fora do horário comercial — nó de mensagem ignorado (conversa ${conversationId})`,
+        );
+        if (node.nextId) {
+          await this.prisma.contactFlowState.update({
+            where: { contactId_flowId: { contactId, flowId } },
+            data: { currentNodeId: node.nextId },
+          });
+          await this.executeNode(
+            node.nextId,
+            conversationId,
+            contactId,
+            flowId,
+            sendFn,
+          );
+        } else {
+          await this.completeFlow(contactId, flowId, conversationId);
+        }
+        return;
+      }
+
       try {
         const externalId = await sendFn(
           conversation.whatsappAccountId,
