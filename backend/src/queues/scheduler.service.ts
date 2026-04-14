@@ -6,10 +6,12 @@ import {
   FOLLOW_UP_QUEUE,
   AUTO_CLOSE_QUEUE,
   FLOW_DELAY_QUEUE,
+  FLOW_REPLY_TIMEOUT_QUEUE,
 } from './queues.constants';
 import type { FollowUpJobData } from './follow-up.processor';
 import type { AutoCloseJobData } from './auto-close.processor';
 import type { FlowDelayJobData } from './flow-delay.processor';
+import type { FlowReplyTimeoutJobData } from './flow-reply-timeout.processor';
 
 @Injectable()
 export class SchedulerService {
@@ -20,6 +22,7 @@ export class SchedulerService {
     @InjectQueue(FOLLOW_UP_QUEUE) private followUpQueue: Queue,
     @InjectQueue(AUTO_CLOSE_QUEUE) private autoCloseQueue: Queue,
     @InjectQueue(FLOW_DELAY_QUEUE) private flowDelayQueue: Queue,
+    @InjectQueue(FLOW_REPLY_TIMEOUT_QUEUE) private flowReplyTimeoutQueue: Queue,
   ) {}
 
   // ─── Agendar follow-ups para uma conversa ───────────────────────────────────
@@ -105,6 +108,29 @@ export class SchedulerService {
     await this.autoCloseQueue
       .remove(`auto-close:${conversationId}`)
       .catch(() => null);
+  }
+
+  // ─── Timeout de wait_for_reply ───────────────────────────────────────────────
+
+  async scheduleReplyTimeout(
+    timeoutMs: number,
+    contactId: string,
+    flowId: string,
+    conversationId: string,
+    nodeId: string,
+  ) {
+    const jobId = `reply-timeout:${contactId}:${flowId}:${nodeId}`;
+    await this.flowReplyTimeoutQueue.remove(jobId).catch(() => null);
+    await this.flowReplyTimeoutQueue.add(
+      'flow-reply-timeout',
+      { contactId, flowId, conversationId, nodeId } satisfies FlowReplyTimeoutJobData,
+      { jobId, delay: timeoutMs, attempts: 1 },
+    );
+  }
+
+  async cancelReplyTimeout(contactId: string, flowId: string, nodeId: string) {
+    const jobId = `reply-timeout:${contactId}:${flowId}:${nodeId}`;
+    await this.flowReplyTimeoutQueue.remove(jobId).catch(() => null);
   }
 
   // ─── Delay de flow ───────────────────────────────────────────────────────────

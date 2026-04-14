@@ -28,6 +28,7 @@ const TYPE_LABELS: Record<FlowNodeType, string> = {
   move_stage: 'Mover no pipeline',
   assign_to: 'Atribuir',
   send_template: 'Enviar template',
+  send_interactive: 'Mensagem interativa',
   webhook_call: 'Webhook',
 };
 
@@ -41,6 +42,7 @@ const TYPE_COLOR: Record<FlowNodeType, string> = {
   move_stage: 'bg-sky-100 text-sky-700',
   assign_to: 'bg-pink-100 text-pink-700',
   send_template: 'bg-orange-100 text-orange-700',
+  send_interactive: 'bg-teal-100 text-teal-700',
   webhook_call: 'bg-zinc-100 text-zinc-700',
 };
 
@@ -55,6 +57,168 @@ interface Props {
   workspaceUsers?: Array<{ id: string; name: string }>;
   workspaceTeams?: Array<{ id: string; name: string }>;
   pipelineStages?: Array<{ id: string; name: string; pipelineName: string }>;
+}
+
+// ─── SendInteractive sub-editor ─────────────────────────────────────────────
+
+function SendInteractiveEditor({
+  config: c,
+  set,
+}: {
+  config: Record<string, unknown>;
+  set: (k: string, v: unknown) => void;
+}) {
+  const itype = String(c.interactiveType ?? 'button');
+  const buttons = (c.buttons as Array<{ id: string; title: string }>) ?? [];
+  const sections = (c.sections as Array<{ title: string; rows: Array<{ id: string; title: string }> }>) ?? [
+    { title: '', rows: [{ id: 'opt_1', title: '' }] },
+  ];
+
+  function updateButton(i: number, field: 'id' | 'title', value: string) {
+    const next = [...buttons];
+    next[i] = { ...next[i], [field]: value };
+    set('buttons', next);
+  }
+
+  function addButton() {
+    if (buttons.length >= 3) return;
+    set('buttons', [...buttons, { id: `btn_${Date.now()}`, title: '' }]);
+  }
+
+  function removeButton(i: number) {
+    set('buttons', buttons.filter((_, idx) => idx !== i));
+  }
+
+  function updateRow(si: number, ri: number, field: 'id' | 'title', value: string) {
+    const next = sections.map((s, sIdx) =>
+      sIdx !== si ? s : { ...s, rows: s.rows.map((r, rIdx) => (rIdx !== ri ? r : { ...r, [field]: value })) },
+    );
+    set('sections', next);
+  }
+
+  function addRow(si: number) {
+    const next = sections.map((s, sIdx) =>
+      sIdx !== si ? s : { ...s, rows: [...s.rows, { id: `opt_${Date.now()}`, title: '' }] },
+    );
+    set('sections', next);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label>Tipo</Label>
+        <Select value={itype} onValueChange={(v) => set('interactiveType', v)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="button">Botões de resposta (até 3)</SelectItem>
+            <SelectItem value="list">Lista de opções</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Corpo da mensagem</Label>
+        <Textarea
+          value={String(c.body ?? '')}
+          onChange={(e) => set('body', e.target.value)}
+          placeholder="Escolha uma opção:"
+          className="min-h-20 resize-none"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Rodapé (opcional)</Label>
+        <Input
+          value={String(c.footer ?? '')}
+          onChange={(e) => set('footer', e.target.value || undefined)}
+          placeholder="Texto auxiliar"
+        />
+      </div>
+
+      {itype === 'button' && (
+        <div className="space-y-2">
+          <Label>Botões</Label>
+          {buttons.map((btn, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Input
+                value={btn.id}
+                onChange={(e) => updateButton(i, 'id', e.target.value)}
+                placeholder="ID"
+                className="w-24 text-xs"
+              />
+              <Input
+                value={btn.title}
+                onChange={(e) => updateButton(i, 'title', e.target.value)}
+                placeholder="Rótulo"
+                className="flex-1 text-xs"
+              />
+              <button
+                onClick={() => removeButton(i)}
+                className="shrink-0 text-muted-foreground hover:text-destructive"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          ))}
+          {buttons.length < 3 && (
+            <button
+              onClick={addButton}
+              className="text-xs text-primary hover:underline"
+            >
+              + Adicionar botão
+            </button>
+          )}
+        </div>
+      )}
+
+      {itype === 'list' && (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Texto do botão da lista</Label>
+            <Input
+              value={String(c.buttonText ?? 'Ver opções')}
+              onChange={(e) => set('buttonText', e.target.value)}
+              placeholder="Ver opções"
+            />
+          </div>
+          {sections.map((section, si) => (
+            <div key={si} className="space-y-2 rounded-lg border border-border/60 p-3">
+              <Input
+                value={section.title}
+                onChange={(e) => {
+                  const next = sections.map((s, idx) => idx !== si ? s : { ...s, title: e.target.value });
+                  set('sections', next);
+                }}
+                placeholder="Título da seção (opcional)"
+                className="text-xs"
+              />
+              {section.rows.map((row, ri) => (
+                <div key={ri} className="flex items-center gap-2">
+                  <Input
+                    value={row.id}
+                    onChange={(e) => updateRow(si, ri, 'id', e.target.value)}
+                    placeholder="ID"
+                    className="w-24 text-xs"
+                  />
+                  <Input
+                    value={row.title}
+                    onChange={(e) => updateRow(si, ri, 'title', e.target.value)}
+                    placeholder="Opção"
+                    className="flex-1 text-xs"
+                  />
+                </div>
+              ))}
+              <button onClick={() => addRow(si)} className="text-xs text-primary hover:underline">
+                + Adicionar opção
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function FlowNodeEditor({
@@ -309,6 +473,10 @@ export function FlowNodeEditor({
                 />
               </div>
             </div>
+          )}
+
+          {node.type === 'send_interactive' && (
+            <SendInteractiveEditor config={c} set={set} />
           )}
 
           {node.type === 'webhook_call' && (

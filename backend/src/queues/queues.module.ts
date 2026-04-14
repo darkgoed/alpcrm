@@ -9,12 +9,14 @@ import {
   FLOW_DELAY_QUEUE,
   FOLLOW_UP_QUEUE,
   AUTO_CLOSE_QUEUE,
+  FLOW_REPLY_TIMEOUT_QUEUE,
 } from './queues.constants';
 
 export {
   FLOW_DELAY_QUEUE,
   FOLLOW_UP_QUEUE,
   AUTO_CLOSE_QUEUE,
+  FLOW_REPLY_TIMEOUT_QUEUE,
 } from './queues.constants';
 
 @Module({
@@ -36,6 +38,7 @@ export {
       { name: FLOW_DELAY_QUEUE },
       { name: FOLLOW_UP_QUEUE },
       { name: AUTO_CLOSE_QUEUE },
+      { name: FLOW_REPLY_TIMEOUT_QUEUE },
     ),
   ],
   providers: [SchedulerService, AutoCloseProcessor],

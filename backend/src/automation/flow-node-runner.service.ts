@@ -23,8 +23,8 @@ export class FlowNodeRunnerService {
   private readonly logger = new Logger(FlowNodeRunnerService.name);
 
   constructor(
-    private prisma: PrismaService,
-    private scheduler: SchedulerService,
+    private readonly prisma: PrismaService,
+    private readonly scheduler: SchedulerService,
   ) {}
 
   async run(ctx: NodeContext): Promise<NodeResult> {
@@ -67,6 +67,8 @@ export class FlowNodeRunnerService {
         return this.handleAssignTo(ctx, config);
       case 'send_template':
         return this.handleSendTemplate(ctx, conversation, config);
+      case 'send_interactive':
+        return this.handleSendInteractive(ctx, conversation, config);
       case 'webhook_call':
         return this.handleWebhookCall(ctx, config);
       default:
@@ -187,7 +189,101 @@ export class FlowNodeRunnerService {
       },
     });
 
+    // Agenda timeout se configurado
+    if (timeoutMs) {
+      const conversation = await this.prisma.conversation.findUnique({
+        where: { id: ctx.conversationId },
+        select: { id: true },
+      });
+      if (conversation) {
+        await this.scheduler.scheduleReplyTimeout(
+          timeoutMs,
+          ctx.contactId,
+          ctx.flowId,
+          ctx.conversationId,
+          ctx.nodeId,
+        );
+      }
+    }
+
     return { kind: 'waiting' };
+  }
+
+  // ─── send_interactive ─────────────────────────────────────────────────────────
+
+  private async handleSendInteractive(
+    ctx: NodeContext,
+    conversation: { id: string; whatsappAccountId: string; contact: { phone: string } },
+    config: Record<string, unknown>,
+  ): Promise<NodeResult> {
+    const interactiveType = String(config.interactiveType ?? 'button'); // 'button' | 'list'
+    const body = interpolate(String(config.body ?? ''), ctx.variables);
+    const footer = config.footer ? interpolate(String(config.footer), ctx.variables) : undefined;
+
+    let action: Record<string, unknown>;
+
+    if (interactiveType === 'list') {
+      action = {
+        button: interpolate(String(config.buttonText ?? 'Ver opções'), ctx.variables),
+        sections: config.sections ?? [],
+      };
+    } else {
+      const buttons = ((config.buttons as Array<{ id: string; title: string }>) ?? []).slice(0, 3);
+      action = {
+        buttons: buttons.map((b) => ({
+          type: 'reply',
+          reply: { id: b.id, title: interpolate(b.title, ctx.variables) },
+        })),
+      };
+    }
+
+    const interactive: Record<string, unknown> = {
+      type: interactiveType,
+      body: { text: body },
+      action,
+    };
+    if (footer) interactive.footer = { text: footer };
+
+    try {
+      const account = await this.prisma.whatsappAccount.findUnique({
+        where: { id: conversation.whatsappAccountId },
+      });
+      if (!account) throw new Error('Conta WhatsApp não encontrada');
+
+      const url = `https://graph.facebook.com/v19.0/${account.metaAccountId}/messages`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${account.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: conversation.contact.phone,
+          type: 'interactive',
+          interactive,
+        }),
+      });
+      const data = (await res.json()) as { messages?: Array<{ id: string }> };
+      const externalId = data.messages?.[0]?.id ?? '';
+
+      await this.prisma.message.create({
+        data: {
+          conversationId: ctx.conversationId,
+          senderType: 'system',
+          type: 'interactive',
+          content: body,
+          status: 'sent',
+          externalId,
+        },
+      });
+
+      await this.prisma.conversation.update({
+        where: { id: ctx.conversationId },
+        data: { lastMessageAt: new Date() },
+      });
+    } catch (err) {
+      this.logger.error(`[Bot] Falha ao enviar interactive: ${String(err)}`);
+    }
+
+    return { kind: 'next', nodeId: null };
   }
 
   // ─── branch / condition ───────────────────────────────────────────────────

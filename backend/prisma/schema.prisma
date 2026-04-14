@@ -410,6 +410,7 @@ enum FlowNodeType {
   assign_to
   send_template
   webhook_call
+  send_interactive
 }
 
 enum FlowTriggerType {

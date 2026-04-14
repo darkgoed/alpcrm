@@ -11,6 +11,7 @@ export type FlowNodeType =
   | 'move_stage'
   | 'assign_to'
   | 'send_template'
+  | 'send_interactive'
   | 'webhook_call';
 
 export interface FlowNode {

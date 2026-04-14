@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Flow, FlowTriggerType } from '@prisma/client';
 import { FlowNodeRunnerService } from './flow-node-runner.service';
+import { SchedulerService } from '../queues/scheduler.service';
 
 type FlowTriggerContext = {
   incomingText?: string | null;
@@ -15,8 +16,9 @@ export class FlowExecutorService {
   private readonly logger = new Logger(FlowExecutorService.name);
 
   constructor(
-    private prisma: PrismaService,
-    private runner: FlowNodeRunnerService,
+    private readonly prisma: PrismaService,
+    private readonly runner: FlowNodeRunnerService,
+    private readonly scheduler: SchedulerService,
   ) {}
 
   // ─── Disparar flow em nova mensagem inbound ─────────────────────────────────
@@ -75,6 +77,9 @@ export class FlowExecutorService {
     for (const state of states) {
       if (!state.currentNodeId) continue;
 
+      // Cancela timeout agendado para este nó
+      await this.scheduler.cancelReplyTimeout(contactId, state.flowId, state.currentNodeId);
+
       // Salva a resposta como variável
       const varName = await this.getReplyVariableName(state.currentNodeId);
       const variables = {
@@ -111,6 +116,42 @@ export class FlowExecutorService {
     const variables = (state?.variables as Record<string, string>) ?? {};
 
     await this.executeFromNode(nodeId, conversationId, contactId, flowId, variables);
+  }
+
+  // ─── Lidar com timeout de wait_for_reply ────────────────────────────────────
+
+  async handleReplyTimeout(
+    contactId: string,
+    flowId: string,
+    conversationId: string,
+    nodeId: string,
+  ) {
+    const state = await this.prisma.contactFlowState.findUnique({
+      where: { contactId_flowId: { contactId, flowId } },
+    });
+
+    // Se o flow não está mais esperando (usuário respondeu), ignora
+    if (!state?.isActive || !state.waitingForReply) return;
+
+    const variables = (state.variables as Record<string, string>) ?? {};
+
+    // Avança via edge "timeout" se existir, senão finaliza o flow
+    const nextNodeId = await this.runner.resolveEdgeTarget(nodeId, 'timeout');
+
+    await this.prisma.contactFlowState.update({
+      where: { contactId_flowId: { contactId, flowId } },
+      data: { waitingForReply: false, replyTimeoutAt: null, currentNodeId: nextNodeId },
+    });
+
+    await this.prisma.flowExecutionLog.create({
+      data: { flowId, contactId, nodeId, event: 'reply_timeout', detail: {} },
+    });
+
+    if (nextNodeId) {
+      await this.executeFromNode(nextNodeId, conversationId, contactId, flowId, variables);
+    } else {
+      await this.completeFlow(contactId, flowId, conversationId);
+    }
   }
 
   // ─── Parar bot (operador assumiu) ──────────────────────────────────────────

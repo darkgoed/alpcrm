@@ -17,15 +17,17 @@ export class CreateFlowNodeDto {
 
   @IsObject()
   config: Record<string, unknown>;
-  // message:         { content: string }
-  // delay:           { ms: number }
-  // wait_for_reply:  { variableName?: string, timeoutMs?: number }
-  // condition/branch:{ field: string, operator: string, value: string }
-  // tag_contact:     { tagId: string, action: 'add'|'remove' }
-  // move_stage:      { stageId: string }
-  // assign_to:       { userId?: string, teamId?: string }
-  // send_template:   { templateName: string, languageCode?: string, components?: unknown[] }
-  // webhook_call:    { url: string, method?: string, saveResponseAs?: string }
+  // message:          { content: string }
+  // delay:            { ms: number }
+  // wait_for_reply:   { variableName?: string, timeoutMs?: number }
+  // condition/branch: { field: string, operator: string, value: string }
+  // tag_contact:      { tagId: string, action: 'add'|'remove' }
+  // move_stage:       { stageId: string }
+  // assign_to:        { userId?: string, teamId?: string }
+  // send_template:    { templateName: string, languageCode?: string, components?: unknown[] }
+  // send_interactive: { interactiveType: 'button'|'list', body: string, footer?: string,
+  //                     buttons?: [{id,title}], buttonText?: string, sections?: [{title,rows:[{id,title}]}] }
+  // webhook_call:     { url: string, method?: string, saveResponseAs?: string }
 
   @IsNumber()
   order: number;
