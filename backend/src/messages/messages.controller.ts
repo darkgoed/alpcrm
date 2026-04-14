@@ -4,7 +4,6 @@ import {
   Post,
   Body,
   Query,
-  Param,
   UseGuards,
   BadRequestException,
   UseInterceptors,
@@ -12,8 +11,9 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
+import { randomUUID } from 'crypto';
 import { extname, join } from 'path';
-import { v4 as uuid } from 'uuid';
+import { MessageType } from '@prisma/client';
 import { MessagesService } from './messages.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -35,7 +35,7 @@ const ALLOWED_MIME = new Set([
   'video/3gpp',
 ]);
 
-const MEDIA_TYPE_MAP: Record<string, string> = {
+const MEDIA_TYPE_MAP: Record<string, MessageType> = {
   'image/jpeg': 'image',
   'image/png': 'image',
   'image/webp': 'image',
@@ -102,7 +102,7 @@ export class MessagesController {
       storage: diskStorage({
         destination: uploadsDir,
         filename: (_req, file, cb) =>
-          cb(null, `${uuid()}${extname(file.originalname)}`),
+          cb(null, `${randomUUID()}${extname(file.originalname)}`),
       }),
       limits: { fileSize: 16 * 1024 * 1024 }, // 16 MB
       fileFilter: (_req, file, cb) => {
@@ -131,7 +131,7 @@ export class MessagesController {
     return this.messagesService.send(
       {
         conversationId,
-        type: mediaType as any,
+        type: mediaType,
         mediaUrl,
         content: caption ?? undefined,
       },

@@ -25,6 +25,11 @@ interface WhatsappSendResponse {
   messages?: Array<{ id?: string }>;
 }
 
+export type WebhookRealtimeEvent = {
+  workspaceId: string;
+  event: string;
+} & Record<string, unknown>;
+
 interface OutboundMediaPayload {
   link: string;
   caption?: string;
@@ -87,7 +92,7 @@ export class WhatsappService {
 
   async processWebhook(
     payload: WhatsappWebhookPayload,
-    onMessage: (data: any) => void,
+    onMessage: (data: WebhookRealtimeEvent) => void,
   ) {
     if (payload.object !== 'whatsapp_business_account') return;
 
@@ -369,7 +374,7 @@ export class WhatsappService {
 
   private async handleStatusUpdate(
     status: WhatsappStatus,
-    onMessage: (data: any) => void,
+    onMessage: (data: WebhookRealtimeEvent) => void,
   ) {
     const statusMap: Record<string, MessageStatus> = {
       sent: 'sent',
@@ -421,7 +426,7 @@ export class WhatsappService {
     accountId: string,
     contact: { id: string; phone: string },
     conversationId: string,
-    onMessage: (data: any) => void,
+    onMessage: (data: WebhookRealtimeEvent) => void,
   ): Promise<void> {
     const settings = await this.prisma.workspaceSettings.findUnique({
       where: { workspaceId },

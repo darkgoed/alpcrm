@@ -192,7 +192,7 @@ export class ConversationsService {
     this.assertPermission(['manage_internal_notes'], permissions);
     if (!content?.trim())
       throw new BadRequestException('Conteúdo da nota é obrigatório');
-    const conv = await this.assertExists(id, workspaceId);
+    await this.assertExists(id, workspaceId);
 
     const note = await this.prisma.message.create({
       data: {
@@ -271,7 +271,7 @@ export class ConversationsService {
         template.language,
         components,
       );
-    } catch (err) {
+    } catch {
       // salva mensagem como failed mesmo assim
     }
 
@@ -328,7 +328,7 @@ export class ConversationsService {
     },
     dto: InitiateConversationDto,
   ) {
-    const components: any[] = [];
+    const components: Record<string, unknown>[] = [];
     const bodyVariables = dto.variables ?? [];
 
     if (bodyVariables.length) {
@@ -369,8 +369,8 @@ export class ConversationsService {
     }
 
     const buttons = Array.isArray(template.buttons) ? template.buttons : [];
-    buttons.forEach((button: any, index) => {
-      if (button?.type !== 'URL') return;
+    buttons.forEach((button, index) => {
+      if (!this.isRecord(button) || button.type !== 'URL') return;
       const value = dto.buttonVariables?.[index];
       if (!value) return;
 
@@ -383,5 +383,9 @@ export class ConversationsService {
     });
 
     return components;
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
   }
 }

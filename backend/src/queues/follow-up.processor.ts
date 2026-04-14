@@ -29,14 +29,8 @@ export class FollowUpProcessor extends WorkerHost {
   }
 
   async process(job: Job<FollowUpJobData>) {
-    const {
-      conversationId,
-      workspaceId,
-      contactId,
-      ruleId,
-      message,
-      scheduledAt,
-    } = job.data;
+    const { conversationId, workspaceId, ruleId, message, scheduledAt } =
+      job.data;
 
     // Busca conversa atualizada
     const conv = await this.prisma.conversation.findUnique({

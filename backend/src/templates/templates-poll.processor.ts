@@ -13,7 +13,9 @@ export class TemplatePollProcessor extends WorkerHost {
   }
 
   async process(job: Job) {
-    this.logger.log(`[TemplatePoll] Iniciando polling de templates PENDING`);
+    this.logger.log(
+      `[TemplatePoll] Iniciando polling de templates PENDING (job=${job.id ?? 'unknown'})`,
+    );
     await this.templatesService.pollAllPending();
   }
 }

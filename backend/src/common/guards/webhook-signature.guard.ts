@@ -116,12 +116,12 @@ export class WebhookSignatureGuard implements CanActivate {
         return null;
       }
 
-      const entry = payload.entry[0];
+      const [entry] = payload.entry as unknown[];
       if (!this.isRecord(entry) || !Array.isArray(entry.changes)) {
         return null;
       }
 
-      const change = entry.changes[0];
+      const [change] = entry.changes as unknown[];
       if (!this.isRecord(change) || !this.isRecord(change.value)) {
         return null;
       }

@@ -24,7 +24,10 @@ export class QuickRepliesController {
   constructor(private readonly svc: QuickRepliesService) {}
 
   @Get()
-  findAll(@CurrentUser() user: AuthenticatedUser, @Query('search') search?: string) {
+  findAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('search') search?: string,
+  ) {
     return this.svc.findAll(user.workspaceId, search);
   }
 

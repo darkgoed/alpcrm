@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { WhatsappService } from './whatsapp.service';
+import type { WebhookRealtimeEvent } from './whatsapp.service';
 import type { WhatsappWebhookPayload } from './dto/webhook.dto';
 import { EventsGateway } from '../gateway/events.gateway';
 import { WebhookSignatureGuard } from '../common/guards/webhook-signature.guard';
@@ -39,9 +40,12 @@ export class WhatsappController {
   @UseGuards(WebhookSignatureGuard)
   @HttpCode(HttpStatus.OK)
   async receive(@Body() payload: WhatsappWebhookPayload) {
-    await this.whatsappService.processWebhook(payload, (data) => {
-      this.eventsGateway.emitToWorkspace(data.workspaceId, data.event, data);
-    });
+    await this.whatsappService.processWebhook(
+      payload,
+      (data: WebhookRealtimeEvent) => {
+        this.eventsGateway.emitToWorkspace(data.workspaceId, data.event, data);
+      },
+    );
     return 'ok';
   }
 }

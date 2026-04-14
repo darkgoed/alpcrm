@@ -178,8 +178,8 @@ export class WorkspacesService {
 
     return {
       id: this.getString(payloadRecord?.id),
-      display_phone_number: this.getString(payloadRecord?.display_phone_number)
-        ?? '',
+      display_phone_number:
+        this.getString(payloadRecord?.display_phone_number) ?? '',
       verified_name: this.getString(payloadRecord?.verified_name) ?? '',
     };
   }

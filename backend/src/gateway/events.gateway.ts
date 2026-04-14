@@ -11,6 +11,19 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import type { JwtPayload } from '../auth/strategies/jwt.strategy';
+
+type SocketData = {
+  workspaceId?: string;
+  userId?: string;
+};
+
+type EventsSocket = Socket<
+  Record<string, never>,
+  Record<string, never>,
+  Record<string, never>,
+  SocketData
+>;
 
 @WebSocketGateway({
   cors: { origin: '*' },
@@ -34,21 +47,30 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // ─── Conexão ────────────────────────────────────────────────────────────────
 
-  async handleConnection(client: Socket) {
+  handleConnection(client: EventsSocket) {
+    const authToken = this.getRecordString(
+      client.handshake.auth as unknown,
+      'token',
+    );
+    const headerToken = client.handshake.headers.authorization;
     const token =
-      client.handshake.auth?.token ?? client.handshake.headers?.authorization;
+      typeof authToken === 'string'
+        ? authToken
+        : typeof headerToken === 'string'
+          ? headerToken
+          : null;
     if (!token) {
       client.disconnect();
       return;
     }
 
     try {
-      const payload = this.jwt.verify(token.replace('Bearer ', ''));
+      const payload = this.jwt.verify<JwtPayload>(token.replace('Bearer ', ''));
       client.data.workspaceId = payload.workspaceId;
       client.data.userId = payload.sub;
 
       // Entrar na sala do workspace automaticamente
-      client.join(`workspace:${payload.workspaceId}`);
+      void client.join(`workspace:${payload.workspaceId}`);
       this.logger.log(
         `Cliente conectado: ${client.id} (workspace: ${payload.workspaceId})`,
       );
@@ -57,7 +79,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  handleDisconnect(client: Socket) {
+  handleDisconnect(client: EventsSocket) {
     this.removeSocketFromPresence(client);
     this.logger.log(`Cliente desconectado: ${client.id}`);
   }
@@ -66,7 +88,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('join_conversation')
   async joinConversation(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: EventsSocket,
     @MessageBody() data: { conversationId: string },
   ) {
     if (
@@ -92,21 +114,21 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    client.join(`conversation:${data.conversationId}`);
+    void client.join(`conversation:${data.conversationId}`);
     this.addPresence(data.conversationId, client.data.userId, client.id);
     this.emitConversationPresence(data.conversationId);
   }
 
   @SubscribeMessage('leave_conversation')
   leaveConversation(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: EventsSocket,
     @MessageBody() data: { conversationId: string },
   ) {
     if (!data?.conversationId || !client.data.userId) {
       return;
     }
 
-    client.leave(`conversation:${data.conversationId}`);
+    void client.leave(`conversation:${data.conversationId}`);
     this.removePresence(data.conversationId, client.data.userId, client.id);
     this.emitConversationPresence(data.conversationId);
   }
@@ -177,7 +199,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  private removeSocketFromPresence(client: Socket) {
+  private removeSocketFromPresence(client: EventsSocket) {
     const joinedConversations = this.socketConversations.get(client.id);
     if (!joinedConversations || !client.data.userId) return;
 
@@ -200,5 +222,14 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       conversationId,
       operators,
     });
+  }
+
+  private getRecordString(value: unknown, key: string): string | undefined {
+    if (typeof value !== 'object' || value === null) {
+      return undefined;
+    }
+
+    const record = value as Record<string, unknown>;
+    return typeof record[key] === 'string' ? record[key] : undefined;
   }
 }

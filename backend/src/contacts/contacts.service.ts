@@ -859,6 +859,14 @@ export class ContactsService {
           return null;
         }
 
+        if (
+          typeof rawValue !== 'string' &&
+          typeof rawValue !== 'number' &&
+          typeof rawValue !== 'boolean'
+        ) {
+          return null;
+        }
+
         const value = String(rawValue).trim().slice(0, 500);
         return value ? [key, value] : null;
       })

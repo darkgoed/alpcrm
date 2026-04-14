@@ -14,6 +14,7 @@ import {
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
+import type { Express } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -110,13 +111,10 @@ export class ContactsController {
   @UseInterceptors(FileInterceptor('file'))
   async importPreview(
     @CurrentUser() user: AuthenticatedUser,
-    @UploadedFile() file: any,
+    @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file?.buffer) throw new BadRequestException('Arquivo CSV obrigatório');
-    return this.contactsService.previewImport(
-      user.workspaceId,
-      file.buffer as Buffer,
-    );
+    return this.contactsService.previewImport(user.workspaceId, file.buffer);
   }
 
   @Post('import/confirm')
@@ -220,7 +218,7 @@ export class ContactsController {
     return this.contactsService.createNote(
       user.workspaceId,
       id,
-      user.sub,
+      user.userId,
       content,
     );
   }
