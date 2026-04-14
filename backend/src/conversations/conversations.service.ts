@@ -240,22 +240,52 @@ export class ConversationsService {
       throw new BadRequestException('Template não aprovado pela Meta');
     }
 
-    // Reutiliza conversa aberta se existir; senão cria nova
+    // Reutiliza conversa aberta; se nao houver, reabre a ultima fechada
     let conversation = await this.prisma.conversation.findFirst({
-      where: { contactId: contact.id, workspaceId, status: 'open' },
+      where: {
+        contactId: contact.id,
+        workspaceId,
+        whatsappAccountId: account.id,
+        status: 'open',
+      },
     });
 
     if (!conversation) {
-      conversation = await this.prisma.conversation.create({
-        data: {
-          workspaceId,
+      const lastClosedConversation = await this.prisma.conversation.findFirst({
+        where: {
           contactId: contact.id,
+          workspaceId,
           whatsappAccountId: account.id,
-          status: 'open',
-          isBotActive: false,
-          assignedUserId: userId,
+          status: 'closed',
         },
+        orderBy: { lastMessageAt: 'desc' },
       });
+
+      if (lastClosedConversation) {
+        conversation = await this.prisma.conversation.update({
+          where: { id: lastClosedConversation.id },
+          data: {
+            status: 'open',
+            isBotActive: false,
+          },
+        });
+
+        this.eventsGateway.emitToWorkspace(workspaceId, 'conversation_updated', {
+          conversationId: conversation.id,
+          conversation,
+        });
+      } else {
+        conversation = await this.prisma.conversation.create({
+          data: {
+            workspaceId,
+            contactId: contact.id,
+            whatsappAccountId: account.id,
+            status: 'open',
+            isBotActive: false,
+            assignedUserId: userId,
+          },
+        });
+      }
     }
 
     // Montar variáveis do template

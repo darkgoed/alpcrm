@@ -548,11 +548,25 @@ function InboxRail() {
       );
     },
     onConversationUpdated: ({ conversationId, conversation }) => {
-      setLiveConversations((current) =>
-        current.map((item) =>
+      setLiveConversations((current) => {
+        const matchesCurrentStatus = conversation.status === status;
+        const targetIndex = current.findIndex((item) => item.id === conversationId);
+
+        if (!matchesCurrentStatus) {
+          return targetIndex === -1
+            ? current
+            : current.filter((item) => item.id !== conversationId);
+        }
+
+        if (targetIndex === -1) {
+          void mutate();
+          return current;
+        }
+
+        return current.map((item) =>
           item.id === conversationId ? { ...item, ...conversation } : item,
-        ),
-      );
+        );
+      });
     },
   });
 

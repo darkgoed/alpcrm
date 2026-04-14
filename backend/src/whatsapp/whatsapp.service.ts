@@ -234,7 +234,7 @@ export class WhatsappService {
       },
     });
 
-    // 3. Buscar ou criar conversa ativa
+    // 3. Buscar conversa aberta; se nao houver, reaproveitar a ultima fechada
     const existingConversation = await this.prisma.conversation.findFirst({
       where: {
         workspaceId,
@@ -247,34 +247,61 @@ export class WhatsappService {
     let conversation = existingConversation;
 
     if (!conversation) {
-      // Round-robin: buscar equipe padrão do workspace e distribuir para membro com menor carga
-      const defaultTeam = await this.prisma.team.findFirst({
-        where: { workspaceId },
-      });
-      let assignedUserId: string | null = null;
-      let teamId: string | null = null;
-
-      if (defaultTeam) {
-        teamId = defaultTeam.id;
-        assignedUserId = await this.teamsService.getNextMember(defaultTeam.id);
-        if (assignedUserId) {
-          this.logger.log(
-            `Conversa atribuída via round-robin ao usuário ${assignedUserId}`,
-          );
-        }
-      }
-
-      conversation = await this.prisma.conversation.create({
-        data: {
+      const lastClosedConversation = await this.prisma.conversation.findFirst({
+        where: {
           workspaceId,
           contactId: contact.id,
           whatsappAccountId: account.id,
-          status: 'open',
-          isBotActive: true,
-          teamId,
-          assignedUserId,
+          status: 'closed',
         },
+        orderBy: { lastMessageAt: 'desc' },
       });
+
+      if (lastClosedConversation) {
+        conversation = await this.prisma.conversation.update({
+          where: { id: lastClosedConversation.id },
+          data: {
+            status: 'open',
+            isBotActive: true,
+          },
+        });
+
+        onMessage({
+          event: 'conversation_updated',
+          workspaceId,
+          conversationId: conversation.id,
+          conversation,
+        });
+      } else {
+        // Round-robin: buscar equipe padrão do workspace e distribuir para membro com menor carga
+        const defaultTeam = await this.prisma.team.findFirst({
+          where: { workspaceId },
+        });
+        let assignedUserId: string | null = null;
+        let teamId: string | null = null;
+
+        if (defaultTeam) {
+          teamId = defaultTeam.id;
+          assignedUserId = await this.teamsService.getNextMember(defaultTeam.id);
+          if (assignedUserId) {
+            this.logger.log(
+              `Conversa atribuída via round-robin ao usuário ${assignedUserId}`,
+            );
+          }
+        }
+
+        conversation = await this.prisma.conversation.create({
+          data: {
+            workspaceId,
+            contactId: contact.id,
+            whatsappAccountId: account.id,
+            status: 'open',
+            isBotActive: true,
+            teamId,
+            assignedUserId,
+          },
+        });
+      }
     }
 
     // 4. Salvar mensagem
