@@ -417,6 +417,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pendingScrollModeRef = useRef<'bottom' | 'preserve' | null>(null);
   const scrollSnapshotRef = useRef<{ height: number; top: number } | null>(null);
+  const sendInFlightRef = useRef(false);
 
   // @mention state
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
@@ -434,6 +435,48 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
           qr.title.toLowerCase().includes(quickReplySearch.toLowerCase()),
       ).slice(0, 5)
     : [];
+
+  function isOptimisticMessage(message: Message) {
+    return message.id.startsWith('temp-');
+  }
+
+  function isSameOutgoingDraft(candidate: Message, incoming: Message) {
+    if (!isOptimisticMessage(candidate)) return false;
+    if (candidate.senderType !== 'user' || incoming.senderType !== 'user') {
+      return false;
+    }
+
+    return (
+      candidate.type === incoming.type &&
+      candidate.content === incoming.content &&
+      candidate.mediaUrl === incoming.mediaUrl &&
+      candidate.interactiveType === incoming.interactiveType
+    );
+  }
+
+  function mergeMessageList(current: Message[], incoming: Message) {
+    const existingIndex = current.findIndex((item) => item.id === incoming.id);
+    if (existingIndex >= 0) {
+      const updated = [...current];
+      updated[existingIndex] = { ...updated[existingIndex], ...incoming };
+      return updated;
+    }
+
+    const optimisticIndex = current.findIndex((item) =>
+      isSameOutgoingDraft(item, incoming),
+    );
+    if (optimisticIndex >= 0) {
+      const updated = [...current];
+      updated[optimisticIndex] = incoming;
+      return updated;
+    }
+
+    return [...current, incoming];
+  }
+
+  function mergeMessagePage(items: Message[]) {
+    return items.reduce<Message[]>((acc, item) => mergeMessageList(acc, item), []);
+  }
 
   // Load workspace users for @mention
   useEffect(() => {
@@ -461,7 +504,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
         const page = await getConversationMessages(id);
         if (cancelled) return;
         pendingScrollModeRef.current = 'bottom';
-        setMessages(page.items);
+        setMessages(mergeMessagePage(page.items));
         setHasMoreMessages(page.hasMore);
         setShowLoadOlderButton(false);
         setMessageCursor(page.nextCursor);
@@ -536,7 +579,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
     onNewMessage: ({ conversationId, message }) => {
       if (conversationId !== id) return;
       pendingScrollModeRef.current = 'bottom';
-      setMessages((current) => (current.some((item) => item.id === message.id) ? current : [...current, message]));
+      setMessages((current) => mergeMessageList(current, message));
       if (message.senderType === 'contact') {
         void syncReadState();
       }
@@ -576,9 +619,8 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       const page = await getConversationMessages(id, messageCursor);
       pendingScrollModeRef.current = 'preserve';
       setMessages((current) => {
-        const existingIds = new Set(current.map((item) => item.id));
-        const olderItems = page.items.filter((item) => !existingIds.has(item.id));
-        return [...olderItems, ...current];
+        const merged = mergeMessagePage([...page.items, ...current]);
+        return merged;
       });
       setHasMoreMessages(page.hasMore);
       setMessageCursor(page.nextCursor);
@@ -612,9 +654,11 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
 
   async function handleFileUpload(file: File) {
     if (!file) return;
+    if (sendInFlightRef.current) return;
     const formData = new FormData();
     formData.append('file', file);
     formData.append('conversationId', id);
+    sendInFlightRef.current = true;
     setSending(true);
     setSendError(null);
     try {
@@ -623,12 +667,13 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       });
       const persisted = res.data as Message;
       pendingScrollModeRef.current = 'bottom';
-      setMessages((current) => [...current, persisted]);
+      setMessages((current) => mergeMessageList(current, persisted));
     } catch (err: any) {
       setSendError(
         err?.response?.data?.message ?? 'Nao foi possivel enviar o arquivo.',
       );
     } finally {
+      sendInFlightRef.current = false;
       setSending(false);
     }
   }
@@ -647,8 +692,9 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
 
   async function handleSend() {
     const content = text.trim();
-    if (!content || sending) return;
+    if (!content || sendInFlightRef.current) return;
 
+    sendInFlightRef.current = true;
     setSending(true);
     setSendError(null);
     setText('');
@@ -658,7 +704,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       try {
         const note = await sendNote(id, content);
         pendingScrollModeRef.current = 'bottom';
-        setMessages((current) => (current.some((m) => m.id === note.id) ? current : [...current, note]));
+        setMessages((current) => mergeMessageList(current, note));
       } catch (err: any) {
         setText(content);
         setSendError(
@@ -666,6 +712,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
             'Nao foi possivel salvar a nota interna.',
         );
       } finally {
+        sendInFlightRef.current = false;
         setSending(false);
         textareaRef.current?.focus();
       }
@@ -691,7 +738,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
     };
 
     pendingScrollModeRef.current = 'bottom';
-    setMessages((current) => [...current, optimisticMessage]);
+    setMessages((current) => mergeMessageList(current, optimisticMessage));
 
     try {
       const persisted = (await sendMessage({
@@ -699,7 +746,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
         type: 'text',
         content,
       })) as Message;
-      setMessages((current) => current.map((item) => (item.id === optimisticMessage.id ? persisted : item)));
+      setMessages((current) => mergeMessageList(current, persisted));
       void mutate();
     } catch (err: any) {
       setMessages((current) => current.map((item) => (item.id === optimisticMessage.id ? { ...item, status: 'failed' } : item)));
@@ -708,6 +755,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
           'Nao foi possivel enviar a mensagem para o WhatsApp.',
       );
     } finally {
+      sendInFlightRef.current = false;
       setSending(false);
       textareaRef.current?.focus();
     }
@@ -718,8 +766,9 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
     content: string;
     interactivePayload: Record<string, any>;
   }) {
-    if (sending) return;
+    if (sendInFlightRef.current) return;
 
+    sendInFlightRef.current = true;
     setSending(true);
     setSendError(null);
 
@@ -742,7 +791,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
     };
 
     pendingScrollModeRef.current = 'bottom';
-    setMessages((current) => [...current, optimisticMessage]);
+    setMessages((current) => mergeMessageList(current, optimisticMessage));
 
     try {
       const payload: SendMessageInput = {
@@ -753,11 +802,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
         interactivePayload: input.interactivePayload,
       };
       const persisted = (await sendMessage(payload)) as Message;
-      setMessages((current) =>
-        current.map((item) =>
-          item.id === optimisticMessage.id ? persisted : item,
-        ),
-      );
+      setMessages((current) => mergeMessageList(current, persisted));
       void mutate();
     } catch (err: any) {
       setMessages((current) =>
@@ -773,6 +818,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       );
       throw err;
     } finally {
+      sendInFlightRef.current = false;
       setSending(false);
       textareaRef.current?.focus();
     }
