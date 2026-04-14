@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Bot, ChevronDown, ChevronUp, Clock3, LoaderCircle, MessageSquareText, PencilLine, Power, Trash2 } from 'lucide-react';
-import { deleteFlow, toggleFlow, type Flow } from '@/hooks/useAutomation';
+import { deleteFlow, sortFlowNodesFromTrigger, toggleFlow, type Flow } from '@/hooks/useAutomation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,7 @@ interface FlowCardProps {
 export function FlowCard({ flow, onEdit, onRefresh }: FlowCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [loadingAction, setLoadingAction] = useState<'toggle' | 'delete' | null>(null);
+  const orderedNodes = sortFlowNodesFromTrigger(flow);
 
   async function handleToggle() {
     setLoadingAction('toggle');
@@ -86,13 +87,15 @@ export function FlowCard({ flow, onEdit, onRefresh }: FlowCardProps) {
 
       {expanded ? (
         <CardContent className="space-y-3">
-          {flow.nodes.map((node, index) => (
+          {orderedNodes.map((node, index) => (
             <div key={node.id} className="rounded-2xl border border-border/70 bg-background p-4">
               <div className="mb-2 flex items-center gap-2">
                 <Badge variant={node.type === 'delay' ? 'outline' : 'success'}>
                   {node.type === 'delay' ? 'Delay' : 'Mensagem'}
                 </Badge>
-                <span className="text-sm font-medium text-foreground">Etapa {index + 1}</span>
+                <span className="text-sm font-medium text-foreground">
+                  {index === 0 ? 'Após o gatilho' : 'Na sequência do flow'}
+                </span>
               </div>
               <div className="flex items-start gap-2 text-sm text-muted-foreground">
                 {node.type === 'delay' ? <Clock3 className="mt-0.5 size-4 text-sky-600" /> : <MessageSquareText className="mt-0.5 size-4 text-emerald-600" />}

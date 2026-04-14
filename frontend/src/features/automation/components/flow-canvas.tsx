@@ -216,7 +216,6 @@ function FlowNode({ data, selected }: NodeProps & { data: FlowNodeData }) {
           <span className="rounded-full bg-white/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
             {TYPE_LABEL[data.type]}
           </span>
-          <span className="text-[10px] opacity-60">#{data.order + 1}</span>
         </div>
         <p className="mt-1 truncate text-xs opacity-80">{nodePreview(data)}</p>
         {interactiveReplies.length > 0 && (

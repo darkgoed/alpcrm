@@ -107,3 +107,70 @@ export async function toggleFlow(id: string): Promise<Flow> {
   const r = await api.patch(`/automation/flows/${id}/toggle`);
   return r.data;
 }
+
+export function sortFlowNodesFromTrigger(flow: Pick<Flow, 'nodes' | 'edges'>): FlowNode[] {
+  if (flow.nodes.length <= 1 || flow.edges.length === 0) {
+    return [...flow.nodes].sort((a, b) => {
+      if (a.order !== b.order) return a.order - b.order;
+      return a.id.localeCompare(b.id);
+    });
+  }
+
+  const nodeById = new Map(flow.nodes.map((node) => [node.id, node]));
+  const incomingCount = new Map(flow.nodes.map((node) => [node.id, 0]));
+  const outgoing = new Map<string, FlowEdge[]>();
+
+  flow.edges.forEach((edge) => {
+    incomingCount.set(edge.toNodeId, (incomingCount.get(edge.toNodeId) ?? 0) + 1);
+    const current = outgoing.get(edge.fromNodeId) ?? [];
+    current.push(edge);
+    outgoing.set(edge.fromNodeId, current);
+  });
+
+  const compareNodeIds = (leftId: string, rightId: string) => {
+    const left = nodeById.get(leftId);
+    const right = nodeById.get(rightId);
+    if (!left || !right) return leftId.localeCompare(rightId);
+    if (left.order !== right.order) return left.order - right.order;
+    return left.id.localeCompare(right.id);
+  };
+
+  const roots = flow.nodes
+    .filter((node) => (incomingCount.get(node.id) ?? 0) === 0)
+    .sort((a, b) => {
+      if (a.order !== b.order) return a.order - b.order;
+      return a.id.localeCompare(b.id);
+    });
+
+  const visited = new Set<string>();
+  const ordered: FlowNode[] = [];
+
+  const visit = (nodeId: string) => {
+    if (visited.has(nodeId)) return;
+    const node = nodeById.get(nodeId);
+    if (!node) return;
+
+    visited.add(nodeId);
+    ordered.push(node);
+
+    const nextEdges = [...(outgoing.get(nodeId) ?? [])].sort((a, b) => {
+      const labelCompare = (a.label ?? '').localeCompare(b.label ?? '');
+      if (labelCompare !== 0) return labelCompare;
+      return compareNodeIds(a.toNodeId, b.toNodeId);
+    });
+
+    nextEdges.forEach((edge) => visit(edge.toNodeId));
+  };
+
+  roots.forEach((root) => visit(root.id));
+
+  flow.nodes
+    .slice()
+    .sort((a, b) => {
+      if (a.order !== b.order) return a.order - b.order;
+      return a.id.localeCompare(b.id);
+    })
+    .forEach((node) => visit(node.id));
+
+  return ordered;
+}
