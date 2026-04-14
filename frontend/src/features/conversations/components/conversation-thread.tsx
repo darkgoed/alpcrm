@@ -960,6 +960,15 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       (left, right) =>
         new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
     );
+  const conversationTimeline = messages.map((message, index) => ({
+    message,
+    showDateDivider:
+      index === 0 ||
+      !isSameCalendarDay(
+        message.createdAt,
+        messages[index - 1]?.createdAt ?? message.createdAt,
+      ),
+  }));
   const historicalConversationTimeline = historicalConversations.map((item, index) => ({
     item,
     showDateDivider:
@@ -1137,14 +1146,25 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                     <LoaderCircle className="size-5 animate-spin text-primary" />
                   </div>
                 ) : messages.length > 0 ? (
-                  messages.map((message) => (
-                    <ConversationMessageBubble
-                      key={message.id}
-                      message={message}
-                      onReply={handleReply}
-                      onDelete={(target) => void handleDeleteMessage(target)}
-                      onReact={(target, emoji) => void handleReact(target, emoji)}
-                    />
+                  conversationTimeline.map(({ message, showDateDivider }) => (
+                    <div key={message.id} className="space-y-2.5">
+                      {showDateDivider ? (
+                        <div className="flex items-center gap-2 py-1">
+                          <Separator className="flex-1" />
+                          <span className="rounded-full border border-border/70 bg-background px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                            {formatTimelineDividerDate(message.createdAt)}
+                          </span>
+                          <Separator className="flex-1" />
+                        </div>
+                      ) : null}
+
+                      <ConversationMessageBubble
+                        message={message}
+                        onReply={handleReply}
+                        onDelete={(target) => void handleDeleteMessage(target)}
+                        onReact={(target, emoji) => void handleReact(target, emoji)}
+                      />
+                    </div>
                   ))
                 ) : (
                   <div className="flex min-h-40 items-center justify-center rounded-lg border border-dashed border-border/60 bg-background/70 px-4 text-sm text-muted-foreground">
