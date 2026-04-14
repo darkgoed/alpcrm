@@ -64,7 +64,7 @@ export class FlowNodeRunnerService {
       case 'message':
         return this.handleMessage(ctx, conversation, config);
       case 'finalize':
-        return { kind: 'done' };
+        return this.handleFinalize(ctx);
       case 'delay':
         return this.handleDelay(ctx, node, config);
       case 'wait_for_reply':
@@ -195,6 +195,19 @@ export class FlowNodeRunnerService {
   }
 
   // ─── delay ────────────────────────────────────────────────────────────────
+
+  private async handleFinalize(ctx: NodeContext): Promise<NodeResult> {
+    await this.prisma.conversation.update({
+      where: { id: ctx.conversationId },
+      data: { status: 'closed', isBotActive: false },
+    });
+
+    this.logger.log(
+      `[FlowNode] Conversa finalizada flow=${ctx.flowId} conversation=${ctx.conversationId} contact=${ctx.contactId} node=${ctx.nodeId}`,
+    );
+
+    return { kind: 'done' };
+  }
 
   private async handleDelay(
     ctx: NodeContext,
