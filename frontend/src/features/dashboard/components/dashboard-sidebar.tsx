@@ -1275,7 +1275,9 @@ function InboxRail() {
                 conversation={c}
                 active={c.id === activeConversationId}
                 onOpen={() => router.push(`/conversations/${c.id}`)}
-                onChanged={() => mutate()}
+                onChanged={async () => {
+                  await mutate();
+                }}
                 onRemoved={(conversationId) => {
                   setLiveConversations((current) =>
                     current.filter((item) => item.id !== conversationId),
