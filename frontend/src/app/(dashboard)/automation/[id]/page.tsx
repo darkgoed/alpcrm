@@ -156,6 +156,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
   const [nodes, setNodes] = useState<NodeDraft[]>([]);
   const [canvasEdges, setCanvasEdges] = useState<CanvasEdgeDraft[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [savedFeedback, setSavedFeedback] = useState(false);
@@ -190,6 +191,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
         label: e.label ?? undefined,
       })),
     );
+    setHydrated(true);
   }, [flow]);
 
   useEffect(() => {
@@ -253,7 +255,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
     finally { setToggling(false); }
   }
 
-  if (!flow) {
+  if (!flow || !hydrated) {
     return (
       <div className="flex h-full items-center justify-center">
         <LoaderCircle className="size-6 animate-spin text-primary" />
