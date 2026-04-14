@@ -239,20 +239,20 @@ Meta: corrigir riscos de acesso indevido, configuração insegura e entrada fals
 
 - [x] Remover fallback de `JWT_SECRET`
 - [x] Falhar boot se variáveis críticas não existirem
-- [ ] Adicionar validação central de configuração de ambiente
-- [ ] Definir perfis explícitos `development`, `staging`, `production`
+- [x] Adicionar validação central de configuração de ambiente
+- [x] Definir perfis explícitos `development`, `staging`, `production`
 - [ ] Adicionar rotação planejada de segredo JWT
-- [ ] Implementar refresh token
-- [ ] Implementar revogação de sessão
+- [x] Implementar refresh token
+- [x] Implementar revogação de sessão
 
 ### 4.2 — Hardening do webhook
 
 - [x] Exigir assinatura válida da Meta em produção
 - [x] Proibir bypass silencioso quando `WHATSAPP_APP_SECRET` estiver ausente
 - [x] Garantir `rawBody` obrigatório para rota de webhook
-- [ ] Validar origem esperada do payload
-- [ ] Registrar tentativas inválidas com contexto suficiente
-- [ ] Adicionar proteção contra replay de webhook
+- [x] Validar origem esperada do payload
+- [x] Registrar tentativas inválidas com contexto suficiente
+- [x] Adicionar proteção contra replay de webhook
 
 ### 4.3 — RBAC real nas ações sensíveis
 
@@ -265,10 +265,10 @@ Meta: corrigir riscos de acesso indevido, configuração insegura e entrada fals
 
 ### 4.4 — Segurança de websocket
 
-- [ ] Validar acesso à conversa antes de entrar em `conversation room`
-- [ ] Restringir eventos por workspace e por autorização real
-- [ ] Definir CORS/WS origin por ambiente
-- [ ] Impedir que cliente entre em salas arbitrárias sem checagem
+- [x] Validar acesso à conversa antes de entrar em `conversation room`
+- [x] Restringir eventos por workspace e por autorização real
+- [x] Definir CORS/WS origin por ambiente
+- [x] Impedir que cliente entre em salas arbitrárias sem checagem
 
 ### 4.5 — Segredos e credenciais
 
