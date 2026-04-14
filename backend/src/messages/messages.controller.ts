@@ -10,6 +10,7 @@ import {
   BadRequestException,
   UseInterceptors,
   UploadedFile,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -23,6 +24,7 @@ import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
+import type { Request } from 'express';
 
 const ALLOWED_MIME = new Set([
   'image/jpeg',
@@ -58,6 +60,25 @@ const MEDIA_TYPE_MAP: Record<string, MessageType> = {
 };
 
 const uploadsDir = join(process.cwd(), 'uploads');
+
+function getRequestBaseUrl(request: Request) {
+  const forwardedProtoHeader = request.headers['x-forwarded-proto'];
+  const forwardedHostHeader = request.headers['x-forwarded-host'];
+  const forwardedProto = Array.isArray(forwardedProtoHeader)
+    ? forwardedProtoHeader[0]
+    : forwardedProtoHeader?.split(',')[0]?.trim();
+  const forwardedHost = Array.isArray(forwardedHostHeader)
+    ? forwardedHostHeader[0]
+    : forwardedHostHeader?.split(',')[0]?.trim();
+  const protocol = forwardedProto || request.protocol || 'http';
+  const host = forwardedHost || request.get('host');
+
+  if (!host) {
+    return process.env.API_BASE_URL ?? `http://localhost:${process.env.PORT ?? 3000}`;
+  }
+
+  return `${protocol}://${host}`;
+}
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('messages')
@@ -157,6 +178,7 @@ export class MessagesController {
     @Body('conversationId') conversationId: string,
     @Body('caption') caption: string | undefined,
     @Body('replyToMessageId') replyToMessageId: string | undefined,
+    @Req() request: Request,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!file) throw new BadRequestException('Arquivo obrigatório');
@@ -164,9 +186,7 @@ export class MessagesController {
       throw new BadRequestException('conversationId obrigatório');
 
     const mediaType = MEDIA_TYPE_MAP[file.mimetype] ?? 'document';
-    const apiBase =
-      process.env.API_BASE_URL ??
-      `http://localhost:${process.env.PORT ?? 3000}`;
+    const apiBase = getRequestBaseUrl(request);
     const mediaUrl = `${apiBase}/api/uploads/${file.filename}`;
 
     return this.messagesService.send(

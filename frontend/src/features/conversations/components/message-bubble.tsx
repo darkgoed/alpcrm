@@ -43,6 +43,44 @@ function isPreviewableDocument(mimeType: string | null) {
   return mimeType === 'application/pdf' || mimeType?.startsWith('text/') === true;
 }
 
+function resolveMediaUrl(mediaUrl: string | null) {
+  if (!mediaUrl) return null;
+
+  const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '');
+  const browserOrigin =
+    typeof window !== 'undefined' ? window.location.origin.replace(/\/+$/, '') : null;
+  const browserUsesPublicHost =
+    !!browserOrigin &&
+    !browserOrigin.includes('://localhost') &&
+    !browserOrigin.includes('://127.0.0.1') &&
+    !browserOrigin.includes('://0.0.0.0');
+  const preferredBase =
+    browserUsesPublicHost ? browserOrigin : configuredApiUrl;
+
+  if (mediaUrl.startsWith('/')) {
+    if (preferredBase) {
+      return new URL(mediaUrl, `${preferredBase}/`).toString();
+    }
+    return mediaUrl;
+  }
+
+  try {
+    const parsed = new URL(mediaUrl);
+    const isLocalhost =
+      parsed.hostname === 'localhost' ||
+      parsed.hostname === '127.0.0.1' ||
+      parsed.hostname === '0.0.0.0';
+
+    if (isLocalhost && preferredBase) {
+      return new URL(parsed.pathname + parsed.search + parsed.hash, `${preferredBase}/`).toString();
+    }
+  } catch {
+    return mediaUrl;
+  }
+
+  return mediaUrl;
+}
+
 function getReferenceLabel(message: MessageReference | null) {
   if (!message) return 'Mensagem original';
   if (message.deletedAt) return 'Mensagem excluida';
@@ -195,6 +233,7 @@ function MediaPreviewDialog({
   message: Message;
 }) {
   const label = message.fileName ?? message.content ?? 'arquivo';
+  const mediaUrl = resolveMediaUrl(message.mediaUrl);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -206,13 +245,13 @@ function MediaPreviewDialog({
           {message.type === 'image' || message.type === 'sticker' ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={message.mediaUrl ?? ''}
+              src={mediaUrl ?? ''}
               alt={label}
               className="max-h-[70vh] w-full object-contain"
             />
           ) : message.type === 'document' && isPreviewableDocument(message.mimeType) ? (
             <iframe
-              src={message.mediaUrl ?? ''}
+              src={mediaUrl ?? ''}
               title={label}
               className="h-[70vh] w-full"
             />
@@ -220,7 +259,7 @@ function MediaPreviewDialog({
         </div>
         <DialogFooter>
           <Button asChild variant="outline">
-            <a href={message.mediaUrl ?? '#'} download={message.fileName ?? true}>
+            <a href={mediaUrl ?? '#'} download={message.fileName ?? true}>
               <Download className="size-4" />
               Baixar
             </a>
@@ -234,8 +273,9 @@ function MediaPreviewDialog({
 function MediaContent({ message }: { message: Message }) {
   const { type, mediaUrl, content, mimeType, fileName, fileSize } = message;
   const [previewOpen, setPreviewOpen] = useState(false);
+  const resolvedMediaUrl = resolveMediaUrl(mediaUrl);
 
-  if (!mediaUrl) {
+  if (!resolvedMediaUrl) {
     return (
       <span className="inline-flex items-center gap-2 text-sm italic opacity-80">
         <Paperclip className="size-4" />
@@ -250,7 +290,7 @@ function MediaContent({ message }: { message: Message }) {
         <button type="button" className="space-y-1 text-left" onClick={() => setPreviewOpen(true)}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={mediaUrl}
+            src={resolvedMediaUrl}
             alt={fileName ?? (type === 'sticker' ? 'sticker' : 'imagem')}
             className={cn(
               'rounded-lg object-contain',
@@ -267,7 +307,7 @@ function MediaContent({ message }: { message: Message }) {
   if (type === 'audio') {
     return (
       <audio controls className="max-w-[220px]">
-        <source src={mediaUrl} type={mimeType ?? 'audio/ogg'} />
+        <source src={resolvedMediaUrl} type={mimeType ?? 'audio/ogg'} />
       </audio>
     );
   }
@@ -276,7 +316,7 @@ function MediaContent({ message }: { message: Message }) {
     return (
       <div className="space-y-1">
         <video controls className="max-w-[220px] rounded-lg">
-          <source src={mediaUrl} type={mimeType ?? 'video/mp4'} />
+          <source src={resolvedMediaUrl} type={mimeType ?? 'video/mp4'} />
         </video>
         {content ? <p className="text-sm leading-5">{content}</p> : null}
       </div>
@@ -289,7 +329,7 @@ function MediaContent({ message }: { message: Message }) {
         <button type="button" className="w-full space-y-2 text-left" onClick={() => setPreviewOpen(true)}>
           <div className="overflow-hidden rounded-lg border border-current/15 bg-white">
             <iframe
-              src={mediaUrl}
+              src={resolvedMediaUrl}
               title={fileName ?? 'documento'}
               className="h-56 w-full pointer-events-none"
             />
@@ -308,7 +348,7 @@ function MediaContent({ message }: { message: Message }) {
 
   return (
     <a
-      href={mediaUrl}
+      href={resolvedMediaUrl}
       target="_blank"
       rel="noopener noreferrer"
       download={fileName ?? true}

@@ -83,6 +83,48 @@ export class WhatsappService {
     private scheduler: SchedulerService,
   ) {}
 
+  private getPublicUploadsUrl(fileName: string) {
+    const configuredBase = this.config.get<string>('API_BASE_URL')?.trim();
+    const normalizedBase = configuredBase?.replace(/\/+$/, '');
+
+    if (normalizedBase) {
+      return `${normalizedBase}/api/uploads/${fileName}`;
+    }
+
+    return `/api/uploads/${fileName}`;
+  }
+
+  private resolveOutboundMediaUrl(mediaUrl: string) {
+    const configuredBase = this.config.get<string>('API_BASE_URL')?.trim();
+    const normalizedBase = configuredBase?.replace(/\/+$/, '');
+
+    if (mediaUrl.startsWith('/')) {
+      if (!normalizedBase) {
+        return mediaUrl;
+      }
+      return new URL(mediaUrl, `${normalizedBase}/`).toString();
+    }
+
+    try {
+      const parsed = new URL(mediaUrl);
+      const isLocalhost =
+        parsed.hostname === 'localhost' ||
+        parsed.hostname === '127.0.0.1' ||
+        parsed.hostname === '0.0.0.0';
+
+      if (isLocalhost && normalizedBase) {
+        return new URL(
+          parsed.pathname + parsed.search + parsed.hash,
+          `${normalizedBase}/`,
+        ).toString();
+      }
+    } catch {
+      return mediaUrl;
+    }
+
+    return mediaUrl;
+  }
+
   // ─── Verificação do webhook (GET) ───────────────────────────────────────────
 
   verifyWebhook(mode: string, token: string, challenge: string): string {
@@ -630,7 +672,9 @@ export class WhatsappService {
     if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
 
     const url = `https://graph.facebook.com/v19.0/${account.metaAccountId}/messages`;
-    const mediaPayload: OutboundMediaPayload = { link: mediaUrl };
+    const mediaPayload: OutboundMediaPayload = {
+      link: this.resolveOutboundMediaUrl(mediaUrl),
+    };
     if (caption && (mediaType === 'image' || mediaType === 'document')) {
       mediaPayload.caption = caption;
     }
@@ -759,12 +803,8 @@ export class WhatsappService {
       const buffer = Buffer.from(await mediaRes.arrayBuffer());
       await fs.writeFile(join(uploadsDir, storedName), buffer);
 
-      const apiBase = this.config.get<string>(
-        'API_BASE_URL',
-        'http://localhost:3000',
-      );
       return {
-        url: `${apiBase}/api/uploads/${storedName}`,
+        url: this.getPublicUploadsUrl(storedName),
         mimeType,
         fileName: generatedName,
         fileSize: fileSize || buffer.length,
