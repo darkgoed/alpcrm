@@ -160,11 +160,22 @@ export class ContactsService {
       messagesByConversation.set(message.conversationId, current);
     }
 
+    const conversationSummaries = contact.conversations as Array<{
+      id: string;
+      status: string;
+      createdAt: Date;
+      lastMessageAt: Date | null;
+      lastContactMessageAt: Date | null;
+      assignedUser: { id: string; name: string } | null;
+      team: { id: string; name: string } | null;
+      _count: { messages: number };
+    }>;
+
     return {
       ...contact,
       totalMessageCount: metricsMessages.length,
       responseMetrics: calculateResponseMetrics(metricsMessages),
-      conversations: contact.conversations.map((conversation) => ({
+      conversations: conversationSummaries.map((conversation) => ({
         ...conversation,
         messageCount: conversation._count.messages,
         responseMetrics: calculateResponseMetrics(
