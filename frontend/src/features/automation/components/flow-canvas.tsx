@@ -432,6 +432,17 @@ function resolveSourceHandle(node: NodeDraft | undefined, label?: string): strin
   return replies.find((reply) => reply.label === label)?.id ?? 'out';
 }
 
+function serializeEdgeSnapshot(edges: Array<Pick<Edge, 'source' | 'target' | 'sourceHandle' | 'label'>>) {
+  return JSON.stringify(
+    edges.map((edge) => ({
+      source: edge.source,
+      target: edge.target,
+      sourceHandle: edge.sourceHandle ?? 'out',
+      label: typeof edge.label === 'string' ? edge.label : '',
+    })),
+  );
+}
+
 // ─── Main canvas ───────────────────────────────────────────────────────────────
 
 function FlowCanvasInner({
@@ -465,6 +476,7 @@ function FlowCanvasInner({
 
   const [rfNodes, setRFNodes, onRFNodesChange] = useNodesState(layouted.nodes);
   const [rfEdges, setRFEdges, onRFEdgesChange] = useEdgesState(layouted.edges);
+  const lastSyncedEdgesRef = useRef(serializeEdgeSnapshot(layouted.edges));
 
   // Sync nodes added/removed from parent into rfNodes
   useEffect(() => {
@@ -554,8 +566,15 @@ function FlowCanvasInner({
 
   // Keep canvas edges aligned with the persisted draft state after save/reload.
   useEffect(() => {
-    setRFEdges(toRFEdges(nodeDrafts, savedEdges));
-  }, [nodeDrafts, savedEdges, setRFEdges]);
+    const nextEdges = toRFEdges(nodeDrafts, savedEdges);
+    const nextSnapshot = serializeEdgeSnapshot(nextEdges);
+    const currentSnapshot = serializeEdgeSnapshot(rfEdges);
+
+    if (nextSnapshot === currentSnapshot || nextSnapshot === lastSyncedEdgesRef.current) return;
+
+    lastSyncedEdgesRef.current = nextSnapshot;
+    setRFEdges(nextEdges);
+  }, [nodeDrafts, rfEdges, savedEdges, setRFEdges]);
 
   // Emit edges to parent whenever they change (skip trigger-to-first edge)
   useEffect(() => {
@@ -569,6 +588,7 @@ function FlowCanvasInner({
           : (e.sourceHandle !== 'out' && e.sourceHandle) ? e.sourceHandle
           : undefined,
       }));
+    lastSyncedEdgesRef.current = serializeEdgeSnapshot(rfEdges);
     onEdgesChange(drafts);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rfEdges]);
