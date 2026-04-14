@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 export function ConversationEmptyState() {
   return (
-    <div className="mx-auto flex h-full w-full max-w-5xl items-center px-4 py-6 lg:px-6">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-5xl items-start overflow-y-auto px-4 py-6 lg:items-center lg:px-6">
       <div className="grid w-full gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Card className="border-none bg-[linear-gradient(135deg,#0f172a_0%,#1d4ed8_60%,#22c55e_100%)] text-white shadow-[0_24px_70px_-32px_rgba(30,64,175,0.45)]">
           <CardHeader className="space-y-4">

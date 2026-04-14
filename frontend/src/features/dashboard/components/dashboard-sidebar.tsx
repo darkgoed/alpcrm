@@ -631,7 +631,7 @@ export function ContextSidebar() {
   if (!isInbox) return null;
 
   return (
-    <aside className="hidden h-screen w-[300px] shrink-0 flex-col border-r border-border/70 bg-white/70 backdrop-blur xl:flex">
+    <aside className="hidden h-screen min-h-0 w-[300px] shrink-0 flex-col overflow-hidden border-r border-border/70 bg-white/70 backdrop-blur xl:flex">
       {/* Header */}
       <div className="px-3 py-4 border-b border-border/70">
         <GlobalSearch />

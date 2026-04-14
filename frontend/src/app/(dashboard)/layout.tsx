@@ -69,7 +69,7 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
           <GlobalSearch onNavigate={onClose} />
         </div>
 
-        <nav className="flex flex-col gap-1 px-3 py-3 flex-1">
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-3">
           {navItems.map(({ href, icon: Icon, label }) => {
             const active = href === '/' ? pathname === '/' : pathname.startsWith(href);
             return (

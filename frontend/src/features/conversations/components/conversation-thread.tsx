@@ -772,7 +772,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
     hasOtherActiveOperator;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="border-b border-border/70 bg-background/90 px-4 py-4 backdrop-blur lg:px-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
@@ -833,8 +833,8 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-6 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:px-6">
-        <Card className="flex min-h-0 flex-col border-border/70 bg-white/70">
+      <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto px-4 py-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:overflow-hidden lg:px-6">
+        <Card className="flex min-h-0 flex-col overflow-hidden border-border/70 bg-white/70">
           <CardHeader className="pb-4">
             <CardTitle className="text-base">Linha do tempo do contato</CardTitle>
           </CardHeader>
@@ -1051,14 +1051,14 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
           </CardContent>
         </Card>
 
-        <Card className="h-fit border-border/70 bg-white/70">
+        <Card className="flex min-h-0 flex-col overflow-hidden border-border/70 bg-white/70">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Sparkles className="size-4 text-primary" />
               Contexto do atendimento
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="min-h-0 space-y-4 overflow-y-auto">
             <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Contato</p>
               <p className="mt-2 text-sm font-semibold text-foreground">{contactName}</p>
