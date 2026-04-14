@@ -104,8 +104,16 @@ export class FlowsService {
   ): Promise<Map<string, string>> {
     const map = new Map<string, string>();
     for (const n of nodes) {
+      // Preserva o clientId como id do banco quando for um UUID real (não draft-)
+      const isExistingId = n.clientId && !n.clientId.startsWith('draft-');
       const created = await this.prisma.flowNode.create({
-        data: { flowId, type: n.type, config: n.config as Prisma.InputJsonValue, order: n.order },
+        data: {
+          ...(isExistingId ? { id: n.clientId } : {}),
+          flowId,
+          type: n.type,
+          config: n.config as Prisma.InputJsonValue,
+          order: n.order,
+        },
       });
       // usa clientId fornecido ou índice de ordem como chave
       const key = n.clientId ?? String(n.order);
