@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -18,6 +18,10 @@ import {
   type NodeProps,
   MarkerType,
   Panel,
+  BaseEdge,
+  EdgeLabelRenderer,
+  getBezierPath,
+  type EdgeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import Dagre from '@dagrejs/dagre';
@@ -132,6 +136,10 @@ type FlowNodeData = NodeDraft & {
   selected: boolean;
   incomingLabels?: string[];
 } & Record<string, unknown>;
+
+type RemovableEdgeData = {
+  onRemove?: (edgeId: string) => void;
+};
 
 function interactiveReplyPreview(node: FlowNodeData): string[] {
   if (node.type !== 'send_interactive') return [];
@@ -319,6 +327,67 @@ const nodeTypes = {
   triggerNode: TriggerNode,
 };
 
+function RemovableEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  markerEnd,
+  style,
+  label,
+  labelStyle,
+  data,
+}: EdgeProps<Edge<RemovableEdgeData>>) {
+  const [edgePath, labelX, labelY] = getBezierPath({
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+  });
+
+  const removeEdge = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    data?.onRemove?.(id);
+  };
+
+  return (
+    <>
+      <BaseEdge
+        path={edgePath}
+        markerEnd={markerEnd}
+        style={style}
+        label={typeof label === 'string' ? label : undefined}
+        labelStyle={labelStyle}
+      />
+      <EdgeLabelRenderer>
+        <button
+          type="button"
+          onClick={removeEdge}
+          className="absolute flex size-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-red-200 bg-red-500 text-[10px] font-bold text-white shadow-sm transition hover:bg-red-600"
+          style={{
+            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+            pointerEvents: 'all',
+          }}
+          aria-label="Remover conexão"
+          title="Remover conexão"
+        >
+          ×
+        </button>
+      </EdgeLabelRenderer>
+    </>
+  );
+}
+
+const edgeTypes = {
+  removable: RemovableEdge,
+};
+
 // ─── Dagre layout ──────────────────────────────────────────────────────────────
 
 function getLayoutedElements(rfNodes: Node[], rfEdges: Edge[]) {
@@ -340,6 +409,43 @@ function getLayoutedElements(rfNodes: Node[], rfEdges: Edge[]) {
   });
 }
 
+function sortNodeDrafts(nodes: NodeDraft[]): NodeDraft[] {
+  return [...nodes].sort((a, b) => {
+    if (a.order !== b.order) return a.order - b.order;
+    return a.clientId.localeCompare(b.clientId);
+  });
+}
+
+function sortCanvasEdges(edges: CanvasEdgeDraft[], nodes: NodeDraft[]): CanvasEdgeDraft[] {
+  const orderById = new Map(nodes.map((node) => [node.clientId, node.order]));
+  return [...edges].sort((a, b) => {
+    const sourceOrder = (orderById.get(a.fromClientId) ?? Number.MAX_SAFE_INTEGER)
+      - (orderById.get(b.fromClientId) ?? Number.MAX_SAFE_INTEGER);
+    if (sourceOrder !== 0) return sourceOrder;
+
+    const targetOrder = (orderById.get(a.toClientId) ?? Number.MAX_SAFE_INTEGER)
+      - (orderById.get(b.toClientId) ?? Number.MAX_SAFE_INTEGER);
+    if (targetOrder !== 0) return targetOrder;
+
+    return (a.label ?? '').localeCompare(b.label ?? '');
+  });
+}
+
+function withDefaultEdgeProps(
+  edge: Edge,
+  onRemove: (edgeId: string) => void,
+): Edge<RemovableEdgeData> {
+  return {
+    ...edge,
+    type: 'removable',
+    animated: false,
+    style: { stroke: '#6b7280', strokeWidth: 1.5, ...(edge.style ?? {}) },
+    labelStyle: { fontSize: 10, fill: '#6b7280', ...(edge.labelStyle ?? {}) },
+    labelBgStyle: { fill: 'white', fillOpacity: 0.8, ...(edge.labelBgStyle ?? {}) },
+    data: { ...(edge.data as RemovableEdgeData | undefined), onRemove },
+  };
+}
+
 // ─── Conversion helpers ────────────────────────────────────────────────────────
 
 function toRFNodes(
@@ -349,6 +455,7 @@ function toRFNodes(
   triggerValue: string,
   selectedClientId: string | null,
 ): Node[] {
+  const sortedNodes = sortNodeDrafts(nodes);
   const trigger: Node = {
     id: '__trigger__',
     type: 'triggerNode',
@@ -358,7 +465,7 @@ function toRFNodes(
     selectable: false,
   };
 
-  const flowNodes: Node[] = nodes.map((n) => ({
+  const flowNodes: Node[] = sortedNodes.map((n) => ({
     id: n.clientId,
     type: 'flowNode',
     position: { x: 0, y: 0 },
@@ -370,8 +477,10 @@ function toRFNodes(
 }
 
 function toRFEdges(nodes: NodeDraft[], edges: CanvasEdgeDraft[]): Edge[] {
-  const nodeMap = new Map(nodes.map((node) => [node.clientId, node]));
-  const rfEdges: Edge[] = edges.map((e) => ({
+  const sortedNodes = sortNodeDrafts(nodes);
+  const sortedEdges = sortCanvasEdges(edges, sortedNodes);
+  const nodeMap = new Map(sortedNodes.map((node) => [node.clientId, node]));
+  const rfEdges: Edge[] = sortedEdges.map((e) => ({
     id: `${e.fromClientId}→${e.toClientId}→${e.label ?? 'out'}`,
     source: e.fromClientId,
     target: e.toClientId,
@@ -384,31 +493,31 @@ function toRFEdges(nodes: NodeDraft[], edges: CanvasEdgeDraft[]): Edge[] {
   }));
 
   // If no edges saved yet, create linear chain from order
-  if (rfEdges.length === 0 && nodes.length > 0) {
+  if (rfEdges.length === 0 && sortedNodes.length > 0) {
     // trigger → first node
     rfEdges.push({
-      id: `__trigger__→${nodes[0].clientId}`,
-      source: '__trigger__',
-      target: nodes[0].clientId,
+        id: `__trigger__→${sortedNodes[0].clientId}`,
+        source: '__trigger__',
+        target: sortedNodes[0].clientId,
       sourceHandle: 'out',
       markerEnd: { type: MarkerType.ArrowClosed },
       style: { stroke: '#6b7280', strokeDasharray: '5 3' },
     });
     // node → node
-    for (let i = 0; i < nodes.length - 1; i++) {
+    for (let i = 0; i < sortedNodes.length - 1; i++) {
       rfEdges.push({
-        id: `${nodes[i].clientId}→${nodes[i + 1].clientId}`,
-        source: nodes[i].clientId,
-        target: nodes[i + 1].clientId,
+        id: `${sortedNodes[i].clientId}→${sortedNodes[i + 1].clientId}`,
+        source: sortedNodes[i].clientId,
+        target: sortedNodes[i + 1].clientId,
         sourceHandle: 'out',
         markerEnd: { type: MarkerType.ArrowClosed },
         style: { stroke: '#6b7280', strokeDasharray: '5 3' },
       });
     }
-  } else if (rfEdges.length > 0 && nodes.length > 0) {
+  } else if (rfEdges.length > 0 && sortedNodes.length > 0) {
     // Always ensure trigger connects to the first node that has no incoming edge
     const hasIncoming = new Set(rfEdges.map((e) => e.target));
-    const firstWithoutIncoming = nodes.find((n) => !hasIncoming.has(n.clientId));
+    const firstWithoutIncoming = sortedNodes.find((n) => !hasIncoming.has(n.clientId));
     if (firstWithoutIncoming) {
       rfEdges.unshift({
         id: `__trigger__→${firstWithoutIncoming.clientId}`,
@@ -458,6 +567,7 @@ function FlowCanvasInner({
   onEdgesChange,
 }: FlowCanvasProps) {
   const initialized = useRef(false);
+  const removeEdgeRef = useRef<(edgeId: string) => void>(() => {});
 
   const initialRFNodes = useMemo(
     () => toRFNodes(nodeDrafts, savedEdges, triggerType, triggerValue, selectedClientId),
@@ -479,6 +589,24 @@ function FlowCanvasInner({
   const [rfNodes, setRFNodes, onRFNodesChange] = useNodesState(layouted.nodes);
   const [rfEdges, setRFEdges, onRFEdgesChange] = useEdgesState(layouted.edges);
   const lastSyncedEdgesRef = useRef(serializeEdgeSnapshot(layouted.edges));
+
+  const applyAutoLayout = useCallback((nextNodes: Node[], nextEdges: Edge[]) => {
+    const sortedNodes = [...nextNodes].sort((a, b) => {
+      if (a.id === '__trigger__') return -1;
+      if (b.id === '__trigger__') return 1;
+      const aOrder = a.type === 'flowNode' ? (a.data as FlowNodeData).order : -1;
+      const bOrder = b.type === 'flowNode' ? (b.data as FlowNodeData).order : -1;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return a.id.localeCompare(b.id);
+    });
+    return getLayoutedElements(sortedNodes, nextEdges);
+  }, []);
+
+  const removeEdgeById = useCallback((edgeId: string) => {
+    setRFEdges((eds) => eds.filter((edge) => edge.id !== edgeId));
+  }, [setRFEdges]);
+
+  removeEdgeRef.current = removeEdgeById;
 
   // Sync nodes added/removed from parent into rfNodes
   useEffect(() => {
@@ -517,10 +645,10 @@ function FlowCanvasInner({
             },
           ];
         });
-      return next;
+      return applyAutoLayout(next, rfEdges);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodeDrafts, selectedClientId]);
+  }, [nodeDrafts, selectedClientId, applyAutoLayout, rfEdges]);
 
   // Sync selected state into rfNodes
   useEffect(() => {
@@ -573,7 +701,8 @@ function FlowCanvasInner({
 
     lastSyncedEdgesRef.current = nextSnapshot;
     setRFEdges(nextEdges);
-  }, [nodeDrafts, savedEdges, setRFEdges, syncKey]);
+    setRFNodes((currentNodes) => applyAutoLayout(currentNodes, nextEdges));
+  }, [nodeDrafts, savedEdges, setRFEdges, setRFNodes, syncKey, applyAutoLayout]);
 
   // Emit edges to parent whenever they change (skip trigger-to-first edge)
   useEffect(() => {
@@ -607,8 +736,13 @@ function FlowCanvasInner({
         }
       }
 
-      setRFEdges((eds) =>
-        addEdge(
+      setRFEdges((eds) => {
+        const filtered = eds.filter((edge) => {
+          if (edge.source !== params.source) return true;
+          return (edge.sourceHandle ?? 'out') !== (params.sourceHandle ?? 'out');
+        });
+
+        return addEdge(
           {
             ...params,
             label,
@@ -617,11 +751,23 @@ function FlowCanvasInner({
             labelStyle: { fontSize: 10, fill: '#6b7280' },
             labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
           },
-          eds,
-        ),
-      );
+          filtered,
+        );
+      });
     },
     [rfNodes, setRFEdges],
+  );
+
+  const onEdgeDoubleClick = useCallback(
+    (_: MouseEvent, edge: Edge) => {
+      removeEdgeById(edge.id);
+    },
+    [removeEdgeById],
+  );
+
+  const displayEdges = useMemo(
+    () => rfEdges.map((edge) => withDefaultEdgeProps(edge, removeEdgeRef.current)),
+    [rfEdges],
   );
 
   const onNodeClick = useCallback(
@@ -640,13 +786,15 @@ function FlowCanvasInner({
   return (
     <ReactFlow
       nodes={rfNodes}
-      edges={rfEdges}
+      edges={displayEdges}
       onNodesChange={onRFNodesChange}
       onEdgesChange={onRFEdgesChange}
       onConnect={onConnect}
+      onEdgeDoubleClick={onEdgeDoubleClick}
       onNodeClick={onNodeClick}
       onPaneClick={onPaneClick}
       nodeTypes={nodeTypes}
+      edgeTypes={edgeTypes}
       fitView
       fitViewOptions={{ padding: 0.3 }}
       deleteKeyCode={null}
@@ -657,7 +805,7 @@ function FlowCanvasInner({
       <MiniMap nodeStrokeWidth={3} zoomable pannable />
       <Panel position="bottom-center">
         <p className="rounded-full border border-border/50 bg-white/80 px-3 py-1 text-[10px] text-muted-foreground backdrop-blur">
-          Clique num nó para editar · Arraste handles para conectar · Shift+clique para selecionar múltiplos
+          Clique num nó para editar · Arraste handles para conectar · Duplo clique ou X vermelho para remover ligação
         </p>
       </Panel>
     </ReactFlow>
