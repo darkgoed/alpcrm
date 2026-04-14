@@ -20,6 +20,7 @@ export interface NodeDraft {
 
 const TYPE_LABELS: Record<FlowNodeType, string> = {
   message: 'Mensagem',
+  finalize: 'Finalizar',
   delay: 'Delay',
   wait_for_reply: 'Aguardar resposta',
   condition: 'Condição',
@@ -34,6 +35,7 @@ const TYPE_LABELS: Record<FlowNodeType, string> = {
 
 const TYPE_COLOR: Record<FlowNodeType, string> = {
   message: 'bg-primary/10 text-primary',
+  finalize: 'bg-rose-100 text-rose-700',
   delay: 'bg-amber-100 text-amber-700',
   wait_for_reply: 'bg-blue-100 text-blue-700',
   condition: 'bg-violet-100 text-violet-700',
@@ -261,17 +263,39 @@ export function FlowNodeEditor({
       <ScrollArea className="flex-1 px-4 py-4">
         <div className="space-y-4">
           {node.type === 'message' && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Texto da mensagem</Label>
+                <Textarea
+                  autoFocus
+                  value={String(c.content ?? '')}
+                  onChange={(e) => set('content', e.target.value)}
+                  placeholder="Escreva a mensagem automática... Use {{variavel}} para inserir dados do contato."
+                  className="min-h-40 resize-none"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  {String(c.content ?? '').length} caracteres
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>URL da imagem (opcional)</Label>
+                <Input
+                  value={String(c.imageUrl ?? '')}
+                  onChange={(e) => set('imageUrl', e.target.value)}
+                  placeholder="https://..."
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Se informar imagem, o texto acima será enviado como legenda.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {node.type === 'finalize' && (
             <div className="space-y-2">
-              <Label>Texto da mensagem</Label>
-              <Textarea
-                autoFocus
-                value={String(c.content ?? '')}
-                onChange={(e) => set('content', e.target.value)}
-                placeholder="Escreva a mensagem automática... Use {{variavel}} para inserir dados do contato."
-                className="min-h-40 resize-none"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                {String(c.content ?? '').length} caracteres
+              <Label>Finalizar flow</Label>
+              <p className="rounded-lg bg-muted/50 px-3 py-2 text-[11px] text-muted-foreground">
+                Esta etapa encerra o flow imediatamente e desativa o bot na conversa.
               </p>
             </div>
           )}

@@ -17,7 +17,8 @@ export class CreateFlowNodeDto {
 
   @IsObject()
   config: Record<string, unknown>;
-  // message:          { content: string }
+  // message:          { content: string, imageUrl?: string }
+  // finalize:         {}
   // delay:            { ms: number }
   // wait_for_reply:   { variableName?: string, timeoutMs?: number }
   // condition/branch: { field: string, operator: string, value: string }

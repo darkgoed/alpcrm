@@ -401,6 +401,7 @@ model SavedSegment {
 
 enum FlowNodeType {
   message
+  finalize
   condition
   delay
   wait_for_reply

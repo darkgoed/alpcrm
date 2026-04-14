@@ -21,8 +21,8 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import Dagre from '@dagrejs/dagre';
-import { Bot, Clock3, GitBranch, MessageSquarePlus, Tag, Webhook, Workflow, Send } from 'lucide-react';
-import { type FlowNodeType, type FlowEdge as FlowEdgeData } from '@/hooks/useAutomation';
+import { Bot, Clock3, GitBranch, MessageSquarePlus, Power, Tag, Webhook, Workflow, Send } from 'lucide-react';
+import { type FlowNodeType } from '@/hooks/useAutomation';
 import { type NodeDraft } from './flow-node-editor';
 import { cn } from '@/lib/utils';
 
@@ -36,7 +36,7 @@ export type CanvasEdgeDraft = {
 
 interface FlowCanvasProps {
   nodes: NodeDraft[];
-  edges: FlowEdgeData[];
+  edges: CanvasEdgeDraft[];
   triggerType: string;
   triggerValue: string;
   selectedClientId: string | null;
@@ -48,12 +48,13 @@ interface FlowCanvasProps {
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const NODE_W = 280;
-const NODE_H = 80;
+const NODE_H = 108;
 const TRIGGER_H = 72;
 
 const TYPE_COLOR: Record<FlowNodeType | 'trigger', string> = {
   trigger: 'border-primary/40 bg-primary/5 text-primary',
   message: 'border-primary/40 bg-primary/5 text-primary',
+  finalize: 'border-rose-300 bg-rose-50 text-rose-700',
   delay: 'border-amber-300 bg-amber-50 text-amber-700',
   wait_for_reply: 'border-blue-300 bg-blue-50 text-blue-700',
   condition: 'border-violet-300 bg-violet-50 text-violet-700',
@@ -68,6 +69,7 @@ const TYPE_COLOR: Record<FlowNodeType | 'trigger', string> = {
 
 const TYPE_LABEL: Record<FlowNodeType, string> = {
   message: 'Mensagem',
+  finalize: 'Finalizar',
   delay: 'Delay',
   wait_for_reply: 'Aguardar resposta',
   condition: 'Condição',
@@ -83,6 +85,7 @@ const TYPE_LABEL: Record<FlowNodeType, string> = {
 const TYPE_ICON: Record<FlowNodeType | 'trigger', React.ComponentType<{ className?: string }>> = {
   trigger: Bot,
   message: MessageSquarePlus,
+  finalize: Power,
   delay: Clock3,
   wait_for_reply: MessageSquarePlus,
   condition: GitBranch,
@@ -98,7 +101,14 @@ const TYPE_ICON: Record<FlowNodeType | 'trigger', React.ComponentType<{ classNam
 function nodePreview(node: NodeDraft): string {
   const c = node.config;
   switch (node.type) {
-    case 'message': return String(c.content || 'Mensagem vazia').slice(0, 50);
+    case 'message': {
+      const hasImage = Boolean(String(c.imageUrl || '').trim());
+      const text = String(c.content || '').trim();
+      if (hasImage && text) return `Imagem + ${text.slice(0, 38)}`;
+      if (hasImage) return 'Imagem';
+      return String(c.content || 'Mensagem vazia').slice(0, 50);
+    }
+    case 'finalize': return 'Encerrar flow';
     case 'delay': return `Aguardar ${Math.round((Number(c.ms) || 0) / 1000)}s`;
     case 'wait_for_reply': return `Esperar → {{${String(c.variableName || 'reply')}}}`;
     case 'condition':
@@ -117,12 +127,62 @@ function nodePreview(node: NodeDraft): string {
 
 const BRANCH_TYPES: FlowNodeType[] = ['branch', 'condition'];
 
-type FlowNodeData = NodeDraft & { selected: boolean } & Record<string, unknown>;
+type FlowNodeData = NodeDraft & {
+  selected: boolean;
+  incomingLabels?: string[];
+} & Record<string, unknown>;
+
+function interactiveReplyPreview(node: FlowNodeData): string[] {
+  if (node.type !== 'send_interactive') return [];
+
+  if (String(node.config.interactiveType ?? 'button') === 'list') {
+    const sections = (node.config.sections as Array<{ rows?: Array<{ title?: string }> }>) ?? [];
+    return sections
+      .flatMap((section) => section.rows ?? [])
+      .map((row) => String(row.title ?? '').trim())
+      .filter(Boolean)
+      .slice(0, 3);
+  }
+
+  const buttons = (node.config.buttons as Array<{ title?: string; id?: string }>) ?? [];
+  return buttons
+    .map((button) => String(button.title ?? button.id ?? '').trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+function interactiveReplyHandles(node: FlowNodeData): Array<{ id: string; label: string }> {
+  if (node.type !== 'send_interactive') return [];
+
+  if (String(node.config.interactiveType ?? 'button') === 'list') {
+    const sections = (node.config.sections as Array<{ rows?: Array<{ title?: string }> }>) ?? [];
+    return sections
+      .flatMap((section) => section.rows ?? [])
+      .map((row, index) => ({
+        id: `reply:${index}`,
+        label: String(row.title ?? '').trim(),
+      }))
+      .filter((row) => row.label)
+      .slice(0, 6);
+  }
+
+  const buttons = (node.config.buttons as Array<{ title?: string; id?: string }>) ?? [];
+  return buttons
+    .map((button, index) => ({
+      id: `reply:${index}`,
+      label: String(button.title ?? button.id ?? '').trim(),
+    }))
+    .filter((button) => button.label)
+    .slice(0, 6);
+}
 
 function FlowNode({ data, selected }: NodeProps & { data: FlowNodeData }) {
   const colorClass = TYPE_COLOR[data.type] ?? TYPE_COLOR.message;
   const Icon = TYPE_ICON[data.type] ?? MessageSquarePlus;
   const isBranch = BRANCH_TYPES.includes(data.type);
+  const incomingLabels = (data.incomingLabels ?? []).filter(Boolean);
+  const interactiveReplies = interactiveReplyPreview(data);
+  const replyHandles = interactiveReplyHandles(data);
 
   return (
     <div
@@ -150,6 +210,27 @@ function FlowNode({ data, selected }: NodeProps & { data: FlowNodeData }) {
           <span className="text-[10px] opacity-60">#{data.order + 1}</span>
         </div>
         <p className="mt-1 truncate text-xs opacity-80">{nodePreview(data)}</p>
+        {interactiveReplies.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {interactiveReplies.map((reply) => (
+              <span key={reply} className="max-w-full truncate rounded-full bg-white/70 px-2 py-0.5 text-[10px]">
+                {reply}
+              </span>
+            ))}
+          </div>
+        )}
+        {incomingLabels.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {incomingLabels.map((label) => (
+              <span
+                key={label}
+                className="max-w-full truncate rounded-full border border-white/70 bg-white/60 px-2 py-0.5 text-[10px] font-medium"
+              >
+                Reply: {label}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {isBranch ? (
@@ -168,6 +249,19 @@ function FlowNode({ data, selected }: NodeProps & { data: FlowNodeData }) {
             style={{ left: '70%' }}
             className="!size-3 !border-2 !border-white !bg-rose-400"
           />
+        </>
+      ) : replyHandles.length > 0 ? (
+        <>
+          {replyHandles.map((reply, index) => (
+            <Handle
+              key={reply.id}
+              id={reply.id}
+              type="source"
+              position={Position.Bottom}
+              style={{ left: `${((index + 1) / (replyHandles.length + 1)) * 100}%` }}
+              className="!size-3 !border-2 !border-white !bg-teal-500"
+            />
+          ))}
         </>
       ) : (
         <Handle
@@ -249,7 +343,7 @@ function getLayoutedElements(rfNodes: Node[], rfEdges: Edge[]) {
 
 function toRFNodes(
   nodes: NodeDraft[],
-  edges: FlowEdgeData[],
+  edges: CanvasEdgeDraft[],
   triggerType: string,
   triggerValue: string,
   selectedClientId: string | null,
@@ -274,11 +368,11 @@ function toRFNodes(
   return [trigger, ...flowNodes];
 }
 
-function toRFEdges(nodes: NodeDraft[], edges: FlowEdgeData[]): Edge[] {
+function toRFEdges(nodes: NodeDraft[], edges: CanvasEdgeDraft[]): Edge[] {
   const rfEdges: Edge[] = edges.map((e) => ({
-    id: e.id,
-    source: e.fromNodeId,
-    target: e.toNodeId,
+    id: `${e.fromClientId}→${e.toClientId}→${e.label ?? 'out'}`,
+    source: e.fromClientId,
+    target: e.toClientId,
     label: e.label ?? undefined,
     sourceHandle: e.label ?? 'out',
     markerEnd: { type: MarkerType.ArrowClosed },
@@ -365,10 +459,24 @@ function FlowCanvasInner({
   // Sync nodes added/removed from parent into rfNodes
   useEffect(() => {
     const draftIds = new Set(nodeDrafts.map((n) => n.clientId));
+    const nodeDraftMap = new Map(nodeDrafts.map((node) => [node.clientId, node]));
     setRFNodes((cur) => {
       const curFlowIds = new Set(cur.filter((n) => n.type === 'flowNode').map((n) => n.id));
       // Remove deleted
       let next = cur.filter((n) => n.type !== 'flowNode' || draftIds.has(n.id));
+      next = next.map((node) =>
+        node.type === 'flowNode'
+          ? {
+              ...node,
+              data: {
+                ...(nodeDraftMap.get(node.id) ?? node.data),
+                selected: node.id === selectedClientId,
+                incomingLabels: (node.data as FlowNodeData).incomingLabels ?? [],
+              } as FlowNodeData,
+              selected: node.id === selectedClientId,
+            }
+          : node,
+      );
       // Add new
       nodeDrafts
         .filter((n) => !curFlowIds.has(n.clientId))
@@ -388,7 +496,7 @@ function FlowCanvasInner({
       return next;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodeDrafts]);
+  }, [nodeDrafts, selectedClientId]);
 
   // Sync selected state into rfNodes
   useEffect(() => {
@@ -400,6 +508,39 @@ function FlowCanvasInner({
       ),
     );
   }, [selectedClientId, setRFNodes]);
+
+  useEffect(() => {
+    const incomingLabelsByNode = new Map<string, string[]>();
+
+    rfEdges
+      .filter((edge) => edge.source !== '__trigger__')
+      .forEach((edge) => {
+        const label = typeof edge.label === 'string' && edge.label
+          ? edge.label
+          : edge.sourceHandle && edge.sourceHandle !== 'out'
+            ? edge.sourceHandle
+            : null;
+
+        if (!label) return;
+        const current = incomingLabelsByNode.get(edge.target) ?? [];
+        if (!current.includes(label)) current.push(label);
+        incomingLabelsByNode.set(edge.target, current);
+      });
+
+    setRFNodes((cur) =>
+      cur.map((node) =>
+        node.type === 'flowNode'
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                incomingLabels: incomingLabelsByNode.get(node.id) ?? [],
+              } as FlowNodeData,
+            }
+          : node,
+      ),
+    );
+  }, [rfEdges, setRFNodes]);
 
   // Emit edges to parent whenever they change (skip trigger-to-first edge)
   useEffect(() => {
@@ -419,10 +560,18 @@ function FlowCanvasInner({
 
   const onConnect = useCallback(
     (params: Connection) => {
-      const label =
+      let label =
         params.sourceHandle === 'yes' ? 'yes'
           : params.sourceHandle === 'no' ? 'no'
           : undefined;
+
+      if (!label && params.source && params.sourceHandle?.startsWith('reply:')) {
+        const sourceNode = rfNodes.find((node) => node.id === params.source);
+        if (sourceNode?.type === 'flowNode') {
+          const replies = interactiveReplyHandles(sourceNode.data as FlowNodeData);
+          label = replies.find((reply) => reply.id === params.sourceHandle)?.label;
+        }
+      }
 
       setRFEdges((eds) =>
         addEdge(
@@ -438,7 +587,7 @@ function FlowCanvasInner({
         ),
       );
     },
-    [setRFEdges],
+    [rfNodes, setRFEdges],
   );
 
   const onNodeClick = useCallback(

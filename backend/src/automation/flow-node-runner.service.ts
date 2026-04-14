@@ -54,6 +54,8 @@ export class FlowNodeRunnerService {
     switch (node.type) {
       case 'message':
         return this.handleMessage(ctx, conversation, config);
+      case 'finalize':
+        return { kind: 'done' };
       case 'delay':
         return this.handleDelay(ctx, node, config);
       case 'wait_for_reply':
@@ -112,6 +114,11 @@ export class FlowNodeRunnerService {
     }
 
     const text = interpolate(String(config.content ?? ''), ctx.variables);
+    const imageUrl = interpolate(String(config.imageUrl ?? ''), ctx.variables).trim();
+
+    if (!text && !imageUrl) {
+      return { kind: 'next', nodeId: null };
+    }
 
     try {
       const account = await this.prisma.whatsappAccount.findUnique({
@@ -126,12 +133,24 @@ export class FlowNodeRunnerService {
           Authorization: `Bearer ${account.token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to: conversation.contact.phone,
-          type: 'text',
-          text: { body: text },
-        }),
+        body: JSON.stringify(
+          imageUrl
+            ? {
+                messaging_product: 'whatsapp',
+                to: conversation.contact.phone,
+                type: 'image',
+                image: {
+                  link: imageUrl,
+                  ...(text ? { caption: text } : {}),
+                },
+              }
+            : {
+                messaging_product: 'whatsapp',
+                to: conversation.contact.phone,
+                type: 'text',
+                text: { body: text },
+              },
+        ),
       });
       const data = (await res.json()) as { messages?: Array<{ id: string }> };
       const externalId = data.messages?.[0]?.id ?? '';
@@ -140,8 +159,9 @@ export class FlowNodeRunnerService {
         data: {
           conversationId: ctx.conversationId,
           senderType: 'system',
-          type: 'text',
-          content: text,
+          type: imageUrl ? 'image' : 'text',
+          content: text || null,
+          mediaUrl: imageUrl || null,
           status: 'sent',
           externalId,
         },

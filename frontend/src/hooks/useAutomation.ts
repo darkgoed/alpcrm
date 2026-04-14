@@ -3,6 +3,7 @@ import { api } from '@/lib/api';
 
 export type FlowNodeType =
   | 'message'
+  | 'finalize'
   | 'condition'
   | 'delay'
   | 'wait_for_reply'

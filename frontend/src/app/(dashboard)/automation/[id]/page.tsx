@@ -44,7 +44,7 @@ const NODE_GROUPS = [
   {
     label: 'Mensagens',
     items: [
-      { type: 'message' as FlowNodeType, label: 'Mensagem de texto', icon: MessageSquarePlus, color: 'text-primary' },
+      { type: 'message' as FlowNodeType, label: 'Mensagem', icon: MessageSquarePlus, color: 'text-primary' },
       { type: 'send_template' as FlowNodeType, label: 'Enviar template', icon: Workflow, color: 'text-orange-500' },
       { type: 'send_interactive' as FlowNodeType, label: 'Mensagem interativa', icon: Send, color: 'text-teal-500' },
     ],
@@ -55,6 +55,7 @@ const NODE_GROUPS = [
       { type: 'delay' as FlowNodeType, label: 'Delay', icon: Clock3, color: 'text-amber-500' },
       { type: 'wait_for_reply' as FlowNodeType, label: 'Aguardar resposta', icon: MessageSquarePlus, color: 'text-blue-500' },
       { type: 'branch' as FlowNodeType, label: 'Branch / Condição', icon: GitBranch, color: 'text-violet-500' },
+      { type: 'finalize' as FlowNodeType, label: 'Finalizar', icon: Power, color: 'text-rose-500' },
     ],
   },
   {
@@ -75,7 +76,8 @@ const NODE_GROUPS = [
 
 function defaultConfig(type: FlowNodeType): Record<string, unknown> {
   switch (type) {
-    case 'message': return { content: '' };
+    case 'message': return { content: '', imageUrl: '' };
+    case 'finalize': return {};
     case 'delay': return { ms: 5000 };
     case 'wait_for_reply': return { variableName: 'reply' };
     case 'condition':
@@ -365,7 +367,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
         <div className="min-h-0 flex-1">
           <FlowCanvas
             nodes={nodes}
-            edges={flow.edges}
+            edges={canvasEdges}
             triggerType={triggerType}
             triggerValue={triggerValue}
             selectedClientId={selectedClientId}
