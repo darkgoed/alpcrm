@@ -891,26 +891,37 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
     await mutate();
   }
 
-  async function handleReply(message: Message) {
+  function handleReply(message: Message) {
     setReplyingTo(message);
     setMode('message');
     setTimeout(() => textareaRef.current?.focus(), 0);
   }
 
   async function handleReact(message: Message, emoji: string) {
-    const updated = await reactToMessage(message.id, emoji);
-    setMessages((current) => mergeMessageList(current, updated));
+    try {
+      const updated = await reactToMessage(message.id, emoji);
+      setMessages((current) => mergeMessageList(current, updated));
+    } catch (err: any) {
+      setSendError(
+        err?.response?.data?.message ?? 'Nao foi possivel reagir a mensagem.',
+      );
+    }
   }
 
   async function handleDeleteMessage(message: Message) {
     if (!window.confirm('Excluir esta mensagem no CRM?')) {
       return;
     }
-
-    const updated = await deleteMessage(message.id);
-    setMessages((current) => mergeMessageList(current, updated));
-    if (replyingTo?.id === message.id) {
-      setReplyingTo(null);
+    try {
+      const updated = await deleteMessage(message.id);
+      setMessages((current) => mergeMessageList(current, updated));
+      if (replyingTo?.id === message.id) {
+        setReplyingTo(null);
+      }
+    } catch (err: any) {
+      setSendError(
+        err?.response?.data?.message ?? 'Nao foi possivel excluir a mensagem.',
+      );
     }
   }
 
@@ -1099,7 +1110,13 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                   </div>
                 ) : messages.length > 0 ? (
                   messages.map((message) => (
-                    <ConversationMessageBubble key={message.id} message={message} />
+                    <ConversationMessageBubble
+                      key={message.id}
+                      message={message}
+                      onReply={handleReply}
+                      onDelete={(target) => void handleDeleteMessage(target)}
+                      onReact={(target, emoji) => void handleReact(target, emoji)}
+                    />
                   ))
                 ) : (
                   <div className="flex min-h-40 items-center justify-center rounded-lg border border-dashed border-border/60 bg-background/70 px-4 text-sm text-muted-foreground">
@@ -1162,6 +1179,37 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                   {collisionPreventionActive && (
                     <div className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-700">
                       Outro operador esta com esta conversa aberta agora. Atribua a conversa antes de responder para evitar colisao.
+                    </div>
+                  )}
+
+                  {mode === 'message' && replyingTo && !replyingTo.deletedAt && (
+                    <div className="flex items-start justify-between gap-3 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-medium text-muted-foreground">Respondendo mensagem</p>
+                        <p className="truncate text-sm">
+                          {replyingTo.content ??
+                            replyingTo.fileName ??
+                            (replyingTo.type === 'image'
+                              ? 'Imagem'
+                              : replyingTo.type === 'document'
+                                ? 'Documento'
+                                : replyingTo.type === 'sticker'
+                                  ? 'Sticker'
+                                  : replyingTo.type === 'location'
+                                    ? replyingTo.metadata?.location?.name ?? 'Localizacao'
+                                    : replyingTo.type === 'contacts'
+                                      ? 'Contato compartilhado'
+                                      : 'Mensagem')}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setReplyingTo(null)}
+                        className="text-muted-foreground transition-colors hover:text-foreground"
+                        aria-label="Cancelar resposta"
+                      >
+                        <X className="size-4" />
+                      </button>
                     </div>
                   )}
 
@@ -1228,7 +1276,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                             ref={fileInputRef}
                             type="file"
                             className="hidden"
-                            accept="image/*,application/pdf,audio/ogg,audio/mpeg,video/mp4"
+                            accept="image/*,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,audio/ogg,audio/mpeg,audio/mp4,video/mp4,video/3gpp"
                             onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFileUpload(f); e.target.value = ''; }}
                           />
                           <button

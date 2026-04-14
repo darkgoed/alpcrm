@@ -23,6 +23,17 @@ export class SendMessageDto {
   @IsOptional()
   mediaUrl?: string;
 
+  @IsString()
+  @IsOptional()
+  mimeType?: string;
+
+  @IsString()
+  @IsOptional()
+  fileName?: string;
+
+  @IsOptional()
+  fileSize?: number;
+
   @IsUUID()
   @IsOptional()
   replyToMessageId?: string;

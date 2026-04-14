@@ -36,6 +36,7 @@ export interface WhatsappMessage {
   from: string;
   id: string;
   timestamp: string;
+  context?: { id?: string; from?: string };
   type:
     | 'text'
     | 'image'

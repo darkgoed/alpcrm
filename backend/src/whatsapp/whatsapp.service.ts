@@ -261,6 +261,7 @@ export class WhatsappService {
     let mimeType: string | null = inboundMime;
     let fileName: string | null = normalizedStructured?.fileName ?? null;
     let fileSize: number | null = null;
+    let replyToMessageId: string | null = null;
 
     if (metaMediaId) {
       const downloaded = await this.downloadAndSaveMedia(
@@ -277,6 +278,17 @@ export class WhatsappService {
       }
     }
 
+    if (msg.context?.id) {
+      const repliedMessage = await this.prisma.message.findFirst({
+        where: {
+          conversationId: conversation.id,
+          externalId: msg.context.id,
+        },
+        select: { id: true },
+      });
+      replyToMessageId = repliedMessage?.id ?? null;
+    }
+
     const message = await this.prisma.message.create({
       data: {
         conversationId: conversation.id,
@@ -289,10 +301,28 @@ export class WhatsappService {
         fileName,
         fileSize,
         metadata: normalizedStructured?.metadata ?? undefined,
+        replyToMessageId,
         interactiveType: normalizedInteractive?.interactiveType ?? null,
         interactivePayload: normalizedInteractive?.interactivePayload,
         status: 'delivered',
         externalId: msg.id,
+      },
+    });
+    const hydratedMessage = await this.prisma.message.findUniqueOrThrow({
+      where: { id: message.id },
+      include: {
+        replyToMessage: {
+          select: {
+            id: true,
+            type: true,
+            content: true,
+            mediaUrl: true,
+            mimeType: true,
+            fileName: true,
+            metadata: true,
+            deletedAt: true,
+          },
+        },
       },
     });
 
@@ -335,7 +365,7 @@ export class WhatsappService {
       event: 'new_message',
       workspaceId,
       conversationId: conversation.id,
-      message,
+      message: hydratedMessage,
       contact,
       unreadCount: (conversation.unreadCount ?? 0) + 1,
     });
@@ -508,6 +538,7 @@ export class WhatsappService {
     accountId: string,
     to: string,
     text: string,
+    replyToExternalId?: string | null,
   ): Promise<string> {
     const account = await this.prisma.whatsappAccount.findUnique({
       where: { id: accountId },
@@ -528,6 +559,7 @@ export class WhatsappService {
         to,
         type: 'text',
         text: { body: text },
+        ...(this.buildReplyContext(replyToExternalId) ?? {}),
       }),
     });
 
@@ -590,6 +622,7 @@ export class WhatsappService {
     mediaType: 'image' | 'document' | 'audio' | 'video',
     mediaUrl: string,
     caption?: string,
+    replyToExternalId?: string | null,
   ): Promise<string> {
     const account = await this.prisma.whatsappAccount.findUnique({
       where: { id: accountId },
@@ -613,6 +646,7 @@ export class WhatsappService {
         to,
         type: mediaType,
         [mediaType]: mediaPayload,
+        ...(this.buildReplyContext(replyToExternalId) ?? {}),
       }),
     });
 
@@ -630,6 +664,7 @@ export class WhatsappService {
     to: string,
     interactiveType: string,
     payload: InteractivePayloadInput,
+    replyToExternalId?: string | null,
   ): Promise<string> {
     const account = await this.prisma.whatsappAccount.findUnique({
       where: { id: accountId },
@@ -649,6 +684,7 @@ export class WhatsappService {
         to,
         type: 'interactive',
         interactive,
+        ...(this.buildReplyContext(replyToExternalId) ?? {}),
       }),
     });
 
@@ -757,13 +793,25 @@ export class WhatsappService {
     return map[type] ?? 'text';
   }
 
+  private buildReplyContext(replyToExternalId?: string | null) {
+    if (!replyToExternalId) {
+      return null;
+    }
+
+    return {
+      context: {
+        message_id: replyToExternalId,
+      },
+    };
+  }
+
   private normalizeStructuredMessage(
     msg: WhatsappMessage,
   ): NormalizedStructuredMessage | null {
     if (msg.type === 'sticker' && msg.sticker) {
       return {
         messageType: 'sticker',
-        content: 'Sticker',
+        content: null,
         metadata: {
           sticker: {
             animated: msg.sticker.animated ?? false,

@@ -533,6 +533,20 @@ function InboxRail() {
         return [moved, ...updated];
       });
     },
+    onMessageUpdated: ({ conversationId, message }) => {
+      setLiveConversations((current) =>
+        current.map((item) =>
+          item.id !== conversationId
+            ? item
+            : {
+                ...item,
+                messages: item.messages.map((entry) =>
+                  entry.id === message.id ? { ...entry, ...message } : entry,
+                ),
+              },
+        ),
+      );
+    },
     onConversationUpdated: ({ conversationId, conversation }) => {
       setLiveConversations((current) =>
         current.map((item) =>

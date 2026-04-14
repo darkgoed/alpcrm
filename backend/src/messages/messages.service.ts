@@ -194,6 +194,8 @@ export class MessagesService {
       );
     }
 
+    let replyTargetExternalId: string | null = null;
+
     if (dto.replyToMessageId) {
       const replyTarget = await this.prisma.message.findFirst({
         where: {
@@ -201,12 +203,14 @@ export class MessagesService {
           conversationId: dto.conversationId,
           deletedAt: null,
         },
-        select: { id: true },
+        select: { id: true, externalId: true },
       });
 
       if (!replyTarget) {
         throw new BadRequestException('Mensagem respondida nao encontrada');
       }
+
+      replyTargetExternalId = replyTarget.externalId ?? null;
     }
 
     // Cancelar follow-ups pendentes — operador respondeu
@@ -243,6 +247,9 @@ export class MessagesService {
         type: dto.type ?? 'text',
         content: dto.content ?? null,
         mediaUrl: dto.mediaUrl ?? null,
+        mimeType: dto.mimeType ?? null,
+        fileName: dto.fileName ?? null,
+        fileSize: dto.fileSize ?? null,
         replyToMessageId: dto.replyToMessageId ?? null,
         interactiveType: dto.interactiveType ?? null,
         interactivePayload: dto.interactivePayload
@@ -253,6 +260,7 @@ export class MessagesService {
         status: 'sent',
       },
     });
+    const hydratedMessage = await this.getHydratedMessage(message.id);
 
     // Atualizar lastMessageAt da conversa
     await this.prisma.conversation.update({
@@ -263,7 +271,7 @@ export class MessagesService {
     // Emitir pelo WebSocket imediatamente
     this.eventsGateway.emitToWorkspace(workspaceId, 'new_message', {
       conversationId: dto.conversationId,
-      message,
+      message: hydratedMessage,
       unreadCount: 0,
     });
 
@@ -276,6 +284,7 @@ export class MessagesService {
           conversation.whatsappAccountId,
           conversation.contact.phone,
           dto.content!,
+          replyTargetExternalId,
         );
       } else if (isMediaType) {
         externalId = await this.whatsappService.sendMediaMessage(
@@ -284,6 +293,7 @@ export class MessagesService {
           dto.type as 'image' | 'document' | 'audio' | 'video',
           dto.mediaUrl!,
           dto.content ?? undefined,
+          replyTargetExternalId,
         );
       } else if (isInteractive) {
         externalId = await this.whatsappService.sendInteractiveMessage(
@@ -291,6 +301,7 @@ export class MessagesService {
           conversation.contact.phone,
           dto.interactiveType!,
           dto.interactivePayload!,
+          replyTargetExternalId,
         );
       } else {
         externalId = '';

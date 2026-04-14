@@ -46,6 +46,18 @@ export interface InteractivePayload {
   url?: string | null;
 }
 
+export type MessageKind =
+  | 'text'
+  | 'image'
+  | 'audio'
+  | 'video'
+  | 'document'
+  | 'sticker'
+  | 'location'
+  | 'contacts'
+  | 'link'
+  | 'interactive';
+
 export interface MessageReaction {
   emoji: string;
   senderType: 'user' | 'contact' | 'system';
@@ -77,7 +89,7 @@ export interface MessageMetadata {
 
 export interface MessageReference {
   id: string;
-  type: Message['type'];
+  type: MessageKind;
   content: string | null;
   mediaUrl: string | null;
   mimeType: string | null;
@@ -91,7 +103,7 @@ export interface Message {
   conversationId: string;
   senderType: 'user' | 'contact' | 'system';
   senderId: string | null;
-  type: 'text' | 'image' | 'audio' | 'video' | 'document' | 'sticker' | 'location' | 'contacts' | 'link' | 'interactive';
+  type: MessageKind;
   content: string | null;
   mediaUrl: string | null;
   mimeType: string | null;
