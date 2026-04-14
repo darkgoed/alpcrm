@@ -137,6 +137,10 @@ function formatTimelineDividerDate(dateStr: string) {
   });
 }
 
+function formatTimelineDividerDateTime(dateStr: string) {
+  return `${formatTimelineDividerDate(dateStr)} • ${formatTime(dateStr)}`;
+}
+
 function isSameCalendarDay(left: string, right: string) {
   const leftDate = new Date(left);
   const rightDate = new Date(right);
@@ -969,15 +973,6 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
         messages[index - 1]?.createdAt ?? message.createdAt,
       ),
   }));
-  const historicalConversationTimeline = historicalConversations.map((item, index) => ({
-    item,
-    showDateDivider:
-      index === 0 ||
-      !isSameCalendarDay(
-        item.createdAt,
-        historicalConversations[index - 1]?.createdAt ?? item.createdAt,
-      ),
-  }));
   const lastCustomerInteraction =
     contactDetail?.conversations
       ?.map((item) => item.lastContactMessageAt)
@@ -1520,17 +1515,15 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                 <div className="relative mt-2.5 pl-5">
                   <div className="absolute bottom-0 left-[9px] top-0 w-px bg-border/70" />
                   <div className="space-y-3">
-                    {historicalConversationTimeline.map(({ item, showDateDivider }) => (
+                    {historicalConversations.map((item) => (
                       <div key={item.id} className="relative space-y-3">
-                        {showDateDivider ? (
-                          <div className="flex items-center gap-2">
-                            <div className="h-px flex-1 bg-border/70" />
-                            <span className="rounded-full border border-border/70 bg-background px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                              {formatTimelineDividerDate(item.createdAt)}
-                            </span>
-                            <div className="h-px flex-1 bg-border/70" />
-                          </div>
-                        ) : null}
+                        <div className="flex items-center gap-2">
+                          <div className="h-px flex-1 bg-border/70" />
+                          <span className="rounded-full border border-border/70 bg-background px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                            {formatTimelineDividerDateTime(item.createdAt)}
+                          </span>
+                          <div className="h-px flex-1 bg-border/70" />
+                        </div>
 
                         <div className="relative rounded-lg border border-border/60 bg-background/80 px-2.5 py-2.5">
                           <div className="absolute left-[-19px] top-3.5 size-2.5 rounded-full border border-background bg-primary shadow-sm" />
