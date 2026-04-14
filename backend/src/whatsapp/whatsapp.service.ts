@@ -61,6 +61,15 @@ interface InteractivePayloadInput {
   sections?: InteractiveListSectionInput[];
 }
 
+type NormalizedStructuredMessage = {
+  messageType: MessageType;
+  content: string | null;
+  metadata: Prisma.InputJsonValue | null;
+  metaMediaId: string | null;
+  inboundMime: string | null;
+  fileName: string | null;
+};
+
 @Injectable()
 export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
@@ -228,9 +237,12 @@ export class WhatsappService {
 
     // 4. Salvar mensagem
     const normalizedInteractive = this.normalizeInboundInteractiveMessage(msg);
-    const messageType = this.mapMessageType(msg.type);
+    const normalizedStructured = this.normalizeStructuredMessage(msg);
+    const messageType =
+      normalizedStructured?.messageType ?? this.mapMessageType(msg.type);
     const content =
       normalizedInteractive?.content ??
+      normalizedStructured?.content ??
       msg.text?.body ??
       msg.image?.caption ??
       msg.video?.caption ??
@@ -238,22 +250,16 @@ export class WhatsappService {
 
     // Baixar mídia inbound da Meta, se houver
     const metaMediaId =
-      msg.image?.id ??
-      msg.audio?.id ??
-      msg.video?.id ??
-      msg.document?.id ??
+      normalizedStructured?.metaMediaId ??
       null;
 
     const inboundMime =
-      msg.image?.mime_type ??
-      msg.audio?.mime_type ??
-      msg.video?.mime_type ??
-      msg.document?.mime_type ??
+      normalizedStructured?.inboundMime ??
       null;
 
     let mediaUrl: string | null = null;
     let mimeType: string | null = inboundMime;
-    let fileName: string | null = msg.document?.filename ?? null;
+    let fileName: string | null = normalizedStructured?.fileName ?? null;
     let fileSize: number | null = null;
 
     if (metaMediaId) {
@@ -282,6 +288,7 @@ export class WhatsappService {
         mimeType,
         fileName,
         fileSize,
+        metadata: normalizedStructured?.metadata ?? undefined,
         interactiveType: normalizedInteractive?.interactiveType ?? null,
         interactivePayload: normalizedInteractive?.interactivePayload,
         status: 'delivered',
@@ -696,6 +703,7 @@ export class WhatsappService {
         'image/jpeg': 'jpg',
         'image/png': 'png',
         'image/webp': 'webp',
+        'image/gif': 'gif',
         'audio/ogg': 'ogg',
         'audio/mpeg': 'mp3',
         'audio/mp4': 'm4a',
@@ -740,10 +748,110 @@ export class WhatsappService {
       audio: 'audio',
       video: 'video',
       document: 'document',
+      sticker: 'sticker',
+      location: 'location',
+      contacts: 'contacts',
       interactive: 'interactive',
       button: 'interactive',
     };
     return map[type] ?? 'text';
+  }
+
+  private normalizeStructuredMessage(
+    msg: WhatsappMessage,
+  ): NormalizedStructuredMessage | null {
+    if (msg.type === 'sticker' && msg.sticker) {
+      return {
+        messageType: 'sticker',
+        content: 'Sticker',
+        metadata: {
+          sticker: {
+            animated: msg.sticker.animated ?? false,
+          },
+        } as Prisma.InputJsonValue,
+        metaMediaId: msg.sticker.id,
+        inboundMime: msg.sticker.mime_type,
+        fileName: null,
+      };
+    }
+
+    if (msg.type === 'location' && msg.location) {
+      const title = msg.location.name ?? msg.location.address ?? 'Localizacao compartilhada';
+      return {
+        messageType: 'location',
+        content: title,
+        metadata: {
+          location: {
+            latitude: msg.location.latitude,
+            longitude: msg.location.longitude,
+            name: msg.location.name ?? null,
+            address: msg.location.address ?? null,
+            url: msg.location.url ?? null,
+          },
+        } as Prisma.InputJsonValue,
+        metaMediaId: null,
+        inboundMime: null,
+        fileName: null,
+      };
+    }
+
+    if (msg.type === 'contacts' && Array.isArray(msg.contacts)) {
+      const contacts = msg.contacts.map((contact) => {
+        const phones = (contact.phones ?? [])
+          .map((phone) => phone.phone ?? phone.wa_id ?? null)
+          .filter((phone): phone is string => Boolean(phone));
+        const emails = (contact.emails ?? [])
+          .map((email) => email.email ?? null)
+          .filter((email): email is string => Boolean(email));
+        const formattedName =
+          contact.name?.formatted_name ??
+          [contact.name?.first_name, contact.name?.last_name]
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+
+        return {
+          name: formattedName || phones[0] || 'Contato compartilhado',
+          formattedName: formattedName || null,
+          phones,
+          emails,
+          organization: contact.org?.company ?? null,
+        };
+      });
+
+      return {
+        messageType: 'contacts',
+        content:
+          contacts.length === 1
+            ? contacts[0].name
+            : `${contacts.length} contatos compartilhados`,
+        metadata: {
+          contacts,
+        } as Prisma.InputJsonValue,
+        metaMediaId: null,
+        inboundMime: null,
+        fileName: null,
+      };
+    }
+
+    return {
+      messageType: this.mapMessageType(msg.type),
+      content: null,
+      metadata: null,
+      metaMediaId:
+        msg.image?.id ??
+        msg.audio?.id ??
+        msg.video?.id ??
+        msg.document?.id ??
+        null,
+      inboundMime:
+        msg.image?.mime_type ??
+        msg.audio?.mime_type ??
+        msg.video?.mime_type ??
+        msg.document?.mime_type ??
+        null,
+      fileName: msg.document?.filename ?? null,
+    };
   }
 
   private async extractMessageId(response: Response): Promise<string> {

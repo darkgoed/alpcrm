@@ -43,6 +43,8 @@ export interface WhatsappMessage {
     | 'video'
     | 'document'
     | 'sticker'
+    | 'location'
+    | 'contacts'
     | 'interactive'
     | 'button';
   text?: { body: string };
@@ -50,6 +52,24 @@ export interface WhatsappMessage {
   audio?: { id: string; mime_type: string };
   video?: { id: string; mime_type: string; caption?: string };
   document?: { id: string; filename: string; mime_type: string };
+  sticker?: { id: string; mime_type: string; animated?: boolean };
+  location?: {
+    latitude: number;
+    longitude: number;
+    name?: string;
+    address?: string;
+    url?: string;
+  };
+  contacts?: Array<{
+    name?: {
+      formatted_name?: string;
+      first_name?: string;
+      last_name?: string;
+    };
+    org?: { company?: string };
+    phones?: Array<{ phone?: string; wa_id?: string }>;
+    emails?: Array<{ email?: string }>;
+  }>;
   button?: { payload?: string; text: string };
   interactive?: {
     type: 'button_reply' | 'list_reply' | 'nfm_reply';

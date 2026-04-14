@@ -49,6 +49,7 @@ function getInitials(value: string) {
 function getMessagePreview(conversation: Conversation) {
   const lastMessage = conversation.messages[0];
   if (!lastMessage) return 'Sem mensagens';
+  if (lastMessage.deletedAt) return 'Mensagem excluida';
   if (lastMessage.type === 'interactive') {
     const labelByType: Record<string, string> = {
       reply_buttons: 'Interativo: botões',
@@ -63,6 +64,13 @@ function getMessagePreview(conversation: Conversation) {
       'Mensagem interativa'
     );
   }
+  if (lastMessage.type === 'image') return 'Imagem compartilhada';
+  if (lastMessage.type === 'sticker') return 'Sticker compartilhado';
+  if (lastMessage.type === 'video') return 'Video compartilhado';
+  if (lastMessage.type === 'audio') return 'Audio compartilhado';
+  if (lastMessage.type === 'document') return 'Documento compartilhado';
+  if (lastMessage.type === 'location') return 'Localizacao compartilhada';
+  if (lastMessage.type === 'contacts') return 'Contato compartilhado';
   return lastMessage.content ?? 'Mídia compartilhada';
 }
 

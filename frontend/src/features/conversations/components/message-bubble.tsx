@@ -1,9 +1,36 @@
 'use client';
 
-import { Check, CheckCheck, Download, ExternalLink, List, Lock, MousePointerSquareDashed, Paperclip } from 'lucide-react';
-import type { Message } from '@/types';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Check,
+  CheckCheck,
+  ChevronDown,
+  Download,
+  ExternalLink,
+  FileText,
+  List,
+  Lock,
+  MapPin,
+  MousePointerSquareDashed,
+  Paperclip,
+  Reply,
+  Smile,
+  Trash2,
+  UserRound,
+} from 'lucide-react';
+import type { Message, MessageReference } from '@/types';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { formatTime } from '@/lib/dateUtils';
+
+const ACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '🙏', '🔥'];
 
 function formatBytes(bytes: number | null) {
   if (!bytes) return '';
@@ -12,31 +39,228 @@ function formatBytes(bytes: number | null) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function isPreviewableDocument(mimeType: string | null) {
+  return mimeType === 'application/pdf' || mimeType?.startsWith('text/') === true;
+}
+
+function getReferenceLabel(message: MessageReference | null) {
+  if (!message) return 'Mensagem original';
+  if (message.deletedAt) return 'Mensagem excluida';
+  if (message.type === 'image') return message.content ?? 'Imagem';
+  if (message.type === 'sticker') return 'Sticker';
+  if (message.type === 'video') return message.content ?? 'Video';
+  if (message.type === 'audio') return 'Audio';
+  if (message.type === 'document') return message.fileName ?? 'Documento';
+  if (message.type === 'location') return message.metadata?.location?.name ?? message.metadata?.location?.address ?? 'Localizacao';
+  if (message.type === 'contacts') return message.content ?? 'Contato compartilhado';
+  return message.content ?? 'Mensagem';
+}
+
+function buildMapLink(message: Message) {
+  const location = message.metadata?.location;
+  if (!location) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`;
+}
+
+function MessageReplyPreview({ message }: { message: MessageReference }) {
+  return (
+    <div className="mb-2 rounded-xl border border-current/15 bg-black/5 px-2.5 py-2 text-xs">
+      <div className="mb-1 inline-flex items-center gap-1.5 font-medium opacity-75">
+        <Reply className="size-3.5" />
+        Respondendo
+      </div>
+      <p className="line-clamp-2 leading-4">{getReferenceLabel(message)}</p>
+    </div>
+  );
+}
+
+function MessageActions({
+  message,
+  onReply,
+  onDelete,
+  onReact,
+}: {
+  message: Message;
+  onReply?: (message: Message) => void;
+  onDelete?: (message: Message) => void;
+  onReact?: (message: Message, emoji: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleOutsideClick(event: MouseEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [open]);
+
+  if (!onReply && !onDelete && !onReact) {
+    return null;
+  }
+
+  return (
+    <div ref={containerRef} className="absolute right-1.5 top-1.5 z-20">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="rounded-full bg-black/10 p-1 opacity-0 transition group-hover:opacity-100 hover:bg-black/20"
+        aria-label="Acoes da mensagem"
+      >
+        <ChevronDown className="size-3.5" />
+      </button>
+      {open ? (
+        <div className="absolute right-0 mt-1 w-52 rounded-xl border border-border/70 bg-background p-2 text-foreground shadow-xl">
+          <div className="mb-2 flex flex-wrap gap-1">
+            {ACTION_EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                className="rounded-lg border border-border/70 px-2 py-1 text-sm hover:bg-accent"
+                onClick={() => {
+                  onReact?.(message, emoji);
+                  setOpen(false);
+                }}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent"
+            onClick={() => {
+              onReply?.(message);
+              setOpen(false);
+            }}
+          >
+            <Reply className="size-4" />
+            Responder
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-red-600 hover:bg-red-50"
+            onClick={() => {
+              onDelete?.(message);
+              setOpen(false);
+            }}
+          >
+            <Trash2 className="size-4" />
+            Excluir
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ReactionRow({ message }: { message: Message }) {
+  const grouped = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const reaction of message.reactions ?? []) {
+      counts.set(reaction.emoji, (counts.get(reaction.emoji) ?? 0) + 1);
+    }
+    return Array.from(counts.entries());
+  }, [message.reactions]);
+
+  if (grouped.length === 0) return null;
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {grouped.map(([emoji, count]) => (
+        <span
+          key={emoji}
+          className="inline-flex items-center gap-1 rounded-full border border-current/15 bg-black/5 px-2 py-0.5 text-[11px]"
+        >
+          <span>{emoji}</span>
+          <span>{count}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function MediaPreviewDialog({
+  open,
+  onOpenChange,
+  message,
+}: {
+  open: boolean;
+  onOpenChange: (value: boolean) => void;
+  message: Message;
+}) {
+  const label = message.fileName ?? message.content ?? 'arquivo';
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>{label}</DialogTitle>
+        </DialogHeader>
+        <div className="max-h-[75vh] overflow-hidden rounded-xl border border-border/70 bg-muted/20">
+          {message.type === 'image' || message.type === 'sticker' ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={message.mediaUrl ?? ''}
+              alt={label}
+              className="max-h-[70vh] w-full object-contain"
+            />
+          ) : message.type === 'document' && isPreviewableDocument(message.mimeType) ? (
+            <iframe
+              src={message.mediaUrl ?? ''}
+              title={label}
+              className="h-[70vh] w-full"
+            />
+          ) : null}
+        </div>
+        <DialogFooter>
+          <Button asChild variant="outline">
+            <a href={message.mediaUrl ?? '#'} download={message.fileName ?? true}>
+              <Download className="size-4" />
+              Baixar
+            </a>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function MediaContent({ message }: { message: Message }) {
   const { type, mediaUrl, content, mimeType, fileName, fileSize } = message;
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   if (!mediaUrl) {
     return (
       <span className="inline-flex items-center gap-2 text-sm italic opacity-80">
         <Paperclip className="size-4" />
-        Mídia não disponível
+        Midia nao disponivel
       </span>
     );
   }
 
-  if (type === 'image') {
+  if (type === 'image' || type === 'sticker') {
     return (
-      <div className="space-y-1">
-        <a href={mediaUrl} target="_blank" rel="noopener noreferrer">
+      <>
+        <button type="button" className="space-y-1 text-left" onClick={() => setPreviewOpen(true)}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={mediaUrl}
-            alt={fileName ?? 'imagem'}
-            className="max-w-[220px] rounded-lg object-cover"
+            alt={fileName ?? (type === 'sticker' ? 'sticker' : 'imagem')}
+            className={cn(
+              'rounded-lg object-contain',
+              type === 'sticker' ? 'max-h-[180px] max-w-[180px]' : 'max-w-[220px]',
+            )}
           />
-        </a>
-        {content && <p className="text-sm leading-5">{content}</p>}
-      </div>
+          {content ? <p className="text-sm leading-5">{content}</p> : null}
+        </button>
+        <MediaPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} message={message} />
+      </>
     );
   }
 
@@ -54,12 +278,34 @@ function MediaContent({ message }: { message: Message }) {
         <video controls className="max-w-[220px] rounded-lg">
           <source src={mediaUrl} type={mimeType ?? 'video/mp4'} />
         </video>
-        {content && <p className="text-sm leading-5">{content}</p>}
+        {content ? <p className="text-sm leading-5">{content}</p> : null}
       </div>
     );
   }
 
-  // document / fallback
+  if (type === 'document' && isPreviewableDocument(mimeType)) {
+    return (
+      <>
+        <button type="button" className="w-full space-y-2 text-left" onClick={() => setPreviewOpen(true)}>
+          <div className="overflow-hidden rounded-lg border border-current/15 bg-white">
+            <iframe
+              src={mediaUrl}
+              title={fileName ?? 'documento'}
+              className="h-56 w-full pointer-events-none"
+            />
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <FileText className="size-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">{fileName ?? 'documento'}</span>
+            {fileSize ? <span className="text-xs opacity-70">{formatBytes(fileSize)}</span> : null}
+          </div>
+          {content ? <p className="text-sm leading-5">{content}</p> : null}
+        </button>
+        <MediaPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} message={message} />
+      </>
+    );
+  }
+
   return (
     <a
       href={mediaUrl}
@@ -76,15 +322,13 @@ function MediaContent({ message }: { message: Message }) {
   );
 }
 
-// ─── Highlight @mentions in note content ──────────────────────────────────────
-
 function NoteContent({ content }: { content: string }) {
   const parts = content.split(/(@\S+)/g);
   return (
     <p className="whitespace-pre-wrap leading-5">
       {parts.map((part, i) =>
         part.startsWith('@') ? (
-          <span key={i} className="font-semibold text-amber-700 bg-amber-100 rounded px-0.5">
+          <span key={i} className="rounded bg-amber-100 px-0.5 font-semibold text-amber-700">
             {part}
           </span>
         ) : (
@@ -100,7 +344,7 @@ function InteractiveContent({ message }: { message: Message }) {
   const kind = message.interactiveType;
 
   if (!payload || !kind) {
-      return <p className="whitespace-pre-wrap leading-5">{message.content}</p>;
+    return <p className="whitespace-pre-wrap leading-5">{message.content}</p>;
   }
 
   if (kind === 'reply_buttons') {
@@ -184,11 +428,83 @@ function InteractiveContent({ message }: { message: Message }) {
   return <p className="whitespace-pre-wrap leading-5">{message.content}</p>;
 }
 
-export function ConversationMessageBubble({ message }: { message: Message }) {
+function StructuredContent({ message }: { message: Message }) {
+  if (message.type === 'location') {
+    const location = message.metadata?.location;
+    const mapLink = buildMapLink(message);
+    return (
+      <div className="space-y-2">
+        <div className="inline-flex items-center gap-2 rounded-lg border border-current/15 px-2.5 py-2">
+          <MapPin className="size-4" />
+          <div className="min-w-0">
+            <p className="font-medium">{location?.name ?? 'Localizacao compartilhada'}</p>
+            {location?.address ? <p className="text-xs opacity-70">{location.address}</p> : null}
+          </div>
+        </div>
+        {location ? (
+          <p className="text-xs opacity-75">
+            {location.latitude}, {location.longitude}
+          </p>
+        ) : null}
+        {mapLink ? (
+          <a
+            href={mapLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-current/15 px-2.5 py-1.5 text-sm"
+          >
+            <ExternalLink className="size-4" />
+            Abrir no mapa
+          </a>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (message.type === 'contacts') {
+    const contacts = message.metadata?.contacts ?? [];
+    return (
+      <div className="space-y-2">
+        {contacts.map((contact, index) => (
+          <div key={`${contact.name}-${index}`} className="rounded-xl border border-current/15 px-3 py-2">
+            <div className="mb-1 flex items-center gap-2">
+              <UserRound className="size-4" />
+              <span className="font-medium">{contact.formattedName ?? contact.name}</span>
+            </div>
+            {contact.organization ? <p className="text-xs opacity-75">{contact.organization}</p> : null}
+            {contact.phones.map((phone) => (
+              <p key={phone} className="text-sm">{phone}</p>
+            ))}
+            {contact.emails.map((email) => (
+              <p key={email} className="text-xs opacity-75">{email}</p>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (message.type === 'interactive') {
+    return <InteractiveContent message={message} />;
+  }
+
+  return message.content ? <p className="whitespace-pre-wrap leading-5">{message.content}</p> : null;
+}
+
+export function ConversationMessageBubble({
+  message,
+  onReply,
+  onDelete,
+  onReact,
+}: {
+  message: Message;
+  onReply?: (message: Message) => void;
+  onDelete?: (message: Message) => void;
+  onReact?: (message: Message, emoji: string) => void;
+}) {
   const isOutgoing = message.senderType === 'user';
   const isSystem = message.senderType === 'system';
 
-  // Nota interna de operador: system com senderId preenchido
   if (isSystem && message.senderId) {
     return (
       <div className="flex justify-center py-1">
@@ -204,7 +520,6 @@ export function ConversationMessageBubble({ message }: { message: Message }) {
     );
   }
 
-  // Evento de sistema (bot, auto-close, etc.)
   if (isSystem) {
     return (
       <div className="flex justify-center py-2">
@@ -215,30 +530,42 @@ export function ConversationMessageBubble({ message }: { message: Message }) {
     );
   }
 
+  const showStructured = ['location', 'contacts', 'interactive'].includes(message.type);
+
   return (
     <div className={cn('flex w-full', isOutgoing ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
-          'max-w-[82%] rounded-2xl px-3 py-2 text-[13px] sm:max-w-[68%]',
+          'group relative max-w-[82%] rounded-2xl px-3 py-2 text-[13px] sm:max-w-[68%]',
           isOutgoing
             ? 'rounded-br-sm bg-primary text-primary-foreground'
             : 'rounded-bl-sm border border-border/60 bg-white/95 text-foreground',
         )}
       >
-        {message.type === 'text' || !message.mediaUrl ? (
-          message.type === 'interactive' ? (
-            <InteractiveContent message={message} />
-          ) : message.content ? (
+        <MessageActions
+          message={message}
+          onReply={message.deletedAt ? undefined : onReply}
+          onDelete={message.deletedAt ? undefined : onDelete}
+          onReact={message.deletedAt ? undefined : onReact}
+        />
+        {message.replyToMessage ? <MessageReplyPreview message={message.replyToMessage} /> : null}
+        {message.deletedAt ? (
+          <p className="italic opacity-70">Mensagem excluida</p>
+        ) : message.type === 'text' || (!message.mediaUrl && !showStructured) ? (
+          message.content ? (
             <p className="whitespace-pre-wrap leading-5">{message.content}</p>
           ) : (
             <span className="inline-flex items-center gap-2 text-sm italic opacity-80">
               <Paperclip className="size-4" />
-              Mídia enviada
+              Midia enviada
             </span>
           )
+        ) : showStructured ? (
+          <StructuredContent message={message} />
         ) : (
           <MediaContent message={message} />
         )}
+        <ReactionRow message={message} />
         <div className={cn('mt-1.5 flex items-center justify-end gap-1 text-[10px]', isOutgoing ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
           <span>{formatTime(message.createdAt)}</span>
           {isOutgoing ? (

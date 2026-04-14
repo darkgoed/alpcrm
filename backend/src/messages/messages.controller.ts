@@ -2,7 +2,9 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Body,
+  Param,
   Query,
   UseGuards,
   BadRequestException,
@@ -95,6 +97,37 @@ export class MessagesController {
     );
   }
 
+  @Post(':id/reactions')
+  @RequirePermissions('respond_conversation')
+  react(
+    @Param('id') id: string,
+    @Body('emoji') emoji: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    if (!emoji?.trim()) {
+      throw new BadRequestException('Emoji obrigatorio');
+    }
+
+    return this.messagesService.react(
+      id,
+      emoji,
+      user.workspaceId,
+      user.userId,
+      user.permissions,
+    );
+  }
+
+  @Delete(':id')
+  @RequirePermissions('respond_conversation')
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.messagesService.remove(
+      id,
+      user.workspaceId,
+      user.userId,
+      user.permissions,
+    );
+  }
+
   @Post('media')
   @RequirePermissions('respond_conversation')
   @UseInterceptors(
@@ -116,6 +149,7 @@ export class MessagesController {
     @UploadedFile() file: Express.Multer.File,
     @Body('conversationId') conversationId: string,
     @Body('caption') caption: string | undefined,
+    @Body('replyToMessageId') replyToMessageId: string | undefined,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!file) throw new BadRequestException('Arquivo obrigatório');
@@ -134,6 +168,7 @@ export class MessagesController {
         type: mediaType,
         mediaUrl,
         content: caption ?? undefined,
+        replyToMessageId: replyToMessageId ?? undefined,
       },
       user.workspaceId,
       user.userId,

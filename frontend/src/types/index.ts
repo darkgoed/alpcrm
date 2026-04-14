@@ -46,21 +46,67 @@ export interface InteractivePayload {
   url?: string | null;
 }
 
+export interface MessageReaction {
+  emoji: string;
+  senderType: 'user' | 'contact' | 'system';
+  senderId: string | null;
+  createdAt: string;
+}
+
+export interface MessageLocationMetadata {
+  latitude: number;
+  longitude: number;
+  name?: string | null;
+  address?: string | null;
+  url?: string | null;
+}
+
+export interface MessageSharedContact {
+  name: string;
+  formattedName?: string | null;
+  phones: string[];
+  emails: string[];
+  organization?: string | null;
+}
+
+export interface MessageMetadata {
+  location?: MessageLocationMetadata | null;
+  contacts?: MessageSharedContact[] | null;
+  sticker?: { animated?: boolean | null } | null;
+}
+
+export interface MessageReference {
+  id: string;
+  type: Message['type'];
+  content: string | null;
+  mediaUrl: string | null;
+  mimeType: string | null;
+  fileName: string | null;
+  metadata: MessageMetadata | null;
+  deletedAt: string | null;
+}
+
 export interface Message {
   id: string;
   conversationId: string;
   senderType: 'user' | 'contact' | 'system';
   senderId: string | null;
-  type: 'text' | 'image' | 'audio' | 'video' | 'document' | 'link' | 'interactive';
+  type: 'text' | 'image' | 'audio' | 'video' | 'document' | 'sticker' | 'location' | 'contacts' | 'link' | 'interactive';
   content: string | null;
   mediaUrl: string | null;
   mimeType: string | null;
   fileName: string | null;
   fileSize: number | null;
+  metadata: MessageMetadata | null;
+  reactions: MessageReaction[] | null;
+  replyToMessageId: string | null;
+  replyToMessage: MessageReference | null;
   interactiveType: string | null;
   interactivePayload: InteractivePayload | null;
   status: 'sent' | 'delivered' | 'read' | 'failed';
   externalId: string | null;
+  deletedAt: string | null;
+  deletedById: string | null;
   createdAt: string;
 }
 

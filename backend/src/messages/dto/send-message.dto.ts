@@ -23,6 +23,10 @@ export class SendMessageDto {
   @IsOptional()
   mediaUrl?: string;
 
+  @IsUUID()
+  @IsOptional()
+  replyToMessageId?: string;
+
   @IsString()
   @IsOptional()
   interactiveType?: string;

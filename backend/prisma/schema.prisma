@@ -276,6 +276,9 @@ enum MessageType {
   audio
   video
   document
+  sticker
+  location
+  contacts
   link
   interactive
 }
@@ -298,13 +301,20 @@ model Message {
   mimeType       String?           @map("mime_type")
   fileName       String?           @map("file_name")
   fileSize       Int?              @map("file_size")
-  interactiveType    String?           @map("interactive_type")
-  interactivePayload Json?             @map("interactive_payload")
+  metadata       Json?             @map("metadata")
+  reactions      Json?             @map("reactions")
+  replyToMessageId String?         @map("reply_to_message_id")
+  interactiveType    String?       @map("interactive_type")
+  interactivePayload Json?         @map("interactive_payload")
   status         MessageStatus     @default(sent)
   externalId     String?           @map("external_id") // ID na API do WhatsApp
+  deletedAt      DateTime?         @map("deleted_at")
+  deletedById    String?           @map("deleted_by_id")
   createdAt      DateTime          @default(now()) @map("created_at")
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  replyToMessage Message? @relation("MessageReplies", fields: [replyToMessageId], references: [id], onDelete: SetNull)
+  replies        Message[] @relation("MessageReplies")
 
   @@map("messages")
 }

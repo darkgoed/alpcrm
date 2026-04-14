@@ -16,6 +16,13 @@ import { FlowExecutorService } from '../automation/flow-executor.service';
 import { SchedulerService } from '../queues/scheduler.service';
 import { SendMessageDto } from './dto/send-message.dto';
 
+type MessageReactionRecord = {
+  emoji: string;
+  senderType: 'user' | 'contact' | 'system';
+  senderId: string | null;
+  createdAt: string;
+};
+
 @Injectable()
 export class MessagesService {
   private readonly logger = new Logger(MessagesService.name);
@@ -53,6 +60,20 @@ export class MessagesService {
     const normalizedTake = Math.min(Math.max(take, 1), 100);
     const messages = await this.prisma.message.findMany({
       where: { conversationId },
+      include: {
+        replyToMessage: {
+          select: {
+            id: true,
+            type: true,
+            content: true,
+            mediaUrl: true,
+            mimeType: true,
+            fileName: true,
+            metadata: true,
+            deletedAt: true,
+          },
+        },
+      },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: normalizedTake + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -173,6 +194,21 @@ export class MessagesService {
       );
     }
 
+    if (dto.replyToMessageId) {
+      const replyTarget = await this.prisma.message.findFirst({
+        where: {
+          id: dto.replyToMessageId,
+          conversationId: dto.conversationId,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+
+      if (!replyTarget) {
+        throw new BadRequestException('Mensagem respondida nao encontrada');
+      }
+    }
+
     // Cancelar follow-ups pendentes — operador respondeu
     this.scheduler
       .cancelFollowUps(dto.conversationId, workspaceId)
@@ -207,6 +243,7 @@ export class MessagesService {
         type: dto.type ?? 'text',
         content: dto.content ?? null,
         mediaUrl: dto.mediaUrl ?? null,
+        replyToMessageId: dto.replyToMessageId ?? null,
         interactiveType: dto.interactiveType ?? null,
         interactivePayload: dto.interactivePayload
           ? (JSON.parse(
@@ -273,6 +310,112 @@ export class MessagesService {
       });
     }
 
+    return this.getHydratedMessage(message.id);
+  }
+
+  async react(
+    messageId: string,
+    emoji: string,
+    workspaceId: string,
+    userId: string,
+    permissions: string[] = [],
+  ) {
+    this.assertPermission(['respond_conversation'], permissions);
+    const scopedMessage = await this.getScopedMessage(
+      messageId,
+      workspaceId,
+      userId,
+      permissions,
+    );
+
+    const normalizedEmoji = emoji.trim();
+    if (!normalizedEmoji) {
+      throw new BadRequestException('Emoji obrigatorio');
+    }
+
+    const existing = this.parseReactions(scopedMessage.reactions);
+    const withoutCurrentSender = existing.filter(
+      (reaction) =>
+        !(
+          reaction.senderType === 'user' &&
+          reaction.senderId === userId
+        ),
+    );
+    const ownReaction = existing.find(
+      (reaction) =>
+        reaction.senderType === 'user' && reaction.senderId === userId,
+    );
+
+    const nextReactions =
+      ownReaction?.emoji === normalizedEmoji
+        ? withoutCurrentSender
+        : [
+            ...withoutCurrentSender,
+            {
+              emoji: normalizedEmoji,
+              senderType: 'user',
+              senderId: userId,
+              createdAt: new Date().toISOString(),
+            },
+          ];
+
+    await this.prisma.message.update({
+      where: { id: messageId },
+      data: {
+        reactions: nextReactions.length
+          ? (JSON.parse(
+              JSON.stringify(nextReactions),
+            ) as Prisma.InputJsonValue)
+          : Prisma.DbNull,
+      },
+    });
+
+    const message = await this.getHydratedMessage(messageId);
+    this.eventsGateway.emitToWorkspace(workspaceId, 'message_updated', {
+      conversationId: scopedMessage.conversationId,
+      message,
+    });
+    return message;
+  }
+
+  async remove(
+    messageId: string,
+    workspaceId: string,
+    userId: string,
+    permissions: string[] = [],
+  ) {
+    this.assertPermission(['respond_conversation'], permissions);
+    const scopedMessage = await this.getScopedMessage(
+      messageId,
+      workspaceId,
+      userId,
+      permissions,
+    );
+
+    await this.prisma.message.update({
+      where: { id: messageId },
+      data: {
+        type: 'text',
+        content: null,
+        mediaUrl: null,
+        mimeType: null,
+        fileName: null,
+        fileSize: null,
+        metadata: Prisma.DbNull,
+        reactions: Prisma.DbNull,
+        replyToMessageId: null,
+        interactiveType: null,
+        interactivePayload: Prisma.DbNull,
+        deletedAt: new Date(),
+        deletedById: userId,
+      },
+    });
+
+    const message = await this.getHydratedMessage(messageId);
+    this.eventsGateway.emitToWorkspace(workspaceId, 'message_updated', {
+      conversationId: scopedMessage.conversationId,
+      message,
+    });
     return message;
   }
 
@@ -284,5 +427,94 @@ export class MessagesService {
     if (!hasAll) {
       throw new ForbiddenException('Permissão insuficiente');
     }
+  }
+
+  private async getScopedMessage(
+    messageId: string,
+    workspaceId: string,
+    userId: string,
+    permissions: string[],
+  ) {
+    const message = await this.prisma.message.findFirst({
+      where: {
+        id: messageId,
+        conversation: { workspaceId },
+      },
+      include: {
+        conversation: {
+          select: {
+            id: true,
+            assignedUserId: true,
+          },
+        },
+      },
+    });
+
+    if (!message) {
+      throw new NotFoundException('Mensagem nao encontrada');
+    }
+
+    const canViewAll = permissions.includes('view_all_conversations');
+    if (!canViewAll && message.conversation.assignedUserId !== userId) {
+      throw new ForbiddenException('Sem acesso a essa mensagem');
+    }
+
+    return {
+      ...message,
+      conversationId: message.conversation.id,
+    };
+  }
+
+  private async getHydratedMessage(messageId: string) {
+    return this.prisma.message.findUniqueOrThrow({
+      where: { id: messageId },
+      include: {
+        replyToMessage: {
+          select: {
+            id: true,
+            type: true,
+            content: true,
+            mediaUrl: true,
+            mimeType: true,
+            fileName: true,
+            metadata: true,
+            deletedAt: true,
+          },
+        },
+      },
+    });
+  }
+
+  private parseReactions(value: Prisma.JsonValue | null): MessageReactionRecord[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value.flatMap((entry) => {
+      if (typeof entry !== 'object' || entry === null) {
+        return [];
+      }
+
+      const record = entry as Record<string, unknown>;
+      if (typeof record.emoji !== 'string') {
+        return [];
+      }
+
+      return [
+        {
+          emoji: record.emoji,
+          senderType:
+            record.senderType === 'contact' || record.senderType === 'system'
+              ? record.senderType
+              : 'user',
+          senderId:
+            typeof record.senderId === 'string' ? record.senderId : null,
+          createdAt:
+            typeof record.createdAt === 'string'
+              ? record.createdAt
+              : new Date().toISOString(),
+        },
+      ];
+    });
   }
 }

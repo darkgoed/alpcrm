@@ -60,6 +60,7 @@ export interface SendMessageInput {
   type?: Message['type'];
   content?: string;
   mediaUrl?: string;
+  replyToMessageId?: string;
   interactiveType?: string;
   interactivePayload?: Record<string, any>;
 }
@@ -67,6 +68,16 @@ export interface SendMessageInput {
 export async function sendMessage(input: SendMessageInput) {
   const { data } = await api.post('/messages', input);
   return data;
+}
+
+export async function reactToMessage(messageId: string, emoji: string) {
+  const { data } = await api.post(`/messages/${messageId}/reactions`, { emoji });
+  return data as Message;
+}
+
+export async function deleteMessage(messageId: string) {
+  const { data } = await api.delete(`/messages/${messageId}`);
+  return data as Message;
 }
 
 export async function assignConversation(id: string, userId?: string, teamId?: string) {

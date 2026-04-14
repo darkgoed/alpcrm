@@ -18,8 +18,10 @@ import {
 import {
   assignConversation,
   closeConversation,
+  deleteMessage,
   getConversationMessages,
   markConversationAsRead,
+  reactToMessage,
   reopenConversation,
   sendMessage,
   type SendMessageInput,
@@ -423,6 +425,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [contactDetail, setContactDetail] = useState<ContactDetail | null>(null);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
 
   // Quick replies
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -450,7 +453,8 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       candidate.type === incoming.type &&
       candidate.content === incoming.content &&
       candidate.mediaUrl === incoming.mediaUrl &&
-      candidate.interactiveType === incoming.interactiveType
+      candidate.interactiveType === incoming.interactiveType &&
+      candidate.replyToMessageId === incoming.replyToMessageId
     );
   }
 
@@ -528,6 +532,10 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
     };
   }, [id]);
 
+  useEffect(() => {
+    setReplyingTo(null);
+  }, [id]);
+
   function getMessagesViewport() {
     return scrollAreaRef.current?.querySelector(
       '[data-radix-scroll-area-viewport]',
@@ -589,6 +597,13 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       setMessages((current) =>
         current.map((item) => (item.id === messageId ? { ...item, status: status as Message['status'] } : item)),
       );
+    },
+    onMessageUpdated: ({ conversationId, message }) => {
+      if (conversationId !== id) return;
+      setMessages((current) => mergeMessageList(current, message));
+      if (replyingTo?.id === message.id && message.deletedAt) {
+        setReplyingTo(null);
+      }
     },
     onConversationPresence: ({ conversationId, operators }) => {
       if (conversationId !== id) return;
@@ -658,6 +673,9 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('conversationId', id);
+    if (replyingTo?.id) {
+      formData.append('replyToMessageId', replyingTo.id);
+    }
     sendInFlightRef.current = true;
     setSending(true);
     setSendError(null);
@@ -668,6 +686,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       const persisted = res.data as Message;
       pendingScrollModeRef.current = 'bottom';
       setMessages((current) => mergeMessageList(current, persisted));
+      setReplyingTo(null);
     } catch (err: any) {
       setSendError(
         err?.response?.data?.message ?? 'Nao foi possivel enviar o arquivo.',
@@ -730,10 +749,27 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       mimeType: null,
       fileName: null,
       fileSize: null,
+      metadata: null,
+      reactions: null,
+      replyToMessageId: replyingTo?.id ?? null,
+      replyToMessage: replyingTo
+        ? {
+            id: replyingTo.id,
+            type: replyingTo.type,
+            content: replyingTo.content,
+            mediaUrl: replyingTo.mediaUrl,
+            mimeType: replyingTo.mimeType,
+            fileName: replyingTo.fileName,
+            metadata: replyingTo.metadata,
+            deletedAt: replyingTo.deletedAt,
+          }
+        : null,
       interactiveType: null,
       interactivePayload: null,
       status: 'sent',
       externalId: null,
+      deletedAt: null,
+      deletedById: null,
       createdAt: new Date().toISOString(),
     };
 
@@ -745,8 +781,10 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
         conversationId: id,
         type: 'text',
         content,
+        replyToMessageId: replyingTo?.id ?? undefined,
       })) as Message;
       setMessages((current) => mergeMessageList(current, persisted));
+      setReplyingTo(null);
       void mutate();
     } catch (err: any) {
       setMessages((current) => current.map((item) => (item.id === optimisticMessage.id ? { ...item, status: 'failed' } : item)));
@@ -783,10 +821,27 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       mimeType: null,
       fileName: null,
       fileSize: null,
+      metadata: null,
+      reactions: null,
+      replyToMessageId: replyingTo?.id ?? null,
+      replyToMessage: replyingTo
+        ? {
+            id: replyingTo.id,
+            type: replyingTo.type,
+            content: replyingTo.content,
+            mediaUrl: replyingTo.mediaUrl,
+            mimeType: replyingTo.mimeType,
+            fileName: replyingTo.fileName,
+            metadata: replyingTo.metadata,
+            deletedAt: replyingTo.deletedAt,
+          }
+        : null,
       interactiveType: input.interactiveType,
       interactivePayload: input.interactivePayload,
       status: 'sent',
       externalId: null,
+      deletedAt: null,
+      deletedById: null,
       createdAt: new Date().toISOString(),
     };
 
@@ -798,11 +853,13 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
         conversationId: id,
         type: 'interactive',
         content: input.content,
+        replyToMessageId: replyingTo?.id ?? undefined,
         interactiveType: input.interactiveType,
         interactivePayload: input.interactivePayload,
       };
       const persisted = (await sendMessage(payload)) as Message;
       setMessages((current) => mergeMessageList(current, persisted));
+      setReplyingTo(null);
       void mutate();
     } catch (err: any) {
       setMessages((current) =>
@@ -832,6 +889,29 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
   async function handleReopen() {
     await reopenConversation(id);
     await mutate();
+  }
+
+  async function handleReply(message: Message) {
+    setReplyingTo(message);
+    setMode('message');
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  }
+
+  async function handleReact(message: Message, emoji: string) {
+    const updated = await reactToMessage(message.id, emoji);
+    setMessages((current) => mergeMessageList(current, updated));
+  }
+
+  async function handleDeleteMessage(message: Message) {
+    if (!window.confirm('Excluir esta mensagem no CRM?')) {
+      return;
+    }
+
+    const updated = await deleteMessage(message.id);
+    setMessages((current) => mergeMessageList(current, updated));
+    if (replyingTo?.id === message.id) {
+      setReplyingTo(null);
+    }
   }
 
   if (isLoading || !conversation) {
