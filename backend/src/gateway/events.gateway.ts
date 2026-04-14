@@ -25,8 +25,12 @@ type EventsSocket = Socket<
   SocketData
 >;
 
+const wsOrigin = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+  : '*';
+
 @WebSocketGateway({
-  cors: { origin: '*' },
+  cors: { origin: wsOrigin, credentials: true },
   namespace: '/ws',
 })
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {

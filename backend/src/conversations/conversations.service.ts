@@ -143,6 +143,21 @@ export class ConversationsService {
     });
   }
 
+  async remove(id: string, workspaceId: string, permissions: string[] = []) {
+    this.assertPermission(['close_conversation'], permissions);
+    await this.assertExists(id, workspaceId);
+
+    await this.prisma.conversation.delete({
+      where: { id },
+    });
+
+    this.eventsGateway.emitToWorkspace(workspaceId, 'conversation_deleted', {
+      conversationId: id,
+    });
+
+    return { success: true };
+  }
+
   async markAsRead(
     id: string,
     workspaceId: string,

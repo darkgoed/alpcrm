@@ -95,6 +95,11 @@ export async function reopenConversation(id: string) {
   return data;
 }
 
+export async function deleteConversation(id: string) {
+  const { data } = await api.delete(`/conversations/${id}`);
+  return data as { success: boolean };
+}
+
 export async function markConversationAsRead(id: string) {
   const { data } = await api.patch(`/conversations/${id}/read`);
   return data as Conversation;

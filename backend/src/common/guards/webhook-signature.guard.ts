@@ -15,6 +15,17 @@ interface WebhookRequest extends Request {
   rawBody?: Buffer;
 }
 
+// In-memory replay cache: signature hash → expiry timestamp (ms)
+const REPLAY_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+const replayCache = new Map<string, number>();
+
+function pruneReplayCache() {
+  const now = Date.now();
+  for (const [key, expiry] of replayCache) {
+    if (now > expiry) replayCache.delete(key);
+  }
+}
+
 @Injectable()
 export class WebhookSignatureGuard implements CanActivate {
   private readonly logger = new Logger(WebhookSignatureGuard.name);
@@ -26,14 +37,16 @@ export class WebhookSignatureGuard implements CanActivate {
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest<WebhookRequest>();
-    const signature = req.headers['x-hub-signature-256'] as string;
+    const signature = req.headers['x-hub-signature-256'] as string | undefined;
     const isProduction = this.config.get<string>('NODE_ENV') === 'production';
     const rawBody: Buffer | undefined = req.rawBody;
+    const ip = req.ip ?? 'unknown';
+    const ua = req.headers['user-agent'] ?? 'unknown';
 
     if (!signature) {
       if (isProduction) {
         this.logger.error(
-          `Webhook rejeitado sem assinatura em produção (ip=${req.ip ?? 'unknown'})`,
+          `Webhook rejeitado: assinatura ausente (ip=${ip} ua=${ua})`,
         );
         throw new UnauthorizedException(
           'Assinatura do webhook é obrigatória em produção',
@@ -41,38 +54,52 @@ export class WebhookSignatureGuard implements CanActivate {
       }
 
       this.logger.warn(
-        'Webhook recebido sem assinatura — aceitando (modo dev)',
+        `Webhook sem assinatura — aceitando (modo dev, ip=${ip})`,
       );
       return true;
     }
 
     if (!rawBody) {
       this.logger.error(
-        'Webhook recebido sem rawBody; validação de assinatura não pode ser executada',
+        `Webhook rejeitado: rawBody ausente (ip=${ip})`,
       );
       throw new ServiceUnavailableException(
         'rawBody é obrigatório para validar a assinatura do webhook',
       );
     }
 
-    const appSecret = await this.resolveAppSecret(rawBody);
+    // ── Validação de origem do payload ────────────────────────────────────────
+    const parsedPayload = this.parsePayload(rawBody);
+    if (parsedPayload && !this.isValidOrigin(parsedPayload)) {
+      this.logger.error(
+        `Webhook rejeitado: objeto inesperado "${String((parsedPayload as Record<string, unknown>)['object'])}" (ip=${ip})`,
+      );
+      throw new UnauthorizedException('Payload de webhook inválido');
+    }
+
+    // ── Resolução do App Secret ───────────────────────────────────────────────
+    const appSecret = await this.resolveAppSecret(
+      rawBody,
+      parsedPayload as Record<string, unknown> | null,
+    );
 
     if (!appSecret) {
       this.logger.error(
-        'App Secret ausente; validação de assinatura não pode ser executada',
+        `Webhook rejeitado: App Secret ausente (ip=${ip})`,
       );
       throw new ServiceUnavailableException(
         'Validação do webhook indisponível por configuração ausente',
       );
     }
 
+    // ── Verificação de assinatura ─────────────────────────────────────────────
     const expected =
       'sha256=' +
       crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex');
 
     if (signature.length !== expected.length) {
       this.logger.error(
-        `Assinatura inválida no webhook (ip=${req.ip ?? 'unknown'})`,
+        `Webhook rejeitado: assinatura inválida (comprimento diferente, ip=${ip} ua=${ua})`,
       );
       throw new UnauthorizedException('Assinatura do webhook inválida');
     }
@@ -84,16 +111,48 @@ export class WebhookSignatureGuard implements CanActivate {
 
     if (!valid) {
       this.logger.error(
-        `Assinatura inválida no webhook (ip=${req.ip ?? 'unknown'})`,
+        `Webhook rejeitado: assinatura inválida (ip=${ip} ua=${ua})`,
       );
       throw new UnauthorizedException('Assinatura do webhook inválida');
     }
 
+    // ── Proteção contra replay ────────────────────────────────────────────────
+    pruneReplayCache();
+    const sigHash = crypto
+      .createHash('sha256')
+      .update(signature)
+      .digest('hex');
+
+    if (replayCache.has(sigHash)) {
+      this.logger.warn(
+        `Webhook rejeitado: replay detectado (ip=${ip} ua=${ua})`,
+      );
+      throw new UnauthorizedException('Webhook duplicado rejeitado');
+    }
+
+    replayCache.set(sigHash, Date.now() + REPLAY_WINDOW_MS);
+
     return true;
   }
 
-  private async resolveAppSecret(rawBody: Buffer): Promise<string | null> {
-    const phoneNumberId = this.extractPhoneNumberId(rawBody);
+  private isValidOrigin(payload: unknown): boolean {
+    if (!this.isRecord(payload)) return false;
+    return payload['object'] === 'whatsapp_business_account';
+  }
+
+  private parsePayload(rawBody: Buffer): unknown {
+    try {
+      return JSON.parse(rawBody.toString('utf8')) as unknown;
+    } catch {
+      return null;
+    }
+  }
+
+  private async resolveAppSecret(
+    rawBody: Buffer,
+    parsed: Record<string, unknown> | null,
+  ): Promise<string | null> {
+    const phoneNumberId = this.extractPhoneNumberId(parsed);
 
     if (phoneNumberId) {
       const account = await this.prisma.whatsappAccount.findFirst({
@@ -109,30 +168,24 @@ export class WebhookSignatureGuard implements CanActivate {
     return this.config.get<string>('WHATSAPP_APP_SECRET')?.trim() || null;
   }
 
-  private extractPhoneNumberId(rawBody: Buffer): string | null {
+  private extractPhoneNumberId(
+    parsed: Record<string, unknown> | null,
+  ): string | null {
     try {
-      const payload = JSON.parse(rawBody.toString('utf8')) as unknown;
-      if (!this.isRecord(payload) || !Array.isArray(payload.entry)) {
+      if (!parsed || !Array.isArray(parsed['entry'])) return null;
+
+      const [entry] = parsed['entry'] as unknown[];
+      if (!this.isRecord(entry) || !Array.isArray(entry['changes']))
         return null;
-      }
 
-      const [entry] = payload.entry as unknown[];
-      if (!this.isRecord(entry) || !Array.isArray(entry.changes)) {
+      const [change] = entry['changes'] as unknown[];
+      if (!this.isRecord(change) || !this.isRecord(change['value']))
         return null;
-      }
 
-      const [change] = entry.changes as unknown[];
-      if (!this.isRecord(change) || !this.isRecord(change.value)) {
-        return null;
-      }
+      const metadata = change['value']['metadata'];
+      if (!this.isRecord(metadata)) return null;
 
-      const metadata = change.value.metadata;
-      if (!this.isRecord(metadata)) {
-        return null;
-      }
-
-      const phoneNumberId = metadata.phone_number_id;
-
+      const phoneNumberId = metadata['phone_number_id'];
       return typeof phoneNumberId === 'string' && phoneNumberId.trim()
         ? phoneNumberId
         : null;

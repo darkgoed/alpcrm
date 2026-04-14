@@ -4,6 +4,7 @@ import {
   Post,
   Param,
   Patch,
+  Delete,
   Body,
   Query,
   UseGuards,
@@ -77,6 +78,16 @@ export class ConversationsController {
   @RequirePermissions('close_conversation')
   reopen(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.conversationsService.reopen(
+      id,
+      user.workspaceId,
+      user.permissions,
+    );
+  }
+
+  @Delete(':id')
+  @RequirePermissions('close_conversation')
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.conversationsService.remove(
       id,
       user.workspaceId,
       user.permissions,

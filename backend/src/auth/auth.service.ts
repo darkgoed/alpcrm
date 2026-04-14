@@ -5,9 +5,12 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+
+const REFRESH_TOKEN_TTL_DAYS = 7;
 
 @Injectable()
 export class AuthService {
@@ -24,17 +27,13 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    // Buscar todas as permissões do sistema para dar ao admin
     const allPermissions = await this.prisma.permission.findMany();
 
-    // Tudo em uma transação: workspace → role admin → usuário → vínculo role
     const result = await this.prisma.$transaction(async (tx) => {
-      // 1. Criar workspace
       const workspace = await tx.workspace.create({
         data: { name: dto.workspaceName, slug: dto.workspaceSlug },
       });
 
-      // 2. Criar role "admin" com todas as permissões
       const adminRole = await tx.role.create({
         data: {
           workspaceId: workspace.id,
@@ -45,7 +44,6 @@ export class AuthService {
         },
       });
 
-      // 3. Criar usuário e associar role admin
       const user = await tx.user.create({
         data: {
           workspaceId: workspace.id,
@@ -60,7 +58,7 @@ export class AuthService {
     });
 
     const permissions = allPermissions.map((p) => p.key);
-    return this.signToken(
+    return this.issueTokenPair(
       result.user.id,
       result.user.email,
       result.workspace.id,
@@ -70,10 +68,7 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const users = await this.prisma.user.findMany({
-      where: {
-        email: dto.email,
-        isActive: true,
-      },
+      where: { email: dto.email, isActive: true },
       orderBy: { updatedAt: 'desc' },
       include: {
         workspace: true,
@@ -81,9 +76,7 @@ export class AuthService {
           include: {
             role: {
               include: {
-                rolePermissions: {
-                  include: { permission: true },
-                },
+                rolePermissions: { include: { permission: true } },
               },
             },
           },
@@ -106,7 +99,6 @@ export class AuthService {
     if (!authenticatedUser)
       throw new UnauthorizedException('Credenciais inválidas');
 
-    // Deduplica permissões caso o usuário tenha múltiplas roles
     const permissions = [
       ...new Set(
         authenticatedUser.userRoles.flatMap((ur) =>
@@ -115,7 +107,7 @@ export class AuthService {
       ),
     ];
 
-    return this.signToken(
+    return this.issueTokenPair(
       authenticatedUser.id,
       authenticatedUser.email,
       authenticatedUser.workspaceId,
@@ -123,17 +115,81 @@ export class AuthService {
     );
   }
 
-  private signToken(
+  async refresh(refreshTokenValue: string) {
+    const stored = await this.prisma.refreshToken.findUnique({
+      where: { token: refreshTokenValue },
+      include: {
+        user: {
+          include: {
+            userRoles: {
+              include: {
+                role: {
+                  include: {
+                    rolePermissions: { include: { permission: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (
+      !stored ||
+      stored.revokedAt !== null ||
+      stored.expiresAt < new Date() ||
+      !stored.user.isActive
+    ) {
+      throw new UnauthorizedException('Refresh token inválido ou expirado');
+    }
+
+    // Revoke the used token (rotation)
+    await this.prisma.refreshToken.update({
+      where: { id: stored.id },
+      data: { revokedAt: new Date() },
+    });
+
+    const permissions = [
+      ...new Set(
+        stored.user.userRoles.flatMap((ur) =>
+          ur.role.rolePermissions.map((rp) => rp.permission.key),
+        ),
+      ),
+    ];
+
+    return this.issueTokenPair(
+      stored.user.id,
+      stored.user.email,
+      stored.user.workspaceId,
+      permissions,
+    );
+  }
+
+  async logout(refreshTokenValue: string) {
+    await this.prisma.refreshToken.updateMany({
+      where: { token: refreshTokenValue, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  private async issueTokenPair(
     userId: string,
     email: string,
     workspaceId: string,
     permissions: string[] = [],
   ) {
     const payload = { sub: userId, email, workspaceId, permissions };
-    return {
-      access_token: this.jwt.sign(payload),
-      workspaceId,
-      permissions,
-    };
+    const access_token = this.jwt.sign(payload);
+
+    const rawToken = crypto.randomBytes(48).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_TTL_DAYS);
+
+    await this.prisma.refreshToken.create({
+      data: { userId, token: rawToken, expiresAt },
+    });
+
+    return { access_token, refresh_token: rawToken, workspaceId, permissions };
   }
 }

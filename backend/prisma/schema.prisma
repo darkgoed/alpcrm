@@ -59,13 +59,14 @@ model User {
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
-  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  userRoles     UserRole[]
-  teamUsers     TeamUser[]
-  assignedConvs Conversation[] @relation("AssignedUser")
+  workspace      Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userRoles      UserRole[]
+  teamUsers      TeamUser[]
+  assignedConvs  Conversation[] @relation("AssignedUser")
   ownedContacts  Contact[]      @relation("ContactOwner")
   contactNotes   ContactNote[]  @relation("ContactNoteAuthor")
   auditLogs      AuditLog[]
+  refreshTokens  RefreshToken[]
 
   @@unique([workspaceId, email])
   @@map("users")
@@ -656,6 +657,23 @@ model InteractiveTemplate {
 
   @@unique([workspaceId, name])
   @@map("interactive_templates")
+}
+
+// ─────────────────────────────────────────────────────────
+// AUTH — REFRESH TOKENS
+// ─────────────────────────────────────────────────────────
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  token     String    @unique
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
 }
 
 // ─────────────────────────────────────────────────────────
