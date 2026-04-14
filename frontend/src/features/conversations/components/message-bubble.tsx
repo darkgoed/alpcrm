@@ -26,23 +26,23 @@ function MediaContent({ message }: { message: Message }) {
 
   if (type === 'image') {
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <a href={mediaUrl} target="_blank" rel="noopener noreferrer">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={mediaUrl}
             alt={fileName ?? 'imagem'}
-            className="max-w-[260px] rounded-xl object-cover"
+            className="max-w-[220px] rounded-lg object-cover"
           />
         </a>
-        {content && <p className="text-sm leading-6">{content}</p>}
+        {content && <p className="text-sm leading-5">{content}</p>}
       </div>
     );
   }
 
   if (type === 'audio') {
     return (
-      <audio controls className="max-w-[260px]">
+      <audio controls className="max-w-[220px]">
         <source src={mediaUrl} type={mimeType ?? 'audio/ogg'} />
       </audio>
     );
@@ -50,11 +50,11 @@ function MediaContent({ message }: { message: Message }) {
 
   if (type === 'video') {
     return (
-      <div className="space-y-1.5">
-        <video controls className="max-w-[260px] rounded-xl">
+      <div className="space-y-1">
+        <video controls className="max-w-[220px] rounded-lg">
           <source src={mediaUrl} type={mimeType ?? 'video/mp4'} />
         </video>
-        {content && <p className="text-sm leading-6">{content}</p>}
+        {content && <p className="text-sm leading-5">{content}</p>}
       </div>
     );
   }
@@ -66,7 +66,7 @@ function MediaContent({ message }: { message: Message }) {
       target="_blank"
       rel="noopener noreferrer"
       download={fileName ?? true}
-      className="inline-flex items-center gap-2 rounded-lg border border-current/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
+      className="inline-flex items-center gap-2 rounded-md border border-current/20 bg-white/10 px-2.5 py-1.5 text-sm hover:bg-white/20"
     >
       <Paperclip className="size-4 shrink-0" />
       <span className="min-w-0 truncate">{fileName ?? 'documento'}</span>
@@ -81,7 +81,7 @@ function MediaContent({ message }: { message: Message }) {
 function NoteContent({ content }: { content: string }) {
   const parts = content.split(/(@\S+)/g);
   return (
-    <p className="whitespace-pre-wrap leading-6">
+    <p className="whitespace-pre-wrap leading-5">
       {parts.map((part, i) =>
         part.startsWith('@') ? (
           <span key={i} className="font-semibold text-amber-700 bg-amber-100 rounded px-0.5">
@@ -100,17 +100,17 @@ function InteractiveContent({ message }: { message: Message }) {
   const kind = message.interactiveType;
 
   if (!payload || !kind) {
-    return <p className="whitespace-pre-wrap leading-6">{message.content}</p>;
+      return <p className="whitespace-pre-wrap leading-5">{message.content}</p>;
   }
 
   if (kind === 'reply_buttons') {
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         {payload.headerText ? <p className="text-xs font-semibold uppercase tracking-[0.16em] opacity-70">{payload.headerText}</p> : null}
-        {payload.body ? <p className="whitespace-pre-wrap leading-6">{payload.body}</p> : null}
-        <div className="space-y-2">
+        {payload.body ? <p className="whitespace-pre-wrap leading-5">{payload.body}</p> : null}
+        <div className="space-y-1.5">
           {payload.buttons?.map((button) => (
-            <div key={button.id} className="flex items-center gap-2 rounded-xl border border-current/15 px-3 py-2">
+            <div key={button.id} className="flex items-center gap-2 rounded-lg border border-current/15 px-2.5 py-1.5">
               <MousePointerSquareDashed className="size-4 shrink-0 opacity-70" />
               <span>{button.title}</span>
             </div>
@@ -123,20 +123,20 @@ function InteractiveContent({ message }: { message: Message }) {
 
   if (kind === 'list') {
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         {payload.headerText ? <p className="text-xs font-semibold uppercase tracking-[0.16em] opacity-70">{payload.headerText}</p> : null}
-        {payload.body ? <p className="whitespace-pre-wrap leading-6">{payload.body}</p> : null}
-        <div className="rounded-xl border border-current/15 px-3 py-2">
-          <div className="mb-2 flex items-center gap-2 text-xs font-semibold opacity-80">
+        {payload.body ? <p className="whitespace-pre-wrap leading-5">{payload.body}</p> : null}
+        <div className="rounded-lg border border-current/15 px-2.5 py-2">
+          <div className="mb-1.5 flex items-center gap-2 text-xs font-semibold opacity-80">
             <List className="size-4" />
             {payload.buttonText ?? 'Abrir lista'}
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {payload.sections?.map((section, sectionIndex) => (
               <div key={`${section.title}-${sectionIndex}`} className="space-y-1">
                 <p className="text-xs font-medium opacity-70">{section.title}</p>
                 {section.rows.map((row) => (
-                  <div key={row.id} className="rounded-lg border border-current/10 px-2.5 py-2">
+                  <div key={row.id} className="rounded-md border border-current/10 px-2 py-1.5">
                     <p>{row.title}</p>
                     {row.description ? <p className="text-xs opacity-70">{row.description}</p> : null}
                   </div>
@@ -152,14 +152,14 @@ function InteractiveContent({ message }: { message: Message }) {
 
   if (kind === 'cta_url') {
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         {payload.headerText ? <p className="text-xs font-semibold uppercase tracking-[0.16em] opacity-70">{payload.headerText}</p> : null}
-        {payload.body ? <p className="whitespace-pre-wrap leading-6">{payload.body}</p> : null}
+        {payload.body ? <p className="whitespace-pre-wrap leading-5">{payload.body}</p> : null}
         <a
           href={payload.url ?? '#'}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-xl border border-current/15 px-3 py-2"
+          className="inline-flex items-center gap-2 rounded-lg border border-current/15 px-2.5 py-1.5"
         >
           <ExternalLink className="size-4" />
           {payload.buttonText ?? 'Abrir link'}
@@ -175,13 +175,13 @@ function InteractiveContent({ message }: { message: Message }) {
         <div className="inline-flex items-center gap-2 rounded-full border border-current/15 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.14em] opacity-80">
           {kind === 'button_reply' ? 'Reply button' : 'List reply'}
         </div>
-        <p className="whitespace-pre-wrap leading-6">{payload.title ?? message.content}</p>
+        <p className="whitespace-pre-wrap leading-5">{payload.title ?? message.content}</p>
         {payload.description ? <p className="text-xs opacity-70">{payload.description}</p> : null}
       </div>
     );
   }
 
-  return <p className="whitespace-pre-wrap leading-6">{message.content}</p>;
+  return <p className="whitespace-pre-wrap leading-5">{message.content}</p>;
 }
 
 export function ConversationMessageBubble({ message }: { message: Message }) {
@@ -192,8 +192,8 @@ export function ConversationMessageBubble({ message }: { message: Message }) {
   if (isSystem && message.senderId) {
     return (
       <div className="flex justify-center py-1">
-        <div className="max-w-[80%] rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm shadow-sm">
-          <div className="mb-1 flex items-center gap-1.5 text-[11px] font-medium text-amber-600">
+        <div className="max-w-[80%] rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
+          <div className="mb-1 flex items-center gap-1.5 text-[10px] font-medium text-amber-600">
             <Lock className="size-3" />
             Nota interna
           </div>
@@ -219,17 +219,17 @@ export function ConversationMessageBubble({ message }: { message: Message }) {
     <div className={cn('flex w-full', isOutgoing ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
-          'max-w-[85%] rounded-[24px] px-4 py-3 text-sm shadow-sm sm:max-w-[70%]',
+          'max-w-[82%] rounded-2xl px-3 py-2 text-[13px] sm:max-w-[68%]',
           isOutgoing
-            ? 'rounded-br-md bg-primary text-primary-foreground'
-            : 'rounded-bl-md border border-border/70 bg-white text-foreground',
+            ? 'rounded-br-sm bg-primary text-primary-foreground'
+            : 'rounded-bl-sm border border-border/60 bg-white/95 text-foreground',
         )}
       >
         {message.type === 'text' || !message.mediaUrl ? (
           message.type === 'interactive' ? (
             <InteractiveContent message={message} />
           ) : message.content ? (
-            <p className="whitespace-pre-wrap leading-6">{message.content}</p>
+            <p className="whitespace-pre-wrap leading-5">{message.content}</p>
           ) : (
             <span className="inline-flex items-center gap-2 text-sm italic opacity-80">
               <Paperclip className="size-4" />
@@ -239,7 +239,7 @@ export function ConversationMessageBubble({ message }: { message: Message }) {
         ) : (
           <MediaContent message={message} />
         )}
-        <div className={cn('mt-2 flex items-center justify-end gap-1 text-[11px]', isOutgoing ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
+        <div className={cn('mt-1.5 flex items-center justify-end gap-1 text-[10px]', isOutgoing ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
           <span>{formatTime(message.createdAt)}</span>
           {isOutgoing ? (
             message.status === 'read' ? (

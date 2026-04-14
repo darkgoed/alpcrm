@@ -161,7 +161,7 @@ export function InteractiveMessageComposer({
       }}
     >
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" disabled={disabled}>
+        <Button type="button" variant="outline" size="sm" disabled={disabled} className="h-8 gap-1.5 px-2.5 text-xs">
           <SquareMousePointer className="size-4" />
           Interativo
         </Button>
@@ -171,7 +171,7 @@ export function InteractiveMessageComposer({
           <DialogTitle>Mensagem interativa</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="grid gap-2 sm:grid-cols-3">
             {[
               { value: 'reply_buttons', label: 'Reply buttons', icon: SquareMousePointer },
@@ -183,7 +183,7 @@ export function InteractiveMessageComposer({
                 type="button"
                 onClick={() => setKind(value as InteractiveKind)}
                 className={cn(
-                  'flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm transition-colors',
+                  'flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors',
                   kind === value
                     ? 'border-primary bg-primary/5 text-foreground'
                     : 'border-border/70 text-muted-foreground hover:bg-accent',
@@ -195,7 +195,7 @@ export function InteractiveMessageComposer({
             ))}
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-2.5 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
               <label className="text-sm font-medium">Header</label>
               <Input value={headerText} onChange={(e) => setHeaderText(e.target.value)} placeholder="Opcional" />
@@ -227,7 +227,7 @@ export function InteractiveMessageComposer({
               </div>
 
               {buttons.map((button, index) => (
-                <div key={button.id} className="grid gap-2 rounded-xl border border-border/70 p-3 sm:grid-cols-[1fr_1fr_auto]">
+                <div key={button.id} className="grid gap-2 rounded-lg border border-border/70 p-2.5 sm:grid-cols-[1fr_1fr_auto]">
                   <Input
                     value={button.title}
                     onChange={(e) =>
@@ -272,7 +272,7 @@ export function InteractiveMessageComposer({
               </div>
 
               {sections.map((section, sectionIndex) => (
-                <div key={`${sectionIndex}-${section.title}`} className="space-y-3 rounded-xl border border-border/70 p-3">
+                <div key={`${sectionIndex}-${section.title}`} className="space-y-2.5 rounded-lg border border-border/70 p-2.5">
                   <div className="flex items-center justify-between gap-3">
                     <Input
                       value={section.title}
@@ -297,7 +297,7 @@ export function InteractiveMessageComposer({
                   </div>
 
                   {section.rows.map((row, rowIndex) => (
-                    <div key={row.id} className="grid gap-2 rounded-xl border border-border/70 p-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
+                    <div key={row.id} className="grid gap-2 rounded-lg border border-border/70 p-2.5 sm:grid-cols-[1fr_1fr_1fr_auto]">
                       <Input
                         value={row.title}
                         onChange={(e) =>

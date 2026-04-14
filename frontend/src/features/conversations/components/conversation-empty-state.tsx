@@ -6,20 +6,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 export function ConversationEmptyState() {
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-5xl items-start overflow-y-auto px-4 py-6 lg:items-center lg:px-6">
-      <div className="grid w-full gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card className="border-none bg-[linear-gradient(135deg,#0f172a_0%,#1d4ed8_60%,#22c55e_100%)] text-white shadow-[0_24px_70px_-32px_rgba(30,64,175,0.45)]">
-          <CardHeader className="space-y-4">
-            <Badge variant="secondary" className="w-fit bg-white/15 text-white hover:bg-white/15">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-5xl items-start overflow-y-auto px-4 py-4 lg:items-center lg:px-6">
+      <div className="grid w-full gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <Card className="border border-border/60 bg-[linear-gradient(135deg,#0f172a_0%,#1e3a8a_55%,#0f766e_100%)] text-white shadow-none">
+          <CardHeader className="space-y-3 p-5">
+            <Badge variant="secondary" className="w-fit bg-white/12 text-white hover:bg-white/12">
               Inbox operacional
             </Badge>
-            <CardTitle className="text-3xl leading-tight">Selecione uma conversa para abrir o histórico e responder sem trocar de contexto.</CardTitle>
-            <CardDescription className="max-w-xl text-sm leading-6 text-slate-100/85">
+            <CardTitle className="max-w-2xl text-2xl leading-tight">Selecione uma conversa para abrir o histórico e responder sem trocar de contexto.</CardTitle>
+            <CardDescription className="max-w-xl text-sm leading-5 text-slate-100/80">
               A fila à esquerda mantém a triagem ativa enquanto você acompanha mensagens, responsáveis e contexto do lead no painel principal.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button asChild size="lg" variant="secondary" className="bg-white text-slate-950 hover:bg-slate-100">
+          <CardContent className="p-5 pt-0">
+            <Button asChild variant="secondary" className="h-9 bg-white text-slate-950 hover:bg-slate-100">
               <Link href="/automation">
                 Revisar automações
                 <ArrowRight className="size-4" />
@@ -28,24 +28,24 @@ export function ConversationEmptyState() {
           </CardContent>
         </Card>
 
-        <div className="grid gap-4">
-          <Card className="border-border/70 bg-white/70">
-            <CardHeader>
-              <MessageSquareMore className="size-5 text-primary" />
+        <div className="grid gap-3">
+          <Card className="border-border/60 bg-white/70 shadow-none">
+            <CardHeader className="space-y-2 p-4">
+              <MessageSquareMore className="size-4 text-primary" />
               <CardTitle className="text-base">Atendimento assistido</CardTitle>
               <CardDescription>Abra uma conversa para visualizar timeline, status de entrega e contexto do contato.</CardDescription>
             </CardHeader>
           </Card>
-          <Card className="border-border/70 bg-white/70">
-            <CardHeader>
-              <TimerReset className="size-5 text-primary" />
+          <Card className="border-border/60 bg-white/70 shadow-none">
+            <CardHeader className="space-y-2 p-4">
+              <TimerReset className="size-4 text-primary" />
               <CardTitle className="text-base">Fila priorizada</CardTitle>
               <CardDescription>O rail lateral atualiza a ordem de prioridade sempre que uma nova mensagem entra.</CardDescription>
             </CardHeader>
           </Card>
-          <Card className="border-border/70 bg-white/70">
-            <CardHeader>
-              <Bot className="size-5 text-primary" />
+          <Card className="border-border/60 bg-white/70 shadow-none">
+            <CardHeader className="space-y-2 p-4">
+              <Bot className="size-4 text-primary" />
               <CardTitle className="text-base">Automação integrada</CardTitle>
               <CardDescription>Combine distribuição manual com flows automáticos sem sair do workspace.</CardDescription>
             </CardHeader>

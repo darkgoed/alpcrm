@@ -773,24 +773,24 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="border-b border-border/70 bg-background/90 px-4 py-4 backdrop-blur lg:px-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-3">
-            <Avatar className="size-12 border border-border/70">
+      <div className="border-b border-border/60 bg-background/95 px-3 py-3 backdrop-blur lg:px-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-2.5">
+            <Avatar className="size-10 border border-border/60">
               <AvatarFallback className="bg-primary/10 text-primary">{getInitials(contactName)}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="truncate text-lg font-semibold text-foreground">{contactName}</h1>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <h1 className="truncate text-base font-semibold text-foreground">{contactName}</h1>
                 <Badge variant={isClosed ? 'muted' : 'success'}>{isClosed ? 'Fechada' : 'Em atendimento'}</Badge>
                 {conversation.isBotActive ? <Badge variant="outline">Bot ativo</Badge> : null}
               </div>
-              <p className="truncate text-sm text-muted-foreground">
+              <p className="truncate text-xs text-muted-foreground">
                 {conversation.contact.phone}
                 {conversation.assignedUser ? ` • ${conversation.assignedUser.name}` : ''}
                 {conversation.team ? ` • ${conversation.team.name}` : ''}
               </p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 <Badge variant={activeOperators.length > 0 ? 'secondary' : 'outline'}>
                   {activeOperatorLabel}
                 </Badge>
@@ -803,8 +803,8 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs">
               <PhoneCall className="size-4" />
               Ligar
             </Button>
@@ -819,12 +819,12 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
               }}
             />
             {isClosed ? (
-              <Button onClick={handleReopen}>
+              <Button onClick={handleReopen} size="sm" className="h-8 px-2.5 text-xs">
                 <RotateCcw className="size-4" />
                 Reabrir conversa
               </Button>
             ) : (
-              <Button variant="secondary" onClick={handleClose}>
+              <Button variant="secondary" onClick={handleClose} size="sm" className="h-8 px-2.5 text-xs">
                 <X className="size-4" />
                 Fechar conversa
               </Button>
@@ -833,14 +833,14 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto px-4 py-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:overflow-hidden lg:px-6">
-        <Card className="flex min-h-0 flex-col overflow-hidden border-border/70 bg-white/70">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base">Linha do tempo do contato</CardTitle>
+      <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-3 py-3 lg:grid-cols-[minmax(0,1fr)_280px] lg:overflow-hidden lg:px-5">
+        <Card className="flex min-h-0 flex-col overflow-hidden border-border/60 bg-white/50 shadow-none">
+          <CardHeader className="px-4 py-3">
+            <CardTitle className="text-sm font-semibold">Linha do tempo do contato</CardTitle>
           </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
-            <ScrollArea className="min-h-0 flex-1 rounded-2xl border border-border/70 bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)] p-4">
-              <div className="space-y-3">
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-3 px-4 pb-4">
+            <ScrollArea className="min-h-0 flex-1 rounded-xl border border-border/60 bg-[linear-gradient(180deg,#fbfcfd_0%,#f5f7fa_100%)] p-3">
+              <div className="space-y-2.5">
                 {contactTimeline.map((entry, index) => {
                   const previousEntry = contactTimeline[index - 1];
                   const startsConversation =
@@ -848,9 +848,9 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                     previousEntry.conversationId !== entry.conversationId;
 
                   return (
-                    <div key={entry.message.id} className="space-y-3">
+                    <div key={entry.message.id} className="space-y-2.5">
                       {startsConversation ? (
-                        <div className="flex items-center gap-3 py-2">
+                        <div className="flex items-center gap-2 py-1.5">
                           <Separator className="flex-1" />
                           <Badge
                             variant={
@@ -860,7 +860,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                                   ? 'muted'
                                   : 'outline'
                             }
-                            className="shrink-0"
+                            className="shrink-0 text-[10px]"
                           >
                             {entry.conversationId === conversation.id
                               ? 'Conversa atual'
@@ -869,7 +869,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                                 : 'Conversa anterior'}
                           </Badge>
                           <span
-                            className="shrink-0 text-[11px] text-muted-foreground"
+                            className="shrink-0 text-[10px] text-muted-foreground"
                             title={formatFullDateTime(entry.conversationCreatedAt)}
                           >
                             iniciada {formatDistanceToNow(entry.conversationCreatedAt)}
@@ -885,21 +885,21 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
               </div>
             </ScrollArea>
 
-            <div className="rounded-2xl border border-border/70 bg-background p-3 shadow-sm">
+            <div className="rounded-xl border border-border/60 bg-background/95 p-2.5">
               {isClosed ? (
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+                <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
                   <span>Conversa encerrada. Reabra para continuar respondendo.</span>
-                  <Button onClick={handleReopen}>Reabrir</Button>
+                  <Button onClick={handleReopen} size="sm" className="h-8 px-2.5 text-xs">Reabrir</Button>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {/* Mode toggle */}
-                  <div className="flex gap-1 rounded-xl border border-border/70 bg-muted/30 p-1">
+                  <div className="flex gap-1 rounded-lg border border-border/60 bg-muted/20 p-1">
                     <button
                       type="button"
                       onClick={() => setMode('message')}
                       className={cn(
-                        'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                        'flex flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors',
                         mode === 'message'
                           ? 'bg-background text-foreground shadow-sm'
                           : 'text-muted-foreground hover:text-foreground',
@@ -912,7 +912,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                       type="button"
                       onClick={() => setMode('note')}
                       className={cn(
-                        'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                        'flex flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors',
                         mode === 'note'
                           ? 'bg-amber-50 text-amber-700 shadow-sm border border-amber-200'
                           : 'text-muted-foreground hover:text-foreground',
@@ -924,19 +924,19 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                   </div>
 
                   {mode === 'note' && (
-                    <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5">
+                    <p className="rounded-md border border-amber-100 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-600">
                       Notas internas são visíveis apenas para operadores. Use @nome para mencionar um colega.
                     </p>
                   )}
 
                   {mode === 'message' && !windowOpen && (
-                    <div className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-[11px] text-orange-700">
+                    <div className="rounded-md border border-orange-200 bg-orange-50 px-2.5 py-1.5 text-[11px] text-orange-700">
                       Janela de 24h expirada. O cliente não enviou mensagem recentemente. Use um template aprovado para retomar o contato.
                     </div>
                   )}
 
                   {collisionPreventionActive && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700">
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-700">
                       Outro operador esta com esta conversa aberta agora. Atribua a conversa antes de responder para evitar colisao.
                     </div>
                   )}
@@ -959,7 +959,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                           : 'Digite uma mensagem. / para respostas rápidas. Enter envia.'
                       }
                       className={cn(
-                        'min-h-24 resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0',
+                        'min-h-20 resize-none border-0 bg-transparent px-0 py-1 text-sm shadow-none focus-visible:ring-0',
                         mode === 'note' && 'text-amber-900 placeholder:text-amber-400',
                       )}
                       disabled={sending || collisionPreventionActive}
@@ -976,12 +976,12 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
 
                     {/* Quick reply dropdown */}
                     {quickReplySearch !== null && filteredQR.length > 0 && (
-                      <div className="absolute bottom-full left-0 mb-1 w-full rounded-lg border border-border bg-background shadow-lg z-20">
+                      <div className="absolute bottom-full left-0 z-20 mb-1 w-full rounded-md border border-border bg-background shadow-lg">
                         {filteredQR.map((qr) => (
                           <button
                             key={qr.id}
                             onMouseDown={(e) => { e.preventDefault(); applyQuickReply(qr); }}
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted"
                           >
                             <code className="text-xs bg-muted px-1 rounded text-primary">/{qr.shortcut}</code>
                             <span className="text-muted-foreground">{qr.title}</span>
@@ -993,7 +993,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
 
                   <Separator />
                   <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       {mode === 'message' && (
                         <>
                           <InteractiveMessageComposer
@@ -1011,14 +1011,14 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={sending || collisionPreventionActive}
-                            className="text-muted-foreground hover:text-foreground transition-colors"
+                            className="text-muted-foreground transition-colors hover:text-foreground"
                             title="Enviar arquivo"
                           >
                             <Paperclip className="size-4" />
                           </button>
                         </>
                       )}
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[11px] text-muted-foreground">
                         {mode === 'note' ? 'Nota visível só para a equipe.' : 'Enter envia · / para respostas rápidas'}
                       </p>
                     </div>
@@ -1030,16 +1030,17 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                     </Badge>
                   </div>
                   {sendError ? (
-                    <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                    <div className="rounded-md border border-destructive/20 bg-destructive/5 px-2.5 py-1.5 text-xs text-destructive">
                       {sendError}
                     </div>
                   ) : null}
-                  <div className="flex items-center justify-end gap-3">
+                  <div className="flex items-center justify-end gap-2">
                     <Button
                       onClick={() => void handleSend()}
                       disabled={!text.trim() || sending || collisionPreventionActive}
                       variant={mode === 'note' ? 'outline' : 'default'}
-                      className={mode === 'note' ? 'border-amber-200 text-amber-700 hover:bg-amber-50' : ''}
+                      size="sm"
+                      className={cn('h-8 px-2.5 text-xs', mode === 'note' ? 'border-amber-200 text-amber-700 hover:bg-amber-50' : '')}
                     >
                       {sending ? <LoaderCircle className="size-4 animate-spin" /> : mode === 'note' ? <Lock className="size-4" /> : <SendHorizonal className="size-4" />}
                       {mode === 'note' ? 'Salvar nota' : 'Enviar'}
@@ -1051,20 +1052,20 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
           </CardContent>
         </Card>
 
-        <Card className="flex min-h-0 flex-col overflow-hidden border-border/70 bg-white/70">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
+        <Card className="flex min-h-0 flex-col overflow-hidden border-border/60 bg-white/50 shadow-none">
+          <CardHeader className="px-4 py-3">
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
               <Sparkles className="size-4 text-primary" />
               Contexto do atendimento
             </CardTitle>
           </CardHeader>
-          <CardContent className="min-h-0 space-y-4 overflow-y-auto">
-            <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
+          <CardContent className="min-h-0 space-y-3 overflow-y-auto px-4 pb-4">
+            <div className="rounded-xl border border-border/60 bg-muted/25 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Contato</p>
-              <p className="mt-2 text-sm font-semibold text-foreground">{contactName}</p>
+              <p className="mt-1.5 text-sm font-semibold text-foreground">{contactName}</p>
               <p className="mt-1 text-sm text-muted-foreground">{conversation.contact.phone}</p>
               {conversation.contact.email ? <p className="mt-1 text-sm text-muted-foreground">{conversation.contact.email}</p> : null}
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
                 <Badge variant="outline">{formatContactSource(conversation.contact.source)}</Badge>
                 <Badge
                   variant={
@@ -1093,7 +1094,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                   Evidência: {conversation.contact.optInEvidence}
                 </p>
               )}
-              <div className="mt-3 flex gap-2">
+              <div className="mt-2.5 flex gap-2">
                 {conversation.contact.optInStatus !== 'opted_in' && (
                   <Button
                     size="sm"
@@ -1122,16 +1123,16 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                 )}
               </div>
             </div>
-            <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
+            <div className="rounded-xl border border-border/60 bg-muted/25 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Responsável</p>
               <p className="mt-2 text-sm font-semibold text-foreground">{conversation.assignedUser?.name ?? 'Sem responsável definido'}</p>
               <p className="mt-1 text-sm text-muted-foreground">{conversation.team?.name ?? 'Sem time vinculado'}</p>
             </div>
-            <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
+            <div className="rounded-xl border border-border/60 bg-muted/25 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Presenca</p>
               <p className="mt-2 text-sm font-semibold text-foreground">{activeOperatorLabel}</p>
               {activeOperators.length > 0 ? (
-                <div className="mt-3 flex flex-wrap gap-1.5">
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
                   {activeOperators.map((user) => (
                     <Badge key={user.id} variant="outline" className="text-xs">
                       {user.name}
@@ -1142,9 +1143,9 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                 <p className="mt-1 text-sm text-muted-foreground">Nenhum operador com a conversa aberta agora.</p>
               )}
             </div>
-            <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
+            <div className="rounded-xl border border-border/60 bg-muted/25 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Resumo</p>
-              <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+              <ul className="mt-2.5 space-y-1.5 text-sm text-muted-foreground">
                 <li>{contactTimeline.length} mensagens registradas no histórico do contato</li>
                 <li>Status: {conversation.status}</li>
                 <li>Bot: {conversation.isBotActive ? 'ativo' : 'inativo'}</li>
@@ -1156,9 +1157,9 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                 </li>
               </ul>
             </div>
-            <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
+            <div className="rounded-xl border border-border/60 bg-muted/25 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">SLA e resposta</p>
-              <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+              <ul className="mt-2.5 space-y-1.5 text-sm text-muted-foreground">
                 <li>
                   Primeira resposta da conversa:{' '}
                   {currentConversationResponseMetrics.firstResponseMs
@@ -1191,16 +1192,16 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
               </ul>
             </div>
 
-            <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
+            <div className="rounded-xl border border-border/60 bg-muted/25 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
                 Histórico de conversas
               </p>
               {historicalConversations.length > 0 ? (
-                <div className="mt-3 space-y-2">
+                <div className="mt-2.5 space-y-2">
                   {historicalConversations.map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-xl border border-border/70 bg-background/80 px-3 py-3"
+                      className="rounded-lg border border-border/60 bg-background/80 px-2.5 py-2.5"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <Badge variant={item.status === 'closed' ? 'muted' : 'outline'}>
@@ -1213,7 +1214,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                           {formatDistanceToNow(item.createdAt)}
                         </span>
                       </div>
-                      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                      <div className="mt-1.5 space-y-1 text-xs text-muted-foreground">
                         <p>{item.messages.length} mensagens</p>
                         <p>
                           Última atividade:{' '}
@@ -1238,8 +1239,8 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
             </div>
 
             {/* Tags */}
-            <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
-              <div className="flex items-center gap-2 mb-3">
+            <div className="rounded-xl border border-border/60 bg-muted/25 p-3">
+              <div className="mb-2.5 flex items-center gap-2">
                 <Tag className="size-3.5 text-muted-foreground" />
                 <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Tags</p>
               </div>
@@ -1263,8 +1264,8 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
 
             {/* Pipeline */}
             {contactDetail?.contactPipelines && contactDetail.contactPipelines.length > 0 && (
-              <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
-                <div className="flex items-center gap-2 mb-3">
+              <div className="rounded-xl border border-border/60 bg-muted/25 p-3">
+                <div className="mb-2.5 flex items-center gap-2">
                   <Kanban className="size-3.5 text-muted-foreground" />
                   <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Pipeline</p>
                 </div>
