@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateFlowDto,
@@ -104,7 +105,7 @@ export class FlowsService {
     const map = new Map<string, string>();
     for (const n of nodes) {
       const created = await this.prisma.flowNode.create({
-        data: { flowId, type: n.type, config: n.config, order: n.order },
+        data: { flowId, type: n.type, config: n.config as Prisma.InputJsonValue, order: n.order },
       });
       // usa clientId fornecido ou índice de ordem como chave
       const key = n.clientId ?? String(n.order);

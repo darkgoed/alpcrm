@@ -383,7 +383,7 @@ export class FlowNodeRunnerService {
     const stageId = String(config.stageId ?? '');
     if (!stageId) return { kind: 'next', nodeId: null };
 
-    const stage = await this.prisma.pipelineStage.findFirst({
+    const stage = await this.prisma.stage.findFirst({
       where: { id: stageId, pipeline: { workspaceId } },
       select: { id: true, pipelineId: true },
     });
@@ -475,7 +475,7 @@ export class FlowNodeRunnerService {
         data: {
           conversationId: ctx.conversationId,
           senderType: 'system',
-          type: 'template',
+          type: 'interactive',
           content: templateName,
           status: 'sent',
           externalId,
