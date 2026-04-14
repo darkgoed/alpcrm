@@ -114,11 +114,13 @@ function MessageReplyPreview({ message }: { message: MessageReference }) {
 
 function MessageActions({
   message,
+  align = 'right',
   onReply,
   onDelete,
   onReact,
 }: {
   message: Message;
+  align?: 'left' | 'right';
   onReply?: (message: Message) => void;
   onDelete?: (message: Message) => void;
   onReact?: (message: Message, emoji: string) => void;
@@ -143,7 +145,13 @@ function MessageActions({
   }
 
   return (
-    <div ref={containerRef} className="absolute right-1.5 top-1.5 z-20">
+    <div
+      ref={containerRef}
+      className={cn(
+        'absolute top-1.5 z-20',
+        align === 'right' ? 'right-1.5' : 'left-1.5',
+      )}
+    >
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
@@ -153,7 +161,12 @@ function MessageActions({
         <ChevronDown className="size-3.5" />
       </button>
       {open ? (
-        <div className="absolute right-0 mt-1 w-52 rounded-xl border border-border/70 bg-background p-2 text-foreground shadow-xl">
+        <div
+          className={cn(
+            'absolute mt-1 w-[min(13rem,calc(100vw-2.5rem))] rounded-xl border border-border/70 bg-background p-2 text-foreground shadow-xl',
+            align === 'right' ? 'right-0' : 'left-0',
+          )}
+        >
           <div className="mb-2 flex flex-wrap gap-1">
             {ACTION_EMOJIS.map((emoji) => (
               <button
@@ -584,6 +597,7 @@ export function ConversationMessageBubble({
       >
         <MessageActions
           message={message}
+          align={isOutgoing ? 'right' : 'left'}
           onReply={message.deletedAt ? undefined : onReply}
           onDelete={message.deletedAt ? undefined : onDelete}
           onReact={message.deletedAt ? undefined : onReact}
