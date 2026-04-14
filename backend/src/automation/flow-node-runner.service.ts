@@ -28,7 +28,9 @@ export class FlowNodeRunnerService {
   ) {}
 
   async run(ctx: NodeContext): Promise<NodeResult> {
-    const node = await this.prisma.flowNode.findUnique({ where: { id: ctx.nodeId } });
+    const node = await this.prisma.flowNode.findUnique({
+      where: { id: ctx.nodeId },
+    });
     if (!node) return { kind: 'done' };
 
     const conversation = await this.prisma.conversation.findUnique({
@@ -80,7 +82,12 @@ export class FlowNodeRunnerService {
 
   private async handleMessage(
     ctx: NodeContext,
-    conversation: { id: string; workspaceId: string; whatsappAccountId: string; contact: { phone: string } },
+    conversation: {
+      id: string;
+      workspaceId: string;
+      whatsappAccountId: string;
+      contact: { phone: string };
+    },
     config: Record<string, unknown>,
   ): Promise<NodeResult> {
     const wsSettings = await this.prisma.workspaceSettings.findUnique({
@@ -91,11 +98,16 @@ export class FlowNodeRunnerService {
     if (
       wsSettings?.businessHours &&
       !isWithinBusinessHours(
-        wsSettings.businessHours as Record<string, { enabled: boolean; open: string; close: string }>,
+        wsSettings.businessHours as Record<
+          string,
+          { enabled: boolean; open: string; close: string }
+        >,
         wsSettings.timezone ?? 'America/Sao_Paulo',
       )
     ) {
-      this.logger.log(`[Bot] Fora do horário comercial — nó message ignorado (${ctx.conversationId})`);
+      this.logger.log(
+        `[Bot] Fora do horário comercial — nó message ignorado (${ctx.conversationId})`,
+      );
       return { kind: 'next', nodeId: null };
     }
 
@@ -110,7 +122,10 @@ export class FlowNodeRunnerService {
       const url = `https://graph.facebook.com/v19.0/${account.metaAccountId}/messages`;
       const res = await fetch(url, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${account.token}`, 'Content-Type': 'application/json' },
+        headers: {
+          Authorization: `Bearer ${account.token}`,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           messaging_product: 'whatsapp',
           to: conversation.contact.phone,
@@ -153,9 +168,16 @@ export class FlowNodeRunnerService {
     const ms = Number(config.ms ?? 1000);
 
     // Resolve próximo nó para agendar via fila (suporta edges e nextId)
-    const nextNodeId = await this.resolveEdgeTarget(node.id, null) ?? node.nextId;
+    const nextNodeId =
+      (await this.resolveEdgeTarget(node.id, null)) ?? node.nextId;
     if (nextNodeId) {
-      await this.scheduler.scheduleFlowDelay(ms, nextNodeId, ctx.conversationId, ctx.contactId, ctx.flowId);
+      await this.scheduler.scheduleFlowDelay(
+        ms,
+        nextNodeId,
+        ctx.conversationId,
+        ctx.contactId,
+        ctx.flowId,
+      );
     }
 
     // Retorna 'done' para interromper a execução síncrona — o queue retoma
@@ -172,7 +194,9 @@ export class FlowNodeRunnerService {
     const timeoutAt = timeoutMs ? new Date(Date.now() + timeoutMs) : null;
 
     await this.prisma.contactFlowState.update({
-      where: { contactId_flowId: { contactId: ctx.contactId, flowId: ctx.flowId } },
+      where: {
+        contactId_flowId: { contactId: ctx.contactId, flowId: ctx.flowId },
+      },
       data: {
         waitingForReply: true,
         replyTimeoutAt: timeoutAt,
@@ -213,22 +237,33 @@ export class FlowNodeRunnerService {
 
   private async handleSendInteractive(
     ctx: NodeContext,
-    conversation: { id: string; whatsappAccountId: string; contact: { phone: string } },
+    conversation: {
+      id: string;
+      whatsappAccountId: string;
+      contact: { phone: string };
+    },
     config: Record<string, unknown>,
   ): Promise<NodeResult> {
     const interactiveType = String(config.interactiveType ?? 'button'); // 'button' | 'list'
     const body = interpolate(String(config.body ?? ''), ctx.variables);
-    const footer = config.footer ? interpolate(String(config.footer), ctx.variables) : undefined;
+    const footer = config.footer
+      ? interpolate(String(config.footer), ctx.variables)
+      : undefined;
 
     let action: Record<string, unknown>;
 
     if (interactiveType === 'list') {
       action = {
-        button: interpolate(String(config.buttonText ?? 'Ver opções'), ctx.variables),
+        button: interpolate(
+          String(config.buttonText ?? 'Ver opções'),
+          ctx.variables,
+        ),
         sections: config.sections ?? [],
       };
     } else {
-      const buttons = ((config.buttons as Array<{ id: string; title: string }>) ?? []).slice(0, 3);
+      const buttons = (
+        (config.buttons as Array<{ id: string; title: string }>) ?? []
+      ).slice(0, 3);
       action = {
         buttons: buttons.map((b) => ({
           type: 'reply',
@@ -253,7 +288,10 @@ export class FlowNodeRunnerService {
       const url = `https://graph.facebook.com/v19.0/${account.metaAccountId}/messages`;
       const res = await fetch(url, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${account.token}`, 'Content-Type': 'application/json' },
+        headers: {
+          Authorization: `Bearer ${account.token}`,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           messaging_product: 'whatsapp',
           to: conversation.contact.phone,
@@ -312,7 +350,9 @@ export class FlowNodeRunnerService {
 
     if (!tagId) return { kind: 'next', nodeId: null };
 
-    const tag = await this.prisma.tag.findFirst({ where: { id: tagId, workspaceId } });
+    const tag = await this.prisma.tag.findFirst({
+      where: { id: tagId, workspaceId },
+    });
     if (!tag) {
       this.logger.warn(`[Bot] Tag ${tagId} não encontrada no workspace`);
       return { kind: 'next', nodeId: null };
@@ -353,8 +393,17 @@ export class FlowNodeRunnerService {
     }
 
     await this.prisma.contactPipeline.upsert({
-      where: { contactId_pipelineId: { contactId: ctx.contactId, pipelineId: stage.pipelineId } },
-      create: { contactId: ctx.contactId, pipelineId: stage.pipelineId, stageId },
+      where: {
+        contactId_pipelineId: {
+          contactId: ctx.contactId,
+          pipelineId: stage.pipelineId,
+        },
+      },
+      create: {
+        contactId: ctx.contactId,
+        pipelineId: stage.pipelineId,
+        stageId,
+      },
       update: { stageId },
     });
 
@@ -382,7 +431,11 @@ export class FlowNodeRunnerService {
 
   private async handleSendTemplate(
     ctx: NodeContext,
-    conversation: { id: string; whatsappAccountId: string; contact: { phone: string } },
+    conversation: {
+      id: string;
+      whatsappAccountId: string;
+      contact: { phone: string };
+    },
     config: Record<string, unknown>,
   ): Promise<NodeResult> {
     const templateName = String(config.templateName ?? '');
@@ -400,12 +453,19 @@ export class FlowNodeRunnerService {
       const url = `https://graph.facebook.com/v19.0/${account.metaAccountId}/messages`;
       const res = await fetch(url, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${account.token}`, 'Content-Type': 'application/json' },
+        headers: {
+          Authorization: `Bearer ${account.token}`,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           messaging_product: 'whatsapp',
           to: conversation.contact.phone,
           type: 'template',
-          template: { name: templateName, language: { code: languageCode }, components },
+          template: {
+            name: templateName,
+            language: { code: languageCode },
+            components,
+          },
         }),
       });
       const data = (await res.json()) as { messages?: Array<{ id: string }> };
@@ -464,9 +524,14 @@ export class FlowNodeRunnerService {
 
       if (config.saveResponseAs && responseBody) {
         await this.prisma.contactFlowState.update({
-          where: { contactId_flowId: { contactId: ctx.contactId, flowId: ctx.flowId } },
+          where: {
+            contactId_flowId: { contactId: ctx.contactId, flowId: ctx.flowId },
+          },
           data: {
-            variables: { ...ctx.variables, [String(config.saveResponseAs)]: responseBody },
+            variables: {
+              ...ctx.variables,
+              [String(config.saveResponseAs)]: responseBody,
+            },
           },
         });
       }
@@ -479,7 +544,10 @@ export class FlowNodeRunnerService {
 
   // ─── resolve edge target ──────────────────────────────────────────────────
 
-  async resolveEdgeTarget(fromNodeId: string, label: string | null): Promise<string | null> {
+  async resolveEdgeTarget(
+    fromNodeId: string,
+    label: string | null,
+  ): Promise<string | null> {
     const edge = await this.prisma.flowEdge.findFirst({
       where: { fromNodeId, label: label ?? null },
       select: { toNodeId: true },

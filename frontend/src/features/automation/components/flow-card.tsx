@@ -98,8 +98,8 @@ export function FlowCard({ flow, onEdit, onRefresh }: FlowCardProps) {
                 {node.type === 'delay' ? <Clock3 className="mt-0.5 size-4 text-sky-600" /> : <MessageSquareText className="mt-0.5 size-4 text-emerald-600" />}
                 <p>
                   {node.type === 'delay'
-                    ? `${Math.round((node.config.ms ?? 0) / 1000)} segundos`
-                    : (node.config.content ?? 'Mensagem sem conteúdo')}
+                    ? `${Math.round(Number(node.config.ms ?? 0) / 1000)} segundos`
+                    : String(node.config.content ?? 'Mensagem sem conteúdo')}
                 </p>
               </div>
             </div>

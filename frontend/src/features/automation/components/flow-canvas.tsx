@@ -117,7 +117,7 @@ function nodePreview(node: NodeDraft): string {
 
 const BRANCH_TYPES: FlowNodeType[] = ['branch', 'condition'];
 
-type FlowNodeData = NodeDraft & { selected: boolean };
+type FlowNodeData = NodeDraft & { selected: boolean } & Record<string, unknown>;
 
 function FlowNode({ data, selected }: NodeProps & { data: FlowNodeData }) {
   const colorClass = TYPE_COLOR[data.type] ?? TYPE_COLOR.message;

@@ -21,7 +21,14 @@ export class FlowReplyTimeoutProcessor extends WorkerHost {
 
   async process(job: Job<FlowReplyTimeoutJobData>) {
     const { contactId, flowId, conversationId, nodeId } = job.data;
-    this.logger.log(`[FlowReplyTimeout] Timeout disparado — contact=${contactId} flow=${flowId}`);
-    await this.flowExecutor.handleReplyTimeout(contactId, flowId, conversationId, nodeId);
+    this.logger.log(
+      `[FlowReplyTimeout] Timeout disparado — contact=${contactId} flow=${flowId}`,
+    );
+    await this.flowExecutor.handleReplyTimeout(
+      contactId,
+      flowId,
+      conversationId,
+      nodeId,
+    );
   }
 }

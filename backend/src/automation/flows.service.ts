@@ -1,6 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateFlowDto, CreateFlowEdgeDto, CreateFlowNodeDto, UpdateFlowDto } from './dto/create-flow.dto';
+import {
+  CreateFlowDto,
+  CreateFlowEdgeDto,
+  CreateFlowNodeDto,
+  UpdateFlowDto,
+} from './dto/create-flow.dto';
 
 @Injectable()
 export class FlowsService {
@@ -37,7 +42,10 @@ export class FlowsService {
     if (edges.length === 0 && nodeIdMap.size > 1) {
       const ids = [...nodeIdMap.values()];
       for (let i = 0; i < ids.length - 1; i++) {
-        await this.prisma.flowNode.update({ where: { id: ids[i] }, data: { nextId: ids[i + 1] } });
+        await this.prisma.flowNode.update({
+          where: { id: ids[i] },
+          data: { nextId: ids[i + 1] },
+        });
       }
     }
 
@@ -61,7 +69,10 @@ export class FlowsService {
       if (edges.length === 0 && nodeIdMap.size > 1) {
         const ids = [...nodeIdMap.values()];
         for (let i = 0; i < ids.length - 1; i++) {
-          await this.prisma.flowNode.update({ where: { id: ids[i] }, data: { nextId: ids[i + 1] } });
+          await this.prisma.flowNode.update({
+            where: { id: ids[i] },
+            data: { nextId: ids[i + 1] },
+          });
         }
       }
     }
@@ -86,7 +97,10 @@ export class FlowsService {
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
   /** Cria nós e retorna map clientId → dbId */
-  private async createNodes(flowId: string, nodes: CreateFlowNodeDto[]): Promise<Map<string, string>> {
+  private async createNodes(
+    flowId: string,
+    nodes: CreateFlowNodeDto[],
+  ): Promise<Map<string, string>> {
     const map = new Map<string, string>();
     for (const n of nodes) {
       const created = await this.prisma.flowNode.create({

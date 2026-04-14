@@ -123,7 +123,12 @@ export class SchedulerService {
     await this.flowReplyTimeoutQueue.remove(jobId).catch(() => null);
     await this.flowReplyTimeoutQueue.add(
       'flow-reply-timeout',
-      { contactId, flowId, conversationId, nodeId } satisfies FlowReplyTimeoutJobData,
+      {
+        contactId,
+        flowId,
+        conversationId,
+        nodeId,
+      } satisfies FlowReplyTimeoutJobData,
       { jobId, delay: timeoutMs, attempts: 1 },
     );
   }

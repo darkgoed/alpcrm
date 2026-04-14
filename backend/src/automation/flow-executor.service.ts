@@ -36,7 +36,12 @@ export class FlowExecutorService {
     });
 
     for (const flow of flows) {
-      if (!this.checkTrigger(flow.triggerType, flow.triggerValue, { incomingText, isNewConversation }))
+      if (
+        !this.checkTrigger(flow.triggerType, flow.triggerValue, {
+          incomingText,
+          isNewConversation,
+        })
+      )
         continue;
       await this.startFlow(flow, conversationId, contactId);
     }
@@ -50,9 +55,14 @@ export class FlowExecutorService {
     eventType: FlowTriggerType,
     eventValue: string,
   ) {
-    const conversation = await this.findConversationForAutomation(workspaceId, contactId);
+    const conversation = await this.findConversationForAutomation(
+      workspaceId,
+      contactId,
+    );
     if (!conversation) {
-      this.logger.warn(`[Bot] Nenhuma conversa para contacto ${contactId} no trigger ${eventType}`);
+      this.logger.warn(
+        `[Bot] Nenhuma conversa para contacto ${contactId} no trigger ${eventType}`,
+      );
       return;
     }
 
@@ -62,14 +72,24 @@ export class FlowExecutorService {
     });
 
     for (const flow of flows) {
-      if (!this.checkTrigger(flow.triggerType, flow.triggerValue, { eventType, eventValue })) continue;
+      if (
+        !this.checkTrigger(flow.triggerType, flow.triggerValue, {
+          eventType,
+          eventValue,
+        })
+      )
+        continue;
       await this.startFlow(flow, conversation.id, contactId);
     }
   }
 
   // ─── Retomar flow após wait_for_reply ────────────────────────────────────────
 
-  async resumeWaitingFlows(conversationId: string, contactId: string, incomingText: string) {
+  async resumeWaitingFlows(
+    conversationId: string,
+    contactId: string,
+    incomingText: string,
+  ) {
     const states = await this.prisma.contactFlowState.findMany({
       where: { contactId, isActive: true, waitingForReply: true },
     });
@@ -78,7 +98,11 @@ export class FlowExecutorService {
       if (!state.currentNodeId) continue;
 
       // Cancela timeout agendado para este nó
-      await this.scheduler.cancelReplyTimeout(contactId, state.flowId, state.currentNodeId);
+      await this.scheduler.cancelReplyTimeout(
+        contactId,
+        state.flowId,
+        state.currentNodeId,
+      );
 
       // Salva a resposta como variável
       const varName = await this.getReplyVariableName(state.currentNodeId);
@@ -91,16 +115,31 @@ export class FlowExecutorService {
       // Avança para o próximo nó via edge
       const nextNodeId =
         (await this.runner.resolveEdgeTarget(state.currentNodeId, null)) ??
-        (await this.prisma.flowNode.findUnique({ where: { id: state.currentNodeId } }))?.nextId ??
+        (
+          await this.prisma.flowNode.findUnique({
+            where: { id: state.currentNodeId },
+          })
+        )?.nextId ??
         null;
 
       await this.prisma.contactFlowState.update({
         where: { contactId_flowId: { contactId, flowId: state.flowId } },
-        data: { waitingForReply: false, replyTimeoutAt: null, variables, currentNodeId: nextNodeId },
+        data: {
+          waitingForReply: false,
+          replyTimeoutAt: null,
+          variables,
+          currentNodeId: nextNodeId,
+        },
       });
 
       if (nextNodeId) {
-        await this.executeFromNode(nextNodeId, conversationId, contactId, state.flowId, variables);
+        await this.executeFromNode(
+          nextNodeId,
+          conversationId,
+          contactId,
+          state.flowId,
+          variables,
+        );
       } else {
         await this.completeFlow(contactId, state.flowId, conversationId);
       }
@@ -109,13 +148,24 @@ export class FlowExecutorService {
 
   // ─── Executar nó por ID (chamado pelo FlowDelayProcessor) ──────────────────
 
-  async executeNodeById(nodeId: string, conversationId: string, contactId: string, flowId: string) {
+  async executeNodeById(
+    nodeId: string,
+    conversationId: string,
+    contactId: string,
+    flowId: string,
+  ) {
     const state = await this.prisma.contactFlowState.findUnique({
       where: { contactId_flowId: { contactId, flowId } },
     });
     const variables = (state?.variables as Record<string, string>) ?? {};
 
-    await this.executeFromNode(nodeId, conversationId, contactId, flowId, variables);
+    await this.executeFromNode(
+      nodeId,
+      conversationId,
+      contactId,
+      flowId,
+      variables,
+    );
   }
 
   // ─── Lidar com timeout de wait_for_reply ────────────────────────────────────
@@ -140,7 +190,11 @@ export class FlowExecutorService {
 
     await this.prisma.contactFlowState.update({
       where: { contactId_flowId: { contactId, flowId } },
-      data: { waitingForReply: false, replyTimeoutAt: null, currentNodeId: nextNodeId },
+      data: {
+        waitingForReply: false,
+        replyTimeoutAt: null,
+        currentNodeId: nextNodeId,
+      },
     });
 
     await this.prisma.flowExecutionLog.create({
@@ -148,7 +202,13 @@ export class FlowExecutorService {
     });
 
     if (nextNodeId) {
-      await this.executeFromNode(nextNodeId, conversationId, contactId, flowId, variables);
+      await this.executeFromNode(
+        nextNodeId,
+        conversationId,
+        contactId,
+        flowId,
+        variables,
+      );
     } else {
       await this.completeFlow(contactId, flowId, conversationId);
     }
@@ -157,16 +217,23 @@ export class FlowExecutorService {
   // ─── Parar bot (operador assumiu) ──────────────────────────────────────────
 
   async stopBotForConversation(conversationId: string, contactId: string) {
-    const conversation = await this.prisma.conversation.findUnique({ where: { id: conversationId } });
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+    });
     if (!conversation?.isBotActive) return;
 
-    await this.prisma.conversation.update({ where: { id: conversationId }, data: { isBotActive: false } });
+    await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: { isBotActive: false },
+    });
     await this.prisma.contactFlowState.updateMany({
       where: { contactId, isActive: true },
       data: { isActive: false, waitingForReply: false },
     });
 
-    this.logger.log(`[Bot] Parado para conversa ${conversationId} — operador assumiu`);
+    this.logger.log(
+      `[Bot] Parado para conversa ${conversationId} — operador assumiu`,
+    );
   }
 
   // ─── Execução encadeada de nós ──────────────────────────────────────────────
@@ -195,7 +262,10 @@ export class FlowExecutorService {
       let nextId: string | null = null;
 
       if (result.kind === 'branch') {
-        nextId = await this.runner.resolveEdgeTarget(currentNodeId, result.label);
+        nextId = await this.runner.resolveEdgeTarget(
+          currentNodeId,
+          result.label,
+        );
         // fallback: sem edge "yes"/"no" → done
       } else if (result.kind === 'next') {
         if (result.nodeId) {
@@ -203,7 +273,11 @@ export class FlowExecutorService {
         } else {
           nextId =
             (await this.runner.resolveEdgeTarget(currentNodeId, null)) ??
-            (await this.prisma.flowNode.findUnique({ where: { id: currentNodeId } }))?.nextId ??
+            (
+              await this.prisma.flowNode.findUnique({
+                where: { id: currentNodeId },
+              })
+            )?.nextId ??
             null;
         }
       }
@@ -245,27 +319,58 @@ export class FlowExecutorService {
 
     await this.prisma.contactFlowState.upsert({
       where: { contactId_flowId: { contactId, flowId: flow.id } },
-      create: { contactId, flowId: flow.id, currentNodeId: firstNode.id, isActive: true },
-      update: { currentNodeId: firstNode.id, isActive: true, variables: {}, waitingForReply: false },
+      create: {
+        contactId,
+        flowId: flow.id,
+        currentNodeId: firstNode.id,
+        isActive: true,
+      },
+      update: {
+        currentNodeId: firstNode.id,
+        isActive: true,
+        variables: {},
+        waitingForReply: false,
+      },
     });
 
-    await this.prisma.conversation.update({ where: { id: conversationId }, data: { isBotActive: true } });
+    await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: { isBotActive: true },
+    });
 
     await this.prisma.flowExecutionLog.create({
-      data: { flowId: flow.id, contactId, event: 'started', detail: { conversationId } },
+      data: {
+        flowId: flow.id,
+        contactId,
+        event: 'started',
+        detail: { conversationId },
+      },
     });
 
-    await this.executeFromNode(firstNode.id, conversationId, contactId, flow.id, {});
+    await this.executeFromNode(
+      firstNode.id,
+      conversationId,
+      contactId,
+      flow.id,
+      {},
+    );
   }
 
   // ─── Completar flow ─────────────────────────────────────────────────────────
 
-  private async completeFlow(contactId: string, flowId: string, conversationId: string) {
+  private async completeFlow(
+    contactId: string,
+    flowId: string,
+    conversationId: string,
+  ) {
     await this.prisma.contactFlowState.update({
       where: { contactId_flowId: { contactId, flowId } },
       data: { isActive: false, currentNodeId: null, waitingForReply: false },
     });
-    await this.prisma.conversation.update({ where: { id: conversationId }, data: { isBotActive: false } });
+    await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: { isBotActive: false },
+    });
 
     await this.prisma.flowExecutionLog.create({
       data: { flowId, contactId, event: 'completed', detail: {} },
@@ -288,11 +393,13 @@ export class FlowExecutorService {
         return true;
       case 'keyword':
         return Boolean(
-          triggerValue && ctx.incomingText?.toLowerCase().includes(triggerValue.toLowerCase()),
+          triggerValue &&
+          ctx.incomingText?.toLowerCase().includes(triggerValue.toLowerCase()),
         );
       case 'button_reply':
         return Boolean(
-          triggerValue && ctx.incomingText?.toLowerCase() === triggerValue.toLowerCase(),
+          triggerValue &&
+          ctx.incomingText?.toLowerCase() === triggerValue.toLowerCase(),
         );
       case 'tag_applied':
       case 'stage_changed':
@@ -302,7 +409,10 @@ export class FlowExecutorService {
     }
   }
 
-  private async findConversationForAutomation(workspaceId: string, contactId: string) {
+  private async findConversationForAutomation(
+    workspaceId: string,
+    contactId: string,
+  ) {
     return (
       (await this.prisma.conversation.findFirst({
         where: { workspaceId, contactId, status: 'open' },
@@ -318,7 +428,9 @@ export class FlowExecutorService {
   }
 
   private async getReplyVariableName(nodeId: string): Promise<string> {
-    const node = await this.prisma.flowNode.findUnique({ where: { id: nodeId } });
+    const node = await this.prisma.flowNode.findUnique({
+      where: { id: nodeId },
+    });
     const config = (node?.config as Record<string, unknown>) ?? {};
     return config.variableName ? String(config.variableName) : 'reply';
   }

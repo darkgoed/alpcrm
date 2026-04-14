@@ -34,14 +34,6 @@ import { FlowCanvas, type CanvasEdgeDraft } from '@/features/automation/componen
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -105,35 +97,43 @@ function defaultConfig(type: FlowNodeType): Record<string, unknown> {
   }
 }
 
-// ─── Add node dropdown ──────────────────────────────────────────────────────────
+// ─── Add node menu ──────────────────────────────────────────────────────────────
 
 function AddNodeMenu({ onAdd }: { onAdd: (type: FlowNodeType) => void }) {
+  const [open, setOpen] = useState(false);
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5">
-          <Plus className="size-3.5" />
-          Adicionar nó
-          <ChevronDown className="size-3 opacity-50" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-52">
-        {NODE_GROUPS.map((group) => (
-          <div key={group.label}>
-            <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              {group.label}
-            </DropdownMenuLabel>
-            {group.items.map((item) => (
-              <DropdownMenuItem key={item.type} onClick={() => onAdd(item.type)}>
-                <item.icon className={cn('size-4', item.color)} />
-                {item.label}
-              </DropdownMenuItem>
+    <div className="relative">
+      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setOpen((o) => !o)}>
+        <Plus className="size-3.5" />
+        Adicionar nó
+        <ChevronDown className="size-3 opacity-50" />
+      </Button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full z-20 mt-1 w-52 rounded-md border border-border bg-background py-1 shadow-md">
+            {NODE_GROUPS.map((group) => (
+              <div key={group.label}>
+                <p className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                  {group.label}
+                </p>
+                {group.items.map((item) => (
+                  <button
+                    key={item.type}
+                    className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent"
+                    onClick={() => { onAdd(item.type); setOpen(false); }}
+                  >
+                    <item.icon className={cn('size-4', item.color)} />
+                    {item.label}
+                  </button>
+                ))}
+                <div className="my-1 border-t border-border/50" />
+              </div>
             ))}
-            <DropdownMenuSeparator />
           </div>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </>
+      )}
+    </div>
   );
 }
 

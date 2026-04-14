@@ -319,7 +319,9 @@ export class WhatsappService {
           isNewConv,
         ),
       )
-      .catch((err) => this.logger.error(`[Bot] Erro ao processar flow: ${err}`));
+      .catch((err) =>
+        this.logger.error(`[Bot] Erro ao processar flow: ${err}`),
+      );
   }
 
   // ─── Atualização de status ───────────────────────────────────────────────────

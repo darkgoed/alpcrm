@@ -1,7 +1,10 @@
 /**
  * Interpola variáveis {{nome}} em um texto usando o store de variáveis do flow.
  */
-export function interpolate(template: string, variables: Record<string, string>): string {
+export function interpolate(
+  template: string,
+  variables: Record<string, string>,
+): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => variables[key] ?? '');
 }
 
