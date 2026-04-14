@@ -362,6 +362,34 @@ function FlowCanvasInner({
   const [rfNodes, setRFNodes, onRFNodesChange] = useNodesState(layouted.nodes);
   const [rfEdges, setRFEdges, onRFEdgesChange] = useEdgesState(layouted.edges);
 
+  // Sync nodes added/removed from parent into rfNodes
+  useEffect(() => {
+    const draftIds = new Set(nodeDrafts.map((n) => n.clientId));
+    setRFNodes((cur) => {
+      const curFlowIds = new Set(cur.filter((n) => n.type === 'flowNode').map((n) => n.id));
+      // Remove deleted
+      let next = cur.filter((n) => n.type !== 'flowNode' || draftIds.has(n.id));
+      // Add new
+      nodeDrafts
+        .filter((n) => !curFlowIds.has(n.clientId))
+        .forEach((n) => {
+          const lastY = next.length > 0 ? Math.max(...next.map((nd) => nd.position.y)) : 0;
+          next = [
+            ...next,
+            {
+              id: n.clientId,
+              type: 'flowNode',
+              position: { x: 100, y: lastY + 120 },
+              data: { ...n, selected: false } as FlowNodeData,
+              selected: false,
+            },
+          ];
+        });
+      return next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodeDrafts]);
+
   // Sync selected state into rfNodes
   useEffect(() => {
     setRFNodes((nds) =>

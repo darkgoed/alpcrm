@@ -266,7 +266,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* ─── Toolbar ──────────────────────────────────────────────────────── */}
-      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/70 bg-background/95 px-4 py-2.5 backdrop-blur">
+      <header className="relative z-50 flex shrink-0 flex-wrap items-center gap-2 border-b border-border/70 bg-background/95 px-4 py-2.5 backdrop-blur">
         <Link
           href="/automation"
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
