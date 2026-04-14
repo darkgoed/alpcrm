@@ -16,6 +16,7 @@ import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ConversationStatus } from '@prisma/client';
+import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('conversations')
@@ -24,7 +25,7 @@ export class ConversationsController {
 
   @Get()
   findAll(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Query('status') status?: ConversationStatus,
     @Query('teamId') teamId?: string,
     @Query('assignedUserId') assignedUserId?: string,
@@ -38,7 +39,7 @@ export class ConversationsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @CurrentUser() user: any) {
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.conversationsService.findOne(
       id,
       user.workspaceId,
@@ -51,7 +52,7 @@ export class ConversationsController {
   @RequirePermissions('assign_conversation')
   assign(
     @Param('id') id: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: AssignConversationDto,
   ) {
     return this.conversationsService.assign(
@@ -64,7 +65,7 @@ export class ConversationsController {
 
   @Patch(':id/close')
   @RequirePermissions('close_conversation')
-  close(@Param('id') id: string, @CurrentUser() user: any) {
+  close(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.conversationsService.close(
       id,
       user.workspaceId,
@@ -74,7 +75,7 @@ export class ConversationsController {
 
   @Patch(':id/reopen')
   @RequirePermissions('close_conversation')
-  reopen(@Param('id') id: string, @CurrentUser() user: any) {
+  reopen(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.conversationsService.reopen(
       id,
       user.workspaceId,
@@ -83,7 +84,7 @@ export class ConversationsController {
   }
 
   @Patch(':id/read')
-  markAsRead(@Param('id') id: string, @CurrentUser() user: any) {
+  markAsRead(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.conversationsService.markAsRead(
       id,
       user.workspaceId,
@@ -96,7 +97,7 @@ export class ConversationsController {
   @RequirePermissions('manage_internal_notes')
   addNote(
     @Param('id') id: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body('content') content: string,
   ) {
     return this.conversationsService.addNote(
@@ -112,7 +113,7 @@ export class ConversationsController {
   @RequirePermissions('initiate_outbound_conversation')
   initiateConversation(
     @Body() dto: InitiateConversationDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.conversationsService.initiateConversation(
       dto,

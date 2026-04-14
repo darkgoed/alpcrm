@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SchedulerService } from '../queues/scheduler.service';
-import { interpolate, evaluateCondition } from './flow-variable.util';
+import {
+  interpolate,
+  evaluateCondition,
+  stringValue,
+} from './flow-variable.util';
 import { isWithinBusinessHours } from '../common/utils/business-hours.util';
 
 export interface NodeContext {
@@ -122,9 +126,9 @@ export class FlowNodeRunnerService {
       return { kind: 'next', nodeId: null };
     }
 
-    const text = interpolate(String(config.content ?? ''), ctx.variables);
+    const text = interpolate(stringValue(config.content), ctx.variables);
     const imageUrl = interpolate(
-      String(config.imageUrl ?? ''),
+      stringValue(config.imageUrl),
       ctx.variables,
     ).trim();
 
@@ -293,10 +297,10 @@ export class FlowNodeRunnerService {
     },
     config: Record<string, unknown>,
   ): Promise<NodeResult> {
-    const interactiveType = String(config.interactiveType ?? 'button'); // 'button' | 'list'
-    const body = interpolate(String(config.body ?? ''), ctx.variables);
+    const interactiveType = stringValue(config.interactiveType, 'button');
+    const body = interpolate(stringValue(config.body), ctx.variables);
     const footer = config.footer
-      ? interpolate(String(config.footer), ctx.variables)
+      ? interpolate(stringValue(config.footer), ctx.variables)
       : undefined;
     const timeoutMs = config.timeoutMs ? Number(config.timeoutMs) : null;
     const timeoutAt = timeoutMs ? new Date(Date.now() + timeoutMs) : null;
@@ -306,7 +310,7 @@ export class FlowNodeRunnerService {
     if (interactiveType === 'list') {
       action = {
         button: interpolate(
-          String(config.buttonText ?? 'Ver opções'),
+          stringValue(config.buttonText, 'Ver opções'),
           ctx.variables,
         ),
         sections: config.sections ?? [],
@@ -426,9 +430,9 @@ export class FlowNodeRunnerService {
     ctx: NodeContext,
     config: Record<string, unknown>,
   ): NodeResult {
-    const field = String(config.field ?? '');
-    const operator = String(config.operator ?? 'eq');
-    const value = String(config.value ?? '');
+    const field = stringValue(config.field);
+    const operator = stringValue(config.operator, 'eq');
+    const value = stringValue(config.value);
 
     const result = evaluateCondition(field, operator, value, ctx.variables);
     this.logger.log(
@@ -444,8 +448,8 @@ export class FlowNodeRunnerService {
     workspaceId: string,
     config: Record<string, unknown>,
   ): Promise<NodeResult> {
-    const tagId = String(config.tagId ?? '');
-    const action = String(config.action ?? 'add'); // add | remove
+    const tagId = stringValue(config.tagId);
+    const action = stringValue(config.action, 'add');
 
     if (!tagId) return { kind: 'next', nodeId: null };
 
@@ -481,7 +485,7 @@ export class FlowNodeRunnerService {
     workspaceId: string,
     config: Record<string, unknown>,
   ): Promise<NodeResult> {
-    const stageId = String(config.stageId ?? '');
+    const stageId = stringValue(config.stageId);
     if (!stageId) return { kind: 'next', nodeId: null };
 
     const stage = await this.prisma.stage.findFirst({
@@ -519,8 +523,8 @@ export class FlowNodeRunnerService {
     ctx: NodeContext,
     config: Record<string, unknown>,
   ): Promise<NodeResult> {
-    const userId = config.userId ? String(config.userId) : null;
-    const teamId = config.teamId ? String(config.teamId) : null;
+    const userId = this.optionalString(config.userId);
+    const teamId = this.optionalString(config.teamId);
 
     this.logger.log(
       `[FlowNode] Alterando responsável flow=${ctx.flowId} conversation=${ctx.conversationId} contact=${ctx.contactId} node=${ctx.nodeId} user=${userId ?? 'none'} team=${teamId ?? 'none'}`,
@@ -545,8 +549,8 @@ export class FlowNodeRunnerService {
     },
     config: Record<string, unknown>,
   ): Promise<NodeResult> {
-    const templateName = String(config.templateName ?? '');
-    const languageCode = String(config.languageCode ?? 'pt_BR');
+    const templateName = stringValue(config.templateName);
+    const languageCode = stringValue(config.languageCode, 'pt_BR');
     const components = (config.components as unknown[]) ?? [];
 
     if (!templateName) return { kind: 'next', nodeId: null };
@@ -610,8 +614,8 @@ export class FlowNodeRunnerService {
     ctx: NodeContext,
     config: Record<string, unknown>,
   ): Promise<NodeResult> {
-    const url = String(config.url ?? '');
-    const method = String(config.method ?? 'POST').toUpperCase();
+    const url = stringValue(config.url);
+    const method = stringValue(config.method, 'POST').toUpperCase();
 
     if (!url) return { kind: 'next', nodeId: null };
 
@@ -629,11 +633,12 @@ export class FlowNodeRunnerService {
         body: method !== 'GET' ? JSON.stringify(body) : undefined,
         signal: AbortSignal.timeout(10_000),
       });
-      const responseBody = config.saveResponseAs
+      const saveResponseAs = this.optionalString(config.saveResponseAs);
+      const responseBody = saveResponseAs
         ? await res.text().catch(() => '')
         : '';
 
-      if (config.saveResponseAs && responseBody) {
+      if (saveResponseAs && responseBody) {
         await this.prisma.contactFlowState.update({
           where: {
             contactId_flowId: { contactId: ctx.contactId, flowId: ctx.flowId },
@@ -641,7 +646,7 @@ export class FlowNodeRunnerService {
           data: {
             variables: {
               ...ctx.variables,
-              [String(config.saveResponseAs)]: responseBody,
+              [saveResponseAs]: responseBody,
             },
           },
         });
@@ -676,5 +681,10 @@ export class FlowNodeRunnerService {
     }
 
     return { message: String(error) };
+  }
+
+  private optionalString(value: unknown): string | null {
+    const normalized = stringValue(value);
+    return normalized ? normalized : null;
   }
 }

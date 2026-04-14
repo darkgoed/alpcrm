@@ -161,20 +161,26 @@ export class WorkspacesService {
 
     const raw = await response.text();
     const payload = raw ? this.tryParseJson(raw) : null;
+    const payloadRecord = this.isRecord(payload) ? payload : null;
+    const errorPayload =
+      payloadRecord && this.isRecord(payloadRecord.error)
+        ? payloadRecord.error
+        : null;
 
     if (!response.ok) {
       const message =
-        payload?.error?.error_user_msg ||
-        payload?.error?.message ||
+        this.getString(errorPayload?.error_user_msg) ||
+        this.getString(errorPayload?.message) ||
         'Falha ao validar a conta no WhatsApp Cloud API';
 
       throw new BadRequestException(message);
     }
 
     return {
-      id: payload?.id,
-      display_phone_number: payload?.display_phone_number ?? '',
-      verified_name: payload?.verified_name ?? '',
+      id: this.getString(payloadRecord?.id),
+      display_phone_number: this.getString(payloadRecord?.display_phone_number)
+        ?? '',
+      verified_name: this.getString(payloadRecord?.verified_name) ?? '',
     };
   }
 
@@ -250,11 +256,24 @@ export class WorkspacesService {
     });
   }
 
-  private tryParseJson(raw: string): any {
+  private tryParseJson(raw: string): unknown {
     try {
       return JSON.parse(raw);
     } catch {
       return null;
     }
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+  }
+
+  private getString(value: unknown): string | null {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+
+    return null;
   }
 }

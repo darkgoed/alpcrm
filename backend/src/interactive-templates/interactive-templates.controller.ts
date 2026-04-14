@@ -12,13 +12,10 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { InteractiveTemplatesService } from './interactive-templates.service';
 import { CreateInteractiveTemplateDto } from './dto/create-interactive-template.dto';
 import { UpdateInteractiveTemplateDto } from './dto/update-interactive-template.dto';
-
-interface AuthenticatedUser {
-  workspaceId: string;
-}
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('interactive-templates')

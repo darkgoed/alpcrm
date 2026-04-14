@@ -17,6 +17,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { ContactsService } from './contacts.service';
 import {
   CreateContactDto,
@@ -37,7 +38,7 @@ export class ContactsController {
 
   @Get()
   findAll(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Query('search') search?: string,
     @Query('tagIds') tagIds?: string | string[],
     @Query('stageId') stageId?: string,
@@ -56,7 +57,7 @@ export class ContactsController {
 
   @Get(':id')
   findOne(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Query('includeMessages') includeMessages?: string,
   ) {
@@ -68,13 +69,16 @@ export class ContactsController {
   }
 
   @Post()
-  create(@CurrentUser() user: any, @Body() dto: CreateContactDto) {
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateContactDto,
+  ) {
     return this.contactsService.create(user.workspaceId, dto);
   }
 
   @Patch(':id')
   update(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: UpdateContactDto,
   ) {
@@ -83,13 +87,13 @@ export class ContactsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@CurrentUser() user: any, @Param('id') id: string) {
+  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.contactsService.remove(user.workspaceId, id);
   }
 
   @Post(':id/merge')
   merge(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: MergeContactDto,
   ) {
@@ -104,7 +108,10 @@ export class ContactsController {
 
   @Post('import/preview')
   @UseInterceptors(FileInterceptor('file'))
-  async importPreview(@CurrentUser() user: any, @UploadedFile() file: any) {
+  async importPreview(
+    @CurrentUser() user: AuthenticatedUser,
+    @UploadedFile() file: any,
+  ) {
     if (!file?.buffer) throw new BadRequestException('Arquivo CSV obrigatório');
     return this.contactsService.previewImport(
       user.workspaceId,
@@ -114,7 +121,7 @@ export class ContactsController {
 
   @Post('import/confirm')
   async importConfirm(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body()
     dto: { rows: Array<{ phone: string; name?: string; email?: string }> },
   ) {
@@ -125,7 +132,7 @@ export class ContactsController {
 
   @Post(':id/tags')
   addTag(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: AddTagDto,
   ) {
@@ -135,7 +142,7 @@ export class ContactsController {
   @Delete(':id/tags/:tagId')
   @HttpCode(HttpStatus.NO_CONTENT)
   removeTag(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Param('tagId') tagId: string,
   ) {
@@ -145,13 +152,13 @@ export class ContactsController {
   // ─── Tags do workspace ────────────────────────────────────────────────────────
 
   @Get('/tags/list')
-  listTags(@CurrentUser() user: any) {
+  listTags(@CurrentUser() user: AuthenticatedUser) {
     return this.contactsService.listTags(user.workspaceId);
   }
 
   @Post('/tags/create')
   createTag(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body('name') name: string,
     @Body('color') color?: string,
   ) {
@@ -160,41 +167,53 @@ export class ContactsController {
 
   @Delete('/tags/:tagId/delete')
   @HttpCode(HttpStatus.NO_CONTENT)
-  deleteTag(@CurrentUser() user: any, @Param('tagId') tagId: string) {
+  deleteTag(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('tagId') tagId: string,
+  ) {
     return this.contactsService.deleteTag(user.workspaceId, tagId);
   }
 
   @Get('/segments')
-  listSegments(@CurrentUser() user: any) {
+  listSegments(@CurrentUser() user: AuthenticatedUser) {
     return this.contactsService.listSavedSegments(user.workspaceId);
   }
 
   @Post('/segments')
-  createSegment(@CurrentUser() user: any, @Body() dto: CreateSavedSegmentDto) {
+  createSegment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateSavedSegmentDto,
+  ) {
     return this.contactsService.createSavedSegment(user.workspaceId, dto);
   }
 
   @Delete('/segments/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  deleteSegment(@CurrentUser() user: any, @Param('id') id: string) {
+  deleteSegment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
     return this.contactsService.deleteSavedSegment(user.workspaceId, id);
   }
 
   @Post('/bulk/actions')
-  bulkActions(@CurrentUser() user: any, @Body() dto: BulkContactActionDto) {
+  bulkActions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: BulkContactActionDto,
+  ) {
     return this.contactsService.applyBulkActions(user.workspaceId, dto);
   }
 
   // ─── Notas internas ───────────────────────────────────────────────────────────
 
   @Get(':id/notes')
-  listNotes(@CurrentUser() user: any, @Param('id') id: string) {
+  listNotes(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.contactsService.listNotes(user.workspaceId, id);
   }
 
   @Post(':id/notes')
   createNote(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body('content') content: string,
   ) {
@@ -208,7 +227,7 @@ export class ContactsController {
 
   @Patch(':id/opt-in')
   setOptIn(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: SetOptInDto,
   ) {
@@ -218,7 +237,7 @@ export class ContactsController {
   @Delete(':id/notes/:noteId')
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteNote(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Param('noteId') noteId: string,
   ) {

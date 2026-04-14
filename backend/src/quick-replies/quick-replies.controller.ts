@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('quick-replies')
@@ -23,13 +24,16 @@ export class QuickRepliesController {
   constructor(private readonly svc: QuickRepliesService) {}
 
   @Get()
-  findAll(@CurrentUser() user: any, @Query('search') search?: string) {
+  findAll(@CurrentUser() user: AuthenticatedUser, @Query('search') search?: string) {
     return this.svc.findAll(user.workspaceId, search);
   }
 
   @Post()
   @RequirePermissions('manage_workspace')
-  create(@Body() dto: CreateQuickReplyDto, @CurrentUser() user: any) {
+  create(
+    @Body() dto: CreateQuickReplyDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.svc.create(dto, user.workspaceId);
   }
 
@@ -38,14 +42,14 @@ export class QuickRepliesController {
   update(
     @Param('id') id: string,
     @Body() dto: UpdateQuickReplyDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.svc.update(id, user.workspaceId, dto);
   }
 
   @Delete(':id')
   @RequirePermissions('manage_workspace')
-  remove(@Param('id') id: string, @CurrentUser() user: any) {
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.svc.remove(id, user.workspaceId);
   }
 }

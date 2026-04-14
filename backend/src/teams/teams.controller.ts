@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('teams')
@@ -22,18 +23,18 @@ export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
 
   @Get()
-  findAll(@CurrentUser() user: any) {
+  findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.teamsService.findAll(user.workspaceId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @CurrentUser() user: any) {
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.teamsService.findOne(id, user.workspaceId);
   }
 
   @Post()
   @RequirePermissions('manage_teams')
-  create(@Body() dto: CreateTeamDto, @CurrentUser() user: any) {
+  create(@Body() dto: CreateTeamDto, @CurrentUser() user: AuthenticatedUser) {
     return this.teamsService.create(dto, user.workspaceId);
   }
 
@@ -42,14 +43,14 @@ export class TeamsController {
   update(
     @Param('id') id: string,
     @Body() dto: UpdateTeamDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.teamsService.update(id, user.workspaceId, dto);
   }
 
   @Delete(':id')
   @RequirePermissions('manage_teams')
-  remove(@Param('id') id: string, @CurrentUser() user: any) {
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.teamsService.remove(id, user.workspaceId);
   }
 
@@ -58,7 +59,7 @@ export class TeamsController {
   addMember(
     @Param('id') id: string,
     @Param('userId') userId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.teamsService.addMember(id, userId, user.workspaceId);
   }
@@ -68,7 +69,7 @@ export class TeamsController {
   removeMember(
     @Param('id') id: string,
     @Param('userId') userId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.teamsService.removeMember(id, userId, user.workspaceId);
   }

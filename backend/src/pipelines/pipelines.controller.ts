@@ -21,6 +21,7 @@ import {
   ReorderStagesDto,
   MoveContactDto,
 } from './dto/pipeline.dto';
+import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 
 @UseGuards(JwtAuthGuard)
 @Controller('pipelines')
@@ -30,18 +31,21 @@ export class PipelinesController {
   // ─── Pipelines ────────────────────────────────────────────────────────────────
 
   @Get()
-  listPipelines(@CurrentUser() user: any) {
+  listPipelines(@CurrentUser() user: AuthenticatedUser) {
     return this.pipelinesService.listPipelines(user.workspaceId);
   }
 
   @Post()
-  createPipeline(@CurrentUser() user: any, @Body() dto: CreatePipelineDto) {
+  createPipeline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreatePipelineDto,
+  ) {
     return this.pipelinesService.createPipeline(user.workspaceId, dto);
   }
 
   @Patch(':id')
   updatePipeline(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: UpdatePipelineDto,
   ) {
@@ -50,14 +54,17 @@ export class PipelinesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  deletePipeline(@CurrentUser() user: any, @Param('id') id: string) {
+  deletePipeline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
     return this.pipelinesService.deletePipeline(user.workspaceId, id);
   }
 
   // ─── Kanban ───────────────────────────────────────────────────────────────────
 
   @Get(':id/kanban')
-  getKanban(@CurrentUser() user: any, @Param('id') id: string) {
+  getKanban(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.pipelinesService.getKanban(user.workspaceId, id);
   }
 
@@ -65,7 +72,7 @@ export class PipelinesController {
 
   @Post(':id/stages')
   createStage(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') pipelineId: string,
     @Body() dto: CreateStageDto,
   ) {
@@ -74,7 +81,7 @@ export class PipelinesController {
 
   @Patch(':id/stages/:stageId')
   updateStage(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') pipelineId: string,
     @Param('stageId') stageId: string,
     @Body() dto: UpdateStageDto,
@@ -90,7 +97,7 @@ export class PipelinesController {
   @Delete(':id/stages/:stageId')
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteStage(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') pipelineId: string,
     @Param('stageId') stageId: string,
   ) {
@@ -103,7 +110,7 @@ export class PipelinesController {
 
   @Patch(':id/stages/reorder')
   reorderStages(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') pipelineId: string,
     @Body() dto: ReorderStagesDto,
   ) {
@@ -118,7 +125,7 @@ export class PipelinesController {
 
   @Patch(':id/move')
   moveContact(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') pipelineId: string,
     @Body() dto: MoveContactDto,
   ) {
@@ -128,7 +135,7 @@ export class PipelinesController {
   @Delete(':id/contacts/:contactId')
   @HttpCode(HttpStatus.NO_CONTENT)
   removeContact(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') pipelineId: string,
     @Param('contactId') contactId: string,
   ) {

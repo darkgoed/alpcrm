@@ -5,7 +5,18 @@ export function interpolate(
   template: string,
   variables: Record<string, string>,
 ): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => variables[key] ?? '');
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
+    return variables[key] ?? '';
+  });
+}
+
+export function stringValue(value: unknown, fallback = ''): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  return fallback;
 }
 
 /**

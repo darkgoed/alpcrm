@@ -5,6 +5,8 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import type { Request } from 'express';
+import type { AuthenticatedUser } from '../../auth/strategies/jwt.strategy';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 
 @Injectable()
@@ -19,7 +21,9 @@ export class PermissionsGuard implements CanActivate {
 
     if (!required || required.length === 0) return true;
 
-    const { user } = ctx.switchToHttp().getRequest();
+    const { user } = ctx
+      .switchToHttp()
+      .getRequest<Request & { user?: AuthenticatedUser }>();
     const hasAll = required.every((p) => user?.permissions?.includes(p));
 
     if (!hasAll) throw new ForbiddenException('Permissão insuficiente');

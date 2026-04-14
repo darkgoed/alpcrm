@@ -8,7 +8,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
+import type { Request } from 'express';
 import { PrismaService } from '../../prisma/prisma.service';
+
+interface WebhookRequest extends Request {
+  rawBody?: Buffer;
+}
 
 @Injectable()
 export class WebhookSignatureGuard implements CanActivate {
@@ -20,7 +25,7 @@ export class WebhookSignatureGuard implements CanActivate {
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
-    const req = ctx.switchToHttp().getRequest();
+    const req = ctx.switchToHttp().getRequest<WebhookRequest>();
     const signature = req.headers['x-hub-signature-256'] as string;
     const isProduction = this.config.get<string>('NODE_ENV') === 'production';
     const rawBody: Buffer | undefined = req.rawBody;
@@ -106,9 +111,27 @@ export class WebhookSignatureGuard implements CanActivate {
 
   private extractPhoneNumberId(rawBody: Buffer): string | null {
     try {
-      const payload = JSON.parse(rawBody.toString('utf8'));
-      const phoneNumberId =
-        payload?.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
+      const payload = JSON.parse(rawBody.toString('utf8')) as unknown;
+      if (!this.isRecord(payload) || !Array.isArray(payload.entry)) {
+        return null;
+      }
+
+      const entry = payload.entry[0];
+      if (!this.isRecord(entry) || !Array.isArray(entry.changes)) {
+        return null;
+      }
+
+      const change = entry.changes[0];
+      if (!this.isRecord(change) || !this.isRecord(change.value)) {
+        return null;
+      }
+
+      const metadata = change.value.metadata;
+      if (!this.isRecord(metadata)) {
+        return null;
+      }
+
+      const phoneNumberId = metadata.phone_number_id;
 
       return typeof phoneNumberId === 'string' && phoneNumberId.trim()
         ? phoneNumberId
@@ -116,5 +139,9 @@ export class WebhookSignatureGuard implements CanActivate {
     } catch {
       return null;
     }
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
   }
 }

@@ -20,6 +20,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 
 const ALLOWED_MIME = new Set([
   'image/jpeg',
@@ -55,7 +56,7 @@ export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 
   @Get('search')
-  search(@CurrentUser() user: any, @Query('q') q: string) {
+  search(@CurrentUser() user: AuthenticatedUser, @Query('q') q: string) {
     if (!q?.trim()) throw new BadRequestException('Parâmetro q é obrigatório');
     return this.messagesService.search(
       q,
@@ -67,7 +68,7 @@ export class MessagesController {
 
   @Get()
   findByConversation(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Query('conversationId') conversationId: string,
     @Query('cursor') cursor?: string,
     @Query('take') take?: string,
@@ -85,7 +86,7 @@ export class MessagesController {
 
   @Post()
   @RequirePermissions('respond_conversation')
-  send(@Body() dto: SendMessageDto, @CurrentUser() user: any) {
+  send(@Body() dto: SendMessageDto, @CurrentUser() user: AuthenticatedUser) {
     return this.messagesService.send(
       dto,
       user.workspaceId,
@@ -115,7 +116,7 @@ export class MessagesController {
     @UploadedFile() file: Express.Multer.File,
     @Body('conversationId') conversationId: string,
     @Body('caption') caption: string | undefined,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!file) throw new BadRequestException('Arquivo obrigatório');
     if (!conversationId)

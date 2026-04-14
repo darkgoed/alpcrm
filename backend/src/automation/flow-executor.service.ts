@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Flow, FlowTriggerType } from '@prisma/client';
 import { FlowNodeRunnerService } from './flow-node-runner.service';
 import { SchedulerService } from '../queues/scheduler.service';
+import { stringValue } from './flow-variable.util';
 
 type FlowTriggerContext = {
   incomingText?: string | null;
@@ -555,7 +556,8 @@ export class FlowExecutorService {
       where: { id: nodeId },
     });
     const config = (node?.config as Record<string, unknown>) ?? {};
-    return config.variableName ? String(config.variableName) : 'reply';
+    const variableName = stringValue(config.variableName);
+    return variableName || 'reply';
   }
 
   private async logFlowError(

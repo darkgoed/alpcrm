@@ -8,11 +8,12 @@ import {
   Param,
   Body,
   UseGuards,
-  Request,
 } from '@nestjs/common';
+import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { FlowsService } from './flows.service';
 import { CreateFlowDto, UpdateFlowDto } from './dto/create-flow.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @Controller('automation/flows')
 @UseGuards(JwtAuthGuard)
@@ -20,36 +21,36 @@ export class AutomationController {
   constructor(private flows: FlowsService) {}
 
   @Get()
-  findAll(@Request() req: any) {
-    return this.flows.findAll(req.user.workspaceId);
+  findAll(@CurrentUser() user: AuthenticatedUser) {
+    return this.flows.findAll(user.workspaceId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @Request() req: any) {
-    return this.flows.findOne(id, req.user.workspaceId);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.flows.findOne(id, user.workspaceId);
   }
 
   @Post()
-  create(@Body() dto: CreateFlowDto, @Request() req: any) {
-    return this.flows.create(dto, req.user.workspaceId);
+  create(@Body() dto: CreateFlowDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.flows.create(dto, user.workspaceId);
   }
 
   @Put(':id')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateFlowDto,
-    @Request() req: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.flows.update(id, dto, req.user.workspaceId);
+    return this.flows.update(id, dto, user.workspaceId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string, @Request() req: any) {
-    return this.flows.remove(id, req.user.workspaceId);
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.flows.remove(id, user.workspaceId);
   }
 
   @Patch(':id/toggle')
-  toggle(@Param('id') id: string, @Request() req: any) {
-    return this.flows.toggleActive(id, req.user.workspaceId);
+  toggle(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.flows.toggleActive(id, user.workspaceId);
   }
 }
