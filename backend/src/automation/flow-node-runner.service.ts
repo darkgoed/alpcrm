@@ -114,7 +114,10 @@ export class FlowNodeRunnerService {
     }
 
     const text = interpolate(String(config.content ?? ''), ctx.variables);
-    const imageUrl = interpolate(String(config.imageUrl ?? ''), ctx.variables).trim();
+    const imageUrl = interpolate(
+      String(config.imageUrl ?? ''),
+      ctx.variables,
+    ).trim();
 
     if (!text && !imageUrl) {
       return { kind: 'next', nodeId: null };

@@ -157,6 +157,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
   const [selectedStageId, setSelectedStageId] = useState('');
   const [nodes, setNodes] = useState<NodeDraft[]>([]);
   const [canvasEdges, setCanvasEdges] = useState<CanvasEdgeDraft[]>([]);
+  const [canvasSyncKey, setCanvasSyncKey] = useState(0);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -193,6 +194,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
         label: e.label ?? undefined,
       })),
     );
+    setCanvasSyncKey((current) => current + 1);
     setHydrated(true);
   }, [flow]);
 
@@ -368,6 +370,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
           <FlowCanvas
             nodes={nodes}
             edges={canvasEdges}
+            syncKey={canvasSyncKey}
             triggerType={triggerType}
             triggerValue={triggerValue}
             selectedClientId={selectedClientId}

@@ -37,6 +37,7 @@ export type CanvasEdgeDraft = {
 interface FlowCanvasProps {
   nodes: NodeDraft[];
   edges: CanvasEdgeDraft[];
+  syncKey: number;
   triggerType: string;
   triggerValue: string;
   selectedClientId: string | null;
@@ -448,6 +449,7 @@ function serializeEdgeSnapshot(edges: Array<Pick<Edge, 'source' | 'target' | 'so
 function FlowCanvasInner({
   nodes: nodeDrafts,
   edges: savedEdges,
+  syncKey,
   triggerType,
   triggerValue,
   selectedClientId,
@@ -564,17 +566,14 @@ function FlowCanvasInner({
     );
   }, [rfEdges, setRFNodes]);
 
-  // Keep canvas edges aligned with the persisted draft state after save/reload.
   useEffect(() => {
     const nextEdges = toRFEdges(nodeDrafts, savedEdges);
     const nextSnapshot = serializeEdgeSnapshot(nextEdges);
-    const currentSnapshot = serializeEdgeSnapshot(rfEdges);
-
-    if (nextSnapshot === currentSnapshot || nextSnapshot === lastSyncedEdgesRef.current) return;
+    if (nextSnapshot === lastSyncedEdgesRef.current) return;
 
     lastSyncedEdgesRef.current = nextSnapshot;
     setRFEdges(nextEdges);
-  }, [nodeDrafts, rfEdges, savedEdges, setRFEdges]);
+  }, [nodeDrafts, savedEdges, setRFEdges, syncKey]);
 
   // Emit edges to parent whenever they change (skip trigger-to-first edge)
   useEffect(() => {
