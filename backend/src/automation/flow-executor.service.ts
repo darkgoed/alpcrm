@@ -43,7 +43,7 @@ export class FlowExecutorService {
 
     const flows = await this.prisma.flow.findMany({
       where: { workspaceId, isActive: true },
-      include: { nodes: { orderBy: { order: 'asc' } } },
+      include: { nodes: { orderBy: { order: 'asc' } }, edges: true },
     });
 
     for (const flow of flows) {
@@ -84,7 +84,7 @@ export class FlowExecutorService {
 
     const flows = await this.prisma.flow.findMany({
       where: { workspaceId, isActive: true, triggerType: eventType },
-      include: { nodes: { orderBy: { order: 'asc' } } },
+      include: { nodes: { orderBy: { order: 'asc' } }, edges: true },
     });
 
     for (const flow of flows) {
@@ -418,7 +418,10 @@ export class FlowExecutorService {
   // ─── Iniciar flow ──────────────────────────────────────────────────────────
 
   private async startFlow(
-    flow: Flow & { nodes: Array<{ id: string }> },
+    flow: Flow & {
+      nodes: Array<{ id: string; order?: number | null }>;
+      edges: Array<{ fromNodeId: string; toNodeId: string }>;
+    },
     conversationId: string,
     contactId: string,
   ) {
@@ -429,7 +432,8 @@ export class FlowExecutorService {
     });
     if (existingState?.isActive) return;
 
-    const firstNode = flow.nodes[0];
+    const firstNode = this.resolveStartNode(flow);
+    if (!firstNode) return;
 
     this.logger.log(
       `[Flow] Iniciando flow=${flow.id} conversation=${conversationId} contact=${contactId} firstNode=${firstNode.id}`,
@@ -472,6 +476,25 @@ export class FlowExecutorService {
       flow.id,
       {},
     );
+  }
+
+  private resolveStartNode(flow: {
+    nodes: Array<{ id: string; order?: number | null }>;
+    edges: Array<{ fromNodeId: string; toNodeId: string }>;
+  }) {
+    if (flow.nodes.length === 0) return null;
+    if (flow.edges.length === 0) return flow.nodes[0];
+
+    const incoming = new Set(flow.edges.map((edge) => edge.toNodeId));
+    const roots = flow.nodes.filter((node) => !incoming.has(node.id));
+    if (roots.length === 0) return flow.nodes[0];
+
+    return roots.sort((a, b) => {
+      const leftOrder = a.order ?? Number.MAX_SAFE_INTEGER;
+      const rightOrder = b.order ?? Number.MAX_SAFE_INTEGER;
+      if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+      return a.id.localeCompare(b.id);
+    })[0];
   }
 
   // ─── Completar flow ─────────────────────────────────────────────────────────
