@@ -1,7 +1,8 @@
 import {
+  BadRequestException,
   Injectable,
-  NotFoundException,
   ConflictException,
+  NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -12,6 +13,7 @@ import {
 } from './dto/follow-up-rule.dto';
 import {
   CreateWhatsappAccountDto,
+  TestWhatsappConnectionDto,
   UpdateWhatsappAccountDto,
 } from './dto/whatsapp-account.dto';
 
@@ -140,6 +142,40 @@ export class WorkspacesService {
     });
   }
 
+  async testWhatsappConnection(
+    workspaceId: string,
+    dto: TestWhatsappConnectionDto,
+  ) {
+    void workspaceId;
+
+    const url = new URL(`https://graph.facebook.com/v19.0/${dto.phoneNumberId}`);
+    url.searchParams.set('fields', 'id,display_phone_number,verified_name');
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${dto.token}`,
+      },
+    });
+
+    const raw = await response.text();
+    const payload = raw ? this.tryParseJson(raw) : null;
+
+    if (!response.ok) {
+      const message =
+        payload?.error?.error_user_msg ||
+        payload?.error?.message ||
+        'Falha ao validar a conta no WhatsApp Cloud API';
+
+      throw new BadRequestException(message);
+    }
+
+    return {
+      id: payload?.id,
+      display_phone_number: payload?.display_phone_number ?? '',
+      verified_name: payload?.verified_name ?? '',
+    };
+  }
+
   async updateWhatsappAccount(
     workspaceId: string,
     id: string,
@@ -210,5 +246,13 @@ export class WorkspacesService {
         user: { select: { id: true, name: true, email: true } },
       },
     });
+  }
+
+  private tryParseJson(raw: string): any {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
   }
 }

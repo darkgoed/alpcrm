@@ -53,9 +53,9 @@ export async function deleteWhatsappAccount(id: string) {
 }
 
 export async function testWhatsappConnection(phoneNumberId: string, token: string) {
-  const { data } = await api.get(
-    `https://graph.facebook.com/v18.0/${phoneNumberId}`,
-    { headers: { Authorization: `Bearer ${token}` }, baseURL: '' },
-  );
+  const { data } = await api.post('/workspaces/whatsapp-accounts/test-connection', {
+    phoneNumberId,
+    token,
+  });
   return data as { id: string; display_phone_number: string; verified_name: string };
 }

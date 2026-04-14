@@ -57,3 +57,12 @@ export class UpdateWhatsappAccountDto {
   @IsBoolean()
   isActive?: boolean;
 }
+
+export class TestWhatsappConnectionDto {
+  @IsString()
+  phoneNumberId: string;
+
+  @IsString()
+  @MinLength(10)
+  token: string;
+}

@@ -106,8 +106,11 @@ function NewAccountForm({ onCreated }: { onCreated: () => void }) {
     try {
       const info = await testWhatsappConnection(form.metaAccountId, form.token);
       setTestResult({ ok: true, label: `✓ ${info.verified_name} (${info.display_phone_number})` });
-    } catch {
-      setTestResult({ ok: false, label: 'Falha na conexão — verifique o Phone Number ID e o Token' });
+    } catch (e: any) {
+      setTestResult({
+        ok: false,
+        label: e?.response?.data?.message ?? 'Falha na conexão — verifique o Phone Number ID e o Token',
+      });
     } finally {
       setTesting(false);
     }
@@ -315,8 +318,13 @@ function AccountCard({ account, onChanged }: { account: WhatsappAccount; onChang
     try {
       const info = await testWhatsappConnection(form.metaAccountId, form.token);
       setTestResult({ ok: true, label: `✓ ${info.verified_name} (${info.display_phone_number})` });
-    } catch {
-      setTestResult({ ok: false, label: 'Falha na conexão — verifique o Phone Number ID e o Token informado' });
+    } catch (e: any) {
+      setTestResult({
+        ok: false,
+        label:
+          e?.response?.data?.message ??
+          'Falha na conexão — verifique o Phone Number ID e o Token informado',
+      });
     } finally {
       setTesting(false);
     }

@@ -23,6 +23,7 @@ import {
 } from './dto/follow-up-rule.dto';
 import {
   CreateWhatsappAccountDto,
+  TestWhatsappConnectionDto,
   UpdateWhatsappAccountDto,
 } from './dto/whatsapp-account.dto';
 
@@ -97,6 +98,15 @@ export class WorkspacesController {
     @Body() dto: CreateWhatsappAccountDto,
   ) {
     return this.workspacesService.createWhatsappAccount(user.workspaceId, dto);
+  }
+
+  @Post('whatsapp-accounts/test-connection')
+  @RequirePermissions('manage_workspace')
+  testWhatsappConnection(
+    @CurrentUser() user: any,
+    @Body() dto: TestWhatsappConnectionDto,
+  ) {
+    return this.workspacesService.testWhatsappConnection(user.workspaceId, dto);
   }
 
   @Patch('whatsapp-accounts/:id')
