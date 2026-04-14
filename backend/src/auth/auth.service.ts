@@ -150,7 +150,7 @@ export class AuthService {
       data: { revokedAt: new Date() },
     });
 
-    const permissions = [
+    const permissions: string[] = [
       ...new Set(
         stored.user.userRoles.flatMap((ur) =>
           ur.role.rolePermissions.map((rp) => rp.permission.key),
