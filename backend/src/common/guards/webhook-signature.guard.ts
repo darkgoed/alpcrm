@@ -8,18 +8,21 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class WebhookSignatureGuard implements CanActivate {
   private readonly logger = new Logger(WebhookSignatureGuard.name);
 
-  constructor(private config: ConfigService) {}
+  constructor(
+    private config: ConfigService,
+    private prisma: PrismaService,
+  ) {}
 
-  canActivate(ctx: ExecutionContext): boolean {
+  async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest();
     const signature = req.headers['x-hub-signature-256'] as string;
     const isProduction = this.config.get<string>('NODE_ENV') === 'production';
-    const appSecret = this.config.get<string>('WHATSAPP_APP_SECRET');
     const rawBody: Buffer | undefined = req.rawBody;
 
     if (!signature) {
@@ -38,15 +41,6 @@ export class WebhookSignatureGuard implements CanActivate {
       return true;
     }
 
-    if (!appSecret) {
-      this.logger.error(
-        'WHATSAPP_APP_SECRET ausente; validação de assinatura não pode ser executada',
-      );
-      throw new ServiceUnavailableException(
-        'Validação do webhook indisponível por configuração ausente',
-      );
-    }
-
     if (!rawBody) {
       this.logger.error(
         'Webhook recebido sem rawBody; validação de assinatura não pode ser executada',
@@ -56,9 +50,27 @@ export class WebhookSignatureGuard implements CanActivate {
       );
     }
 
+    const appSecret = await this.resolveAppSecret(rawBody);
+
+    if (!appSecret) {
+      this.logger.error(
+        'App Secret ausente; validação de assinatura não pode ser executada',
+      );
+      throw new ServiceUnavailableException(
+        'Validação do webhook indisponível por configuração ausente',
+      );
+    }
+
     const expected =
       'sha256=' +
       crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex');
+
+    if (signature.length !== expected.length) {
+      this.logger.error(
+        `Assinatura inválida no webhook (ip=${req.ip ?? 'unknown'})`,
+      );
+      throw new UnauthorizedException('Assinatura do webhook inválida');
+    }
 
     const valid = crypto.timingSafeEqual(
       Buffer.from(signature),
@@ -73,5 +85,36 @@ export class WebhookSignatureGuard implements CanActivate {
     }
 
     return true;
+  }
+
+  private async resolveAppSecret(rawBody: Buffer): Promise<string | null> {
+    const phoneNumberId = this.extractPhoneNumberId(rawBody);
+
+    if (phoneNumberId) {
+      const account = await this.prisma.whatsappAccount.findFirst({
+        where: { metaAccountId: phoneNumberId, isActive: true },
+        select: { appSecret: true },
+      });
+
+      if (account?.appSecret?.trim()) {
+        return account.appSecret;
+      }
+    }
+
+    return this.config.get<string>('WHATSAPP_APP_SECRET')?.trim() || null;
+  }
+
+  private extractPhoneNumberId(rawBody: Buffer): string | null {
+    try {
+      const payload = JSON.parse(rawBody.toString('utf8'));
+      const phoneNumberId =
+        payload?.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
+
+      return typeof phoneNumberId === 'string' && phoneNumberId.trim()
+        ? phoneNumberId
+        : null;
+    } catch {
+      return null;
+    }
   }
 }
