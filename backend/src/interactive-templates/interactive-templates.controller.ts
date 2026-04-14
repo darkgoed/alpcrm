@@ -16,19 +16,26 @@ import { InteractiveTemplatesService } from './interactive-templates.service';
 import { CreateInteractiveTemplateDto } from './dto/create-interactive-template.dto';
 import { UpdateInteractiveTemplateDto } from './dto/update-interactive-template.dto';
 
+interface AuthenticatedUser {
+  workspaceId: string;
+}
+
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('interactive-templates')
 export class InteractiveTemplatesController {
   constructor(private readonly service: InteractiveTemplatesService) {}
 
   @Get()
-  findAll(@CurrentUser() user: any) {
+  findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.service.findAll(user.workspaceId);
   }
 
   @Post()
   @RequirePermissions('manage_workspace')
-  create(@Body() dto: CreateInteractiveTemplateDto, @CurrentUser() user: any) {
+  create(
+    @Body() dto: CreateInteractiveTemplateDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.service.create(dto, user.workspaceId);
   }
 
@@ -37,14 +44,14 @@ export class InteractiveTemplatesController {
   update(
     @Param('id') id: string,
     @Body() dto: UpdateInteractiveTemplateDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.service.update(id, user.workspaceId, dto);
   }
 
   @Delete(':id')
   @RequirePermissions('manage_workspace')
-  remove(@Param('id') id: string, @CurrentUser() user: any) {
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.service.remove(id, user.workspaceId);
   }
 }
