@@ -103,19 +103,41 @@ export class WhatsappService {
           const contacts = value.contacts ?? [];
           for (const msg of value.messages) {
             const contact = contacts.find((c) => c.wa_id === msg.from);
-            await this.handleIncomingMessage(
-              phoneNumberId,
-              msg,
-              contact,
-              onMessage,
+            this.logger.log(
+              `[Webhook] Evento de mensagem recebido phoneNumberId=${phoneNumberId} from=${msg.from} type=${msg.type} messageId=${msg.id}`,
             );
+            try {
+              await this.handleIncomingMessage(
+                phoneNumberId,
+                msg,
+                contact,
+                onMessage,
+              );
+            } catch (error) {
+              const err = this.formatError(error);
+              this.logger.error(
+                `[Webhook] Falha ao processar mensagem phoneNumberId=${phoneNumberId} from=${msg.from} messageId=${msg.id}: ${err.message}`,
+                err.stack,
+              );
+            }
           }
         }
 
         // Processa atualizações de status
         if (value.statuses?.length) {
           for (const status of value.statuses) {
-            await this.handleStatusUpdate(status, onMessage);
+            this.logger.log(
+              `[Webhook] Evento de status recebido messageExternalId=${status.id} status=${status.status}`,
+            );
+            try {
+              await this.handleStatusUpdate(status, onMessage);
+            } catch (error) {
+              const err = this.formatError(error);
+              this.logger.error(
+                `[Webhook] Falha ao processar status messageExternalId=${status.id} status=${status.status}: ${err.message}`,
+                err.stack,
+              );
+            }
           }
         }
       }
@@ -323,15 +345,24 @@ export class WhatsappService {
           workspaceId,
           contact.id,
           content,
-          ((normalizedInteractive?.interactivePayload as
+          (normalizedInteractive?.interactivePayload as
             | { replyId?: string | null; title?: string | null }
-            | undefined) ?? null),
+            | undefined) ?? null,
           isNewConv,
         ),
       )
-      .catch((err) =>
-        this.logger.error(`[Bot] Erro ao processar flow: ${err}`),
-      );
+      .then(() =>
+        this.logger.log(
+          `[Flow] Processamento concluído conversation=${conversation.id} contact=${contact.id} inboundMessage=${msg.id}`,
+        ),
+      )
+      .catch((err) => {
+        const error = this.formatError(err);
+        this.logger.error(
+          `[Flow] Erro ao processar automação conversation=${conversation.id} contact=${contact.id} inboundMessage=${msg.id}: ${error.message}`,
+          error.stack,
+        );
+      });
   }
 
   // ─── Atualização de status ───────────────────────────────────────────────────
@@ -369,6 +400,18 @@ export class WhatsappService {
       messageId: message.id,
       status: mapped,
     });
+
+    this.logger.log(
+      `[Webhook] Status atualizado conversation=${message.conversationId} messageId=${message.id} externalId=${status.id} status=${mapped}`,
+    );
+  }
+
+  private formatError(error: unknown): { message: string; stack?: string } {
+    if (error instanceof Error) {
+      return { message: error.message, stack: error.stack };
+    }
+
+    return { message: String(error) };
   }
 
   // ─── Horário comercial ───────────────────────────────────────────────────────

@@ -36,21 +36,28 @@ export class FlowExecutorService {
     } | null,
     isNewConversation: boolean,
   ) {
+    this.logger.log(
+      `[Flow] Avaliando gatilhos conversation=${conversationId} contact=${contactId} workspace=${workspaceId} isNewConversation=${isNewConversation} incomingText="${incomingText ?? ''}"`,
+    );
+
     const flows = await this.prisma.flow.findMany({
       where: { workspaceId, isActive: true },
       include: { nodes: { orderBy: { order: 'asc' } } },
     });
 
     for (const flow of flows) {
-      if (
-        !this.checkTrigger(flow.triggerType, flow.triggerValue, {
-          incomingText,
-          replyId: interactiveReply?.replyId ?? null,
-          replyTitle: interactiveReply?.title ?? null,
-          isNewConversation,
-        })
-      )
-        continue;
+      const matched = this.checkTrigger(flow.triggerType, flow.triggerValue, {
+        incomingText,
+        replyId: interactiveReply?.replyId ?? null,
+        replyTitle: interactiveReply?.title ?? null,
+        isNewConversation,
+      });
+
+      if (!matched) continue;
+
+      this.logger.log(
+        `[Flow] Gatilho correspondente flow=${flow.id} triggerType=${flow.triggerType} triggerValue="${flow.triggerValue ?? ''}" conversation=${conversationId} contact=${contactId}`,
+      );
       await this.startFlow(flow, conversationId, contactId);
     }
   }
@@ -80,13 +87,16 @@ export class FlowExecutorService {
     });
 
     for (const flow of flows) {
-      if (
-        !this.checkTrigger(flow.triggerType, flow.triggerValue, {
-          eventType,
-          eventValue,
-        })
-      )
-        continue;
+      const matched = this.checkTrigger(flow.triggerType, flow.triggerValue, {
+        eventType,
+        eventValue,
+      });
+
+      if (!matched) continue;
+
+      this.logger.log(
+        `[Flow] Gatilho de evento correspondente flow=${flow.id} triggerType=${flow.triggerType} eventValue="${eventValue}" contact=${contactId}`,
+      );
       await this.startFlow(flow, conversation.id, contactId);
     }
   }
@@ -108,6 +118,10 @@ export class FlowExecutorService {
 
     for (const state of states) {
       if (!state.currentNodeId) continue;
+
+      this.logger.log(
+        `[Flow] Retomando espera flow=${state.flowId} conversation=${conversationId} contact=${contactId} currentNode=${state.currentNodeId} incomingText="${incomingText}" replyId="${interactiveReply?.replyId ?? ''}" replyTitle="${interactiveReply?.title ?? ''}"`,
+      );
 
       // Cancela timeout agendado para este nó
       await this.scheduler.cancelReplyTimeout(
@@ -169,6 +183,9 @@ export class FlowExecutorService {
       });
 
       if (nextNodeId) {
+        this.logger.log(
+          `[Flow] Resposta recebida, avançando flow=${state.flowId} contact=${contactId} nextNode=${nextNodeId}`,
+        );
         await this.executeFromNode(
           nextNodeId,
           conversationId,
@@ -177,6 +194,9 @@ export class FlowExecutorService {
           variables,
         );
       } else {
+        this.logger.log(
+          `[Flow] Resposta recebida sem próximo nó flow=${state.flowId} contact=${contactId} - finalizando`,
+        );
         await this.completeFlow(contactId, state.flowId, conversationId);
       }
     }
@@ -190,6 +210,10 @@ export class FlowExecutorService {
     contactId: string,
     flowId: string,
   ) {
+    this.logger.log(
+      `[Flow] Executando nó por id flow=${flowId} conversation=${conversationId} contact=${contactId} node=${nodeId}`,
+    );
+
     const state = await this.prisma.contactFlowState.findUnique({
       where: { contactId_flowId: { contactId, flowId } },
     });
@@ -238,6 +262,9 @@ export class FlowExecutorService {
     });
 
     if (nextNodeId) {
+      this.logger.log(
+        `[Flow] Timeout avançando fluxo flow=${flowId} contact=${contactId} nextNode=${nextNodeId}`,
+      );
       await this.executeFromNode(
         nextNodeId,
         conversationId,
@@ -246,6 +273,9 @@ export class FlowExecutorService {
         variables,
       );
     } else {
+      this.logger.log(
+        `[Flow] Timeout sem próximo nó flow=${flowId} contact=${contactId} - finalizando`,
+      );
       await this.completeFlow(contactId, flowId, conversationId);
     }
   }
@@ -285,47 +315,87 @@ export class FlowExecutorService {
 
     // Limita iterações para evitar loops infinitos
     for (let step = 0; step < 50 && currentNodeId; step++) {
-      const result = await this.runner.run({
-        nodeId: currentNodeId,
-        conversationId,
-        contactId,
-        flowId,
-        variables,
+      const currentNode = await this.prisma.flowNode.findUnique({
+        where: { id: currentNodeId },
+        select: { id: true, type: true },
       });
 
-      if (result.kind === 'done' || result.kind === 'waiting') break;
+      this.logger.log(
+        `[Flow] Etapa ${step + 1} flow=${flowId} conversation=${conversationId} contact=${contactId} node=${currentNodeId} type=${currentNode?.type ?? 'unknown'}`,
+      );
 
-      let nextId: string | null = null;
+      try {
+        const result = await this.runner.run({
+          nodeId: currentNodeId,
+          conversationId,
+          contactId,
+          flowId,
+          variables,
+        });
 
-      if (result.kind === 'branch') {
-        nextId = await this.runner.resolveEdgeTarget(
-          currentNodeId,
-          result.label,
-        );
-        // fallback: sem edge "yes"/"no" → done
-      } else if (result.kind === 'next') {
-        if (result.nodeId) {
-          nextId = result.nodeId;
-        } else {
-          nextId =
-            (await this.runner.resolveEdgeTarget(currentNodeId, null)) ??
-            (
-              await this.prisma.flowNode.findUnique({
-                where: { id: currentNodeId },
-              })
-            )?.nextId ??
-            null;
+        if (result.kind === 'done') {
+          this.logger.log(
+            `[Flow] Execução encerrada flow=${flowId} contact=${contactId} node=${currentNodeId} result=done`,
+          );
+          break;
         }
+
+        if (result.kind === 'waiting') {
+          this.logger.log(
+            `[Flow] Flow aguardando resposta flow=${flowId} contact=${contactId} node=${currentNodeId}`,
+          );
+          break;
+        }
+
+        let nextId: string | null = null;
+
+        if (result.kind === 'branch') {
+          nextId = await this.runner.resolveEdgeTarget(
+            currentNodeId,
+            result.label,
+          );
+          this.logger.log(
+            `[Flow] Decisão de branch flow=${flowId} contact=${contactId} node=${currentNodeId} label=${result.label} nextNode=${nextId ?? 'none'}`,
+          );
+          // fallback: sem edge "yes"/"no" → done
+        } else if (result.kind === 'next') {
+          if (result.nodeId) {
+            nextId = result.nodeId;
+          } else {
+            nextId =
+              (await this.runner.resolveEdgeTarget(currentNodeId, null)) ??
+              (
+                await this.prisma.flowNode.findUnique({
+                  where: { id: currentNodeId },
+                })
+              )?.nextId ??
+              null;
+          }
+
+          this.logger.log(
+            `[Flow] Próxima etapa flow=${flowId} contact=${contactId} node=${currentNodeId} nextNode=${nextId ?? 'none'}`,
+          );
+        }
+
+        if (!nextId) break;
+
+        await this.prisma.contactFlowState.update({
+          where: { contactId_flowId: { contactId, flowId } },
+          data: { currentNodeId: nextId },
+        });
+
+        currentNodeId = nextId;
+      } catch (error) {
+        await this.logFlowError(
+          flowId,
+          contactId,
+          currentNodeId,
+          'Falha ao executar etapa do flow',
+          error,
+          { conversationId, step: step + 1, variables },
+        );
+        throw error;
       }
-
-      if (!nextId) break;
-
-      await this.prisma.contactFlowState.update({
-        where: { contactId_flowId: { contactId, flowId } },
-        data: { currentNodeId: nextId },
-      });
-
-      currentNodeId = nextId;
     }
 
     // Se chegou ao fim sem waiting ou delay, completa o flow
@@ -352,6 +422,10 @@ export class FlowExecutorService {
     if (existingState?.isActive) return;
 
     const firstNode = flow.nodes[0];
+
+    this.logger.log(
+      `[Flow] Iniciando flow=${flow.id} conversation=${conversationId} contact=${contactId} firstNode=${firstNode.id}`,
+    );
 
     await this.prisma.contactFlowState.upsert({
       where: { contactId_flowId: { contactId, flowId: flow.id } },
@@ -412,7 +486,9 @@ export class FlowExecutorService {
       data: { flowId, contactId, event: 'completed', detail: {} },
     });
 
-    this.logger.log(`[Bot] Flow ${flowId} concluído para contato ${contactId}`);
+    this.logger.log(
+      `[Flow] Concluído flow=${flowId} conversation=${conversationId} contact=${contactId}`,
+    );
   }
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -473,5 +549,43 @@ export class FlowExecutorService {
     });
     const config = (node?.config as Record<string, unknown>) ?? {};
     return config.variableName ? String(config.variableName) : 'reply';
+  }
+
+  private async logFlowError(
+    flowId: string,
+    contactId: string,
+    nodeId: string | null,
+    message: string,
+    error: unknown,
+    extraDetail: Record<string, unknown> = {},
+  ) {
+    const err = this.formatError(error);
+
+    this.logger.error(
+      `[Flow] ${message} flow=${flowId} contact=${contactId} node=${nodeId ?? 'none'}: ${err.message}`,
+      err.stack,
+    );
+
+    await this.prisma.flowExecutionLog.create({
+      data: {
+        flowId,
+        contactId,
+        nodeId,
+        event: 'error',
+        detail: {
+          message: err.message,
+          stack: err.stack ?? null,
+          ...extraDetail,
+        },
+      },
+    });
+  }
+
+  private formatError(error: unknown): { message: string; stack?: string } {
+    if (error instanceof Error) {
+      return { message: error.message, stack: error.stack };
+    }
+
+    return { message: String(error) };
   }
 }

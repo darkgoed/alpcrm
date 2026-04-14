@@ -33,11 +33,20 @@ export class FlowNodeRunnerService {
     });
     if (!node) return { kind: 'done' };
 
+    this.logger.log(
+      `[FlowNode] Executando flow=${ctx.flowId} conversation=${ctx.conversationId} contact=${ctx.contactId} node=${ctx.nodeId} type=${node.type}`,
+    );
+
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: ctx.conversationId },
       include: { contact: true, whatsappAccount: true },
     });
-    if (!conversation || !conversation.isBotActive) return { kind: 'done' };
+    if (!conversation || !conversation.isBotActive) {
+      this.logger.warn(
+        `[FlowNode] Execução interrompida flow=${ctx.flowId} conversation=${ctx.conversationId} contact=${ctx.contactId} node=${ctx.nodeId} reason=conversation_not_available_or_bot_inactive`,
+      );
+      return { kind: 'done' };
+    }
 
     const config = node.config as Record<string, unknown>;
 
@@ -108,7 +117,7 @@ export class FlowNodeRunnerService {
       )
     ) {
       this.logger.log(
-        `[Bot] Fora do horário comercial — nó message ignorado (${ctx.conversationId})`,
+        `[FlowNode] Fora do horário comercial flow=${ctx.flowId} conversation=${ctx.conversationId} node=${ctx.nodeId} - message ignorada`,
       );
       return { kind: 'next', nodeId: null };
     }
@@ -175,7 +184,11 @@ export class FlowNodeRunnerService {
         data: { lastMessageAt: new Date() },
       });
     } catch (err) {
-      this.logger.error(`[Bot] Falha ao enviar mensagem: ${String(err)}`);
+      const error = this.formatError(err);
+      this.logger.error(
+        `[FlowNode] Falha ao enviar mensagem flow=${ctx.flowId} conversation=${ctx.conversationId} contact=${ctx.contactId} node=${ctx.nodeId}: ${error.message}`,
+        error.stack,
+      );
     }
 
     return { kind: 'next', nodeId: null };
@@ -347,10 +360,17 @@ export class FlowNodeRunnerService {
       });
       sent = true;
     } catch (err) {
-      this.logger.error(`[Bot] Falha ao enviar interactive: ${String(err)}`);
+      const error = this.formatError(err);
+      this.logger.error(
+        `[FlowNode] Falha ao enviar interactive flow=${ctx.flowId} conversation=${ctx.conversationId} contact=${ctx.contactId} node=${ctx.nodeId}: ${error.message}`,
+        error.stack,
+      );
     }
 
     if (!sent) {
+      this.logger.warn(
+        `[FlowNode] Interactive não enviado flow=${ctx.flowId} conversation=${ctx.conversationId} contact=${ctx.contactId} node=${ctx.nodeId}`,
+      );
       return { kind: 'done' };
     }
 
@@ -398,6 +418,9 @@ export class FlowNodeRunnerService {
     const value = String(config.value ?? '');
 
     const result = evaluateCondition(field, operator, value, ctx.variables);
+    this.logger.log(
+      `[FlowNode] Branch avaliado flow=${ctx.flowId} contact=${ctx.contactId} node=${ctx.nodeId} field=${field} operator=${operator} value=${value} result=${result ? 'yes' : 'no'}`,
+    );
     return { kind: 'branch', label: result ? 'yes' : 'no' };
   }
 
@@ -417,7 +440,9 @@ export class FlowNodeRunnerService {
       where: { id: tagId, workspaceId },
     });
     if (!tag) {
-      this.logger.warn(`[Bot] Tag ${tagId} não encontrada no workspace`);
+      this.logger.warn(
+        `[FlowNode] Tag não encontrada flow=${ctx.flowId} contact=${ctx.contactId} node=${ctx.nodeId} tag=${tagId}`,
+      );
       return { kind: 'next', nodeId: null };
     }
 
@@ -451,7 +476,9 @@ export class FlowNodeRunnerService {
       select: { id: true, pipelineId: true },
     });
     if (!stage) {
-      this.logger.warn(`[Bot] Stage ${stageId} não encontrada`);
+      this.logger.warn(
+        `[FlowNode] Stage não encontrada flow=${ctx.flowId} contact=${ctx.contactId} node=${ctx.nodeId} stage=${stageId}`,
+      );
       return { kind: 'next', nodeId: null };
     }
 
@@ -481,6 +508,10 @@ export class FlowNodeRunnerService {
   ): Promise<NodeResult> {
     const userId = config.userId ? String(config.userId) : null;
     const teamId = config.teamId ? String(config.teamId) : null;
+
+    this.logger.log(
+      `[FlowNode] Alterando responsável flow=${ctx.flowId} conversation=${ctx.conversationId} contact=${ctx.contactId} node=${ctx.nodeId} user=${userId ?? 'none'} team=${teamId ?? 'none'}`,
+    );
 
     await this.prisma.conversation.update({
       where: { id: ctx.conversationId },
@@ -550,7 +581,11 @@ export class FlowNodeRunnerService {
         data: { lastMessageAt: new Date() },
       });
     } catch (err) {
-      this.logger.error(`[Bot] Falha ao enviar template: ${String(err)}`);
+      const error = this.formatError(err);
+      this.logger.error(
+        `[FlowNode] Falha ao enviar template flow=${ctx.flowId} conversation=${ctx.conversationId} contact=${ctx.contactId} node=${ctx.nodeId}: ${error.message}`,
+        error.stack,
+      );
     }
 
     return { kind: 'next', nodeId: null };
@@ -599,7 +634,11 @@ export class FlowNodeRunnerService {
         });
       }
     } catch (err) {
-      this.logger.error(`[Bot] webhook_call falhou (${url}): ${String(err)}`);
+      const error = this.formatError(err);
+      this.logger.error(
+        `[FlowNode] webhook_call falhou flow=${ctx.flowId} conversation=${ctx.conversationId} contact=${ctx.contactId} node=${ctx.nodeId} url=${url}: ${error.message}`,
+        error.stack,
+      );
     }
 
     return { kind: 'next', nodeId: null };
@@ -616,5 +655,13 @@ export class FlowNodeRunnerService {
       select: { toNodeId: true },
     });
     return edge?.toNodeId ?? null;
+  }
+
+  private formatError(error: unknown): { message: string; stack?: string } {
+    if (error instanceof Error) {
+      return { message: error.message, stack: error.stack };
+    }
+
+    return { message: String(error) };
   }
 }
