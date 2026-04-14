@@ -36,7 +36,7 @@ export class MessagesService {
     userId: string,
     permissions: string[],
     cursor?: string,
-    take = 50,
+    take = 30,
   ) {
     // Verificar acesso à conversa
     const conversation = await this.prisma.conversation.findFirst({
@@ -50,12 +50,22 @@ export class MessagesService {
       throw new ForbiddenException('Sem acesso a essa conversa');
     }
 
-    return this.prisma.message.findMany({
+    const normalizedTake = Math.min(Math.max(take, 1), 100);
+    const messages = await this.prisma.message.findMany({
       where: { conversationId },
-      orderBy: { createdAt: 'asc' },
-      take,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: normalizedTake + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
+
+    const hasMore = messages.length > normalizedTake;
+    const items = messages.slice(0, normalizedTake).reverse();
+
+    return {
+      items,
+      hasMore,
+      nextCursor: hasMore && items.length > 0 ? items[0].id : null,
+    };
   }
 
   // ─── Busca full-text em mensagens do workspace ──────────────────────────────

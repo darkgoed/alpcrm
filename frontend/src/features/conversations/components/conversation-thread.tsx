@@ -18,6 +18,7 @@ import {
 import {
   assignConversation,
   closeConversation,
+  getConversationMessages,
   markConversationAsRead,
   reopenConversation,
   sendMessage,
@@ -86,6 +87,8 @@ interface ContactPipelineEntry {
 interface ContactDetail {
   contactTags: ContactTag[];
   contactPipelines: ContactPipelineEntry[];
+  totalMessageCount: number;
+  responseMetrics: ResponseMetrics;
   conversations: Array<{
     id: string;
     status: 'open' | 'closed' | 'pending';
@@ -94,15 +97,9 @@ interface ContactDetail {
     lastContactMessageAt: string | null;
     assignedUser: { id: string; name: string } | null;
     team: { id: string; name: string } | null;
-    messages: Message[];
+    messageCount: number;
+    responseMetrics: ResponseMetrics;
   }>;
-}
-
-interface TimelineEntry {
-  conversationId: string;
-  conversationStatus: 'open' | 'closed' | 'pending';
-  conversationCreatedAt: string;
-  message: Message;
 }
 
 interface ResponseMetrics {
@@ -411,8 +408,14 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
   const [mode, setMode] = useState<'message' | 'note'>('message');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const [loadingMessages, setLoadingMessages] = useState(true);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [messageCursor, setMessageCursor] = useState<string | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const pendingScrollModeRef = useRef<'bottom' | 'preserve' | null>(null);
+  const scrollSnapshotRef = useRef<{ height: number; top: number } | null>(null);
 
   // @mention state
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
@@ -439,20 +442,65 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
   // Load contact details (tags, pipeline stages)
   useEffect(() => {
     if (!conversation?.contact.id) return;
-    api.get<ContactDetail>(`/contacts/${conversation.contact.id}`)
+    api.get<ContactDetail>(`/contacts/${conversation.contact.id}?includeMessages=false`)
       .then((r) => setContactDetail(r.data))
       .catch(() => null);
   }, [conversation?.contact.id]);
 
   useEffect(() => {
-    if (conversation?.messages) {
-      setMessages([...conversation.messages].sort((l, r) => new Date(l.createdAt).getTime() - new Date(r.createdAt).getTime()));
+    let cancelled = false;
+
+    async function loadInitialMessages() {
+      setMessages([]);
+      setMessageCursor(null);
+      setHasMoreMessages(false);
+      setLoadingMessages(true);
+
+      try {
+        const page = await getConversationMessages(id);
+        if (cancelled) return;
+        pendingScrollModeRef.current = 'bottom';
+        setMessages(page.items);
+        setHasMoreMessages(page.hasMore);
+        setMessageCursor(page.nextCursor);
+      } catch {
+        if (cancelled) return;
+        setMessages([]);
+        setHasMoreMessages(false);
+        setMessageCursor(null);
+      } finally {
+        if (!cancelled) {
+          setLoadingMessages(false);
+        }
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversation?.id]);
+
+    void loadInitialMessages();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  function getMessagesViewport() {
+    return scrollAreaRef.current?.querySelector(
+      '[data-radix-scroll-area-viewport]',
+    ) as HTMLDivElement | null;
+  }
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const viewport = getMessagesViewport();
+    if (!viewport) return;
+
+    if (pendingScrollModeRef.current === 'preserve' && scrollSnapshotRef.current) {
+      const delta = viewport.scrollHeight - scrollSnapshotRef.current.height;
+      viewport.scrollTop = scrollSnapshotRef.current.top + delta;
+    } else if (pendingScrollModeRef.current === 'bottom') {
+      viewport.scrollTop = viewport.scrollHeight;
+    }
+
+    pendingScrollModeRef.current = null;
+    scrollSnapshotRef.current = null;
   }, [messages]);
 
   const syncReadState = useEffectEvent(async () => {
@@ -468,6 +516,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
   useSocket({
     onNewMessage: ({ conversationId, message }) => {
       if (conversationId !== id) return;
+      pendingScrollModeRef.current = 'bottom';
       setMessages((current) => (current.some((item) => item.id === message.id) ? current : [...current, message]));
       if (message.senderType === 'contact') {
         void syncReadState();
@@ -490,6 +539,34 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
     joinConversation(id);
     return () => leaveConversation(id);
   }, [id]);
+
+  async function handleLoadOlderMessages() {
+    if (!messageCursor || loadingOlderMessages) return;
+
+    const viewport = getMessagesViewport();
+    if (viewport) {
+      scrollSnapshotRef.current = {
+        height: viewport.scrollHeight,
+        top: viewport.scrollTop,
+      };
+    }
+
+    setLoadingOlderMessages(true);
+
+    try {
+      const page = await getConversationMessages(id, messageCursor);
+      pendingScrollModeRef.current = 'preserve';
+      setMessages((current) => {
+        const existingIds = new Set(current.map((item) => item.id));
+        const olderItems = page.items.filter((item) => !existingIds.has(item.id));
+        return [...olderItems, ...current];
+      });
+      setHasMoreMessages(page.hasMore);
+      setMessageCursor(page.nextCursor);
+    } finally {
+      setLoadingOlderMessages(false);
+    }
+  }
 
   // ─── Handle textarea input for @mention detection ─────────────────────────
 
@@ -526,6 +603,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       const persisted = res.data as Message;
+      pendingScrollModeRef.current = 'bottom';
       setMessages((current) => [...current, persisted]);
     } catch (err: any) {
       setSendError(
@@ -560,6 +638,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
     if (mode === 'note') {
       try {
         const note = await sendNote(id, content);
+        pendingScrollModeRef.current = 'bottom';
         setMessages((current) => (current.some((m) => m.id === note.id) ? current : [...current, note]));
       } catch (err: any) {
         setText(content);
@@ -592,6 +671,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       createdAt: new Date().toISOString(),
     };
 
+    pendingScrollModeRef.current = 'bottom';
     setMessages((current) => [...current, optimisticMessage]);
 
     try {
@@ -642,6 +722,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       createdAt: new Date().toISOString(),
     };
 
+    pendingScrollModeRef.current = 'bottom';
     setMessages((current) => [...current, optimisticMessage]);
 
     try {
@@ -698,20 +779,6 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
 
   const contactName = conversation.contact.name ?? conversation.contact.phone;
   const isClosed = conversation.status === 'closed';
-  const contactTimeline: TimelineEntry[] = (contactDetail?.conversations ?? [])
-    .flatMap((item) =>
-      item.messages.map((message) => ({
-        conversationId: item.id,
-        conversationStatus: item.status,
-        conversationCreatedAt: item.createdAt,
-        message,
-      })),
-    )
-    .sort(
-      (left, right) =>
-        new Date(left.message.createdAt).getTime() -
-        new Date(right.message.createdAt).getTime(),
-    );
   const historicalConversations = (contactDetail?.conversations ?? [])
     .filter((item) => item.id !== conversation.id)
     .sort(
@@ -725,10 +792,15 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       .sort(
         (left, right) => new Date(right).getTime() - new Date(left).getTime(),
       )[0] ?? conversation.lastContactMessageAt;
-  const currentConversationResponseMetrics = calculateResponseMetrics(messages);
-  const contactResponseMetrics = calculateResponseMetrics(
-    (contactDetail?.conversations ?? []).flatMap((item) => item.messages),
+  const currentConversationSummary = contactDetail?.conversations.find(
+    (item) => item.id === conversation.id,
   );
+  const currentConversationResponseMetrics =
+    currentConversationSummary?.responseMetrics ??
+    calculateResponseMetrics(messages);
+  const contactResponseMetrics =
+    contactDetail?.responseMetrics ?? calculateResponseMetrics(messages);
+  const totalMessageCount = contactDetail?.totalMessageCount ?? messages.length;
 
   const windowOpen = conversation.lastContactMessageAt
     ? Date.now() - new Date(conversation.lastContactMessageAt).getTime() < 24 * 60 * 60 * 1000

@@ -29,6 +29,32 @@ export function useConversation(id: string | null) {
   return { conversation: data, isLoading: !data && !error, mutate };
 }
 
+export interface ConversationMessagesPage {
+  items: Message[];
+  hasMore: boolean;
+  nextCursor: string | null;
+}
+
+export async function getConversationMessages(
+  conversationId: string,
+  cursor?: string | null,
+  take = 30,
+) {
+  const params = new URLSearchParams({
+    conversationId,
+    take: String(take),
+  });
+
+  if (cursor) {
+    params.set('cursor', cursor);
+  }
+
+  const { data } = await api.get<ConversationMessagesPage>(
+    `/messages?${params.toString()}`,
+  );
+  return data;
+}
+
 export interface SendMessageInput {
   conversationId: string;
   type?: Message['type'];

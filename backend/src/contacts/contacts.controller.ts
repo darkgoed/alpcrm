@@ -55,8 +55,16 @@ export class ContactsController {
   }
 
   @Get(':id')
-  findOne(@CurrentUser() user: any, @Param('id') id: string) {
-    return this.contactsService.findOne(user.workspaceId, id);
+  findOne(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Query('includeMessages') includeMessages?: string,
+  ) {
+    return this.contactsService.findOne(
+      user.workspaceId,
+      id,
+      includeMessages !== 'false',
+    );
   }
 
   @Post()

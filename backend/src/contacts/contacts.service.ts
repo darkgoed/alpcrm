@@ -19,6 +19,58 @@ import {
 import { CONTACT_IMPORT_QUEUE } from '../queues/queues.constants';
 import { FlowExecutorService } from '../automation/flow-executor.service';
 
+type MetricsMessage = {
+  conversationId: string;
+  senderType: 'user' | 'contact' | 'system';
+  createdAt: Date;
+};
+
+type ResponseMetrics = {
+  firstResponseMs: number | null;
+  averageResponseMs: number | null;
+  lastResponseMs: number | null;
+  pendingResponseMs: number | null;
+  responseCount: number;
+};
+
+function calculateResponseMetrics(messages: MetricsMessage[]): ResponseMetrics {
+  let pendingContactAt: Date | null = null;
+  let firstContactAt: Date | null = null;
+  const responseTimes: number[] = [];
+
+  for (const message of messages) {
+    if (message.senderType === 'contact') {
+      pendingContactAt = message.createdAt;
+      firstContactAt ??= message.createdAt;
+      continue;
+    }
+
+    if (message.senderType === 'user' && pendingContactAt) {
+      responseTimes.push(
+        message.createdAt.getTime() - pendingContactAt.getTime(),
+      );
+      pendingContactAt = null;
+    }
+  }
+
+  return {
+    firstResponseMs: responseTimes[0] ?? null,
+    averageResponseMs:
+      responseTimes.length > 0
+        ? Math.round(
+            responseTimes.reduce((sum, current) => sum + current, 0) /
+              responseTimes.length,
+          )
+        : null,
+    lastResponseMs: responseTimes.at(-1) ?? null,
+    pendingResponseMs:
+      firstContactAt && pendingContactAt
+        ? Date.now() - pendingContactAt.getTime()
+        : null,
+    responseCount: responseTimes.length,
+  };
+}
+
 @Injectable()
 export class ContactsService {
   constructor(
@@ -50,7 +102,7 @@ export class ContactsService {
 
   // ─── Buscar um contato ────────────────────────────────────────────────────────
 
-  async findOne(workspaceId: string, id: string) {
+  async findOne(workspaceId: string, id: string, includeMessages = true) {
     const contact = await this.prisma.contact.findFirst({
       where: { id, workspaceId },
       include: {
@@ -60,16 +112,66 @@ export class ContactsService {
         conversations: {
           where: { workspaceId },
           orderBy: { createdAt: 'asc' },
-          include: {
-            assignedUser: { select: { id: true, name: true } },
-            team: { select: { id: true, name: true } },
-            messages: { orderBy: { createdAt: 'asc' } },
-          },
+          ...(includeMessages
+            ? {
+                include: {
+                  assignedUser: { select: { id: true, name: true } },
+                  team: { select: { id: true, name: true } },
+                  messages: { orderBy: { createdAt: 'asc' } },
+                },
+              }
+            : {
+                select: {
+                  id: true,
+                  status: true,
+                  createdAt: true,
+                  lastMessageAt: true,
+                  lastContactMessageAt: true,
+                  assignedUser: { select: { id: true, name: true } },
+                  team: { select: { id: true, name: true } },
+                  _count: { select: { messages: true } },
+                },
+              }),
         },
       },
     });
     if (!contact) throw new NotFoundException('Contato não encontrado');
-    return contact;
+    if (includeMessages) return contact;
+
+    const metricsMessages = await this.prisma.message.findMany({
+      where: {
+        conversation: {
+          workspaceId,
+          contactId: id,
+        },
+      },
+      select: {
+        conversationId: true,
+        senderType: true,
+        createdAt: true,
+      },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+
+    const messagesByConversation = new Map<string, MetricsMessage[]>();
+    for (const message of metricsMessages) {
+      const current = messagesByConversation.get(message.conversationId) ?? [];
+      current.push(message);
+      messagesByConversation.set(message.conversationId, current);
+    }
+
+    return {
+      ...contact,
+      totalMessageCount: metricsMessages.length,
+      responseMetrics: calculateResponseMetrics(metricsMessages),
+      conversations: contact.conversations.map((conversation) => ({
+        ...conversation,
+        messageCount: conversation._count.messages,
+        responseMetrics: calculateResponseMetrics(
+          messagesByConversation.get(conversation.id) ?? [],
+        ),
+      })),
+    };
   }
 
   // ─── Criar contato ────────────────────────────────────────────────────────────

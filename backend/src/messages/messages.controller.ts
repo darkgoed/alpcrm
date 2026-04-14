@@ -72,13 +72,14 @@ export class MessagesController {
     @Query('cursor') cursor?: string,
     @Query('take') take?: string,
   ) {
+    const parsedTake = Number.parseInt(take ?? '', 10);
     return this.messagesService.findByConversation(
       conversationId,
       user.workspaceId,
       user.userId,
       user.permissions,
       cursor,
-      take ? parseInt(take) : 50,
+      Number.isNaN(parsedTake) ? 30 : parsedTake,
     );
   }
 

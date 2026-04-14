@@ -76,7 +76,6 @@ export class ConversationsService {
         whatsappAccount: { select: { id: true, phoneNumber: true } },
         assignedUser: { select: { id: true, name: true } },
         team: { select: { id: true, name: true } },
-        messages: { orderBy: { createdAt: 'asc' } },
       },
     });
 
