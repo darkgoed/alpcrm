@@ -37,6 +37,7 @@ model Workspace {
   auditLogs        AuditLog[]
   messageTemplates MessageTemplate[]
   quickReplies     QuickReply[]
+  interactiveTemplates InteractiveTemplate[]
   savedSegments    SavedSegment[]
   contactNotes     ContactNote[]
 
@@ -625,6 +626,26 @@ model QuickReply {
 
   @@unique([workspaceId, shortcut])
   @@map("quick_replies")
+}
+
+// ─────────────────────────────────────────────────────────
+// INTERACTIVE TEMPLATES (templates internos do CRM)
+// ─────────────────────────────────────────────────────────
+
+model InteractiveTemplate {
+  id               String   @id @default(uuid())
+  workspaceId      String   @map("workspace_id")
+  name             String
+  content          String
+  interactiveType  String   @map("interactive_type")
+  interactivePayload Json   @map("interactive_payload")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, name])
+  @@map("interactive_templates")
 }
 
 // ─────────────────────────────────────────────────────────

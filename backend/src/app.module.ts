@@ -20,6 +20,7 @@ import { GatewayModule } from './gateway/gateway.module';
 import { QueuesModule } from './queues/queues.module';
 import { TemplatesModule } from './templates/templates.module';
 import { QuickRepliesModule } from './quick-replies/quick-replies.module';
+import { InteractiveTemplatesModule } from './interactive-templates/interactive-templates.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { QuickRepliesModule } from './quick-replies/quick-replies.module';
     QueuesModule,
     TemplatesModule,
     QuickRepliesModule,
+    InteractiveTemplatesModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
