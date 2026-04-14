@@ -411,6 +411,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
   const [loadingMessages, setLoadingMessages] = useState(true);
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [showLoadOlderButton, setShowLoadOlderButton] = useState(false);
   const [messageCursor, setMessageCursor] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -462,11 +463,13 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
         pendingScrollModeRef.current = 'bottom';
         setMessages(page.items);
         setHasMoreMessages(page.hasMore);
+        setShowLoadOlderButton(false);
         setMessageCursor(page.nextCursor);
       } catch {
         if (cancelled) return;
         setMessages([]);
         setHasMoreMessages(false);
+        setShowLoadOlderButton(false);
         setMessageCursor(null);
       } finally {
         if (!cancelled) {
@@ -487,6 +490,22 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       '[data-radix-scroll-area-viewport]',
     ) as HTMLDivElement | null;
   }
+
+  useEffect(() => {
+    const viewport = getMessagesViewport();
+    if (!viewport) return;
+
+    const updateLoadMoreVisibility = () => {
+      setShowLoadOlderButton(hasMoreMessages && viewport.scrollTop <= 24);
+    };
+
+    updateLoadMoreVisibility();
+    viewport.addEventListener('scroll', updateLoadMoreVisibility);
+
+    return () => {
+      viewport.removeEventListener('scroll', updateLoadMoreVisibility);
+    };
+  }, [hasMoreMessages, messages.length]);
 
   useEffect(() => {
     const viewport = getMessagesViewport();
@@ -931,13 +950,13 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
               className="min-h-0 flex-1 rounded-xl border border-border/60 bg-[linear-gradient(180deg,#fbfcfd_0%,#f5f7fa_100%)] p-3"
             >
               <div className="space-y-2.5">
-                {hasMoreMessages ? (
-                  <div className="flex justify-center pb-1">
+                {showLoadOlderButton ? (
+                  <div className="sticky top-0 z-10 flex justify-center pb-1">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-8 text-xs"
+                      className="h-8 border-border/70 bg-background/95 text-xs shadow-sm backdrop-blur"
                       onClick={() => void handleLoadOlderMessages()}
                       disabled={loadingOlderMessages}
                     >
