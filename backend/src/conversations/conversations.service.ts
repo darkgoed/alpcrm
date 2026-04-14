@@ -113,11 +113,24 @@ export class ConversationsService {
 
   async close(id: string, workspaceId: string, permissions: string[] = []) {
     this.assertPermission(['close_conversation'], permissions);
-    await this.assertExists(id, workspaceId);
-    return this.prisma.conversation.update({
-      where: { id },
-      data: { status: 'closed', isBotActive: false },
-    });
+    const conversation = await this.assertExists(id, workspaceId);
+
+    const [updatedConversation] = await this.prisma.$transaction([
+      this.prisma.conversation.update({
+        where: { id },
+        data: { status: 'closed', isBotActive: false },
+      }),
+      this.prisma.contactFlowState.updateMany({
+        where: { contactId: conversation.contactId, isActive: true },
+        data: {
+          isActive: false,
+          waitingForReply: false,
+          replyTimeoutAt: null,
+        },
+      }),
+    ]);
+
+    return updatedConversation;
   }
 
   // ─── Reabrir conversa ───────────────────────────────────────────────────────

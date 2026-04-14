@@ -217,6 +217,13 @@ export class FlowExecutorService {
     const state = await this.prisma.contactFlowState.findUnique({
       where: { contactId_flowId: { contactId, flowId } },
     });
+    if (!state?.isActive) {
+      this.logger.log(
+        `[Flow] Ignorando execução atrasada flow=${flowId} conversation=${conversationId} contact=${contactId} node=${nodeId} - estado inativo`,
+      );
+      return;
+    }
+
     const variables = (state?.variables as Record<string, string>) ?? {};
 
     await this.executeFromNode(

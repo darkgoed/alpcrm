@@ -148,7 +148,9 @@ export class WorkspacesService {
   ) {
     void workspaceId;
 
-    const url = new URL(`https://graph.facebook.com/v19.0/${dto.phoneNumberId}`);
+    const url = new URL(
+      `https://graph.facebook.com/v19.0/${dto.phoneNumberId}`,
+    );
     url.searchParams.set('fields', 'id,display_phone_number,verified_name');
 
     const response = await fetch(url, {
