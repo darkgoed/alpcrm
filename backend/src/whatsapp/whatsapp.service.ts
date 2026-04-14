@@ -309,13 +309,23 @@ export class WhatsappService {
     // 7. Retomar wait_for_reply ou disparar novo flow
     const isNewConv = !existingConversation;
     this.flowExecutor
-      .resumeWaitingFlows(conversation.id, contact.id, content ?? '')
+      .resumeWaitingFlows(
+        conversation.id,
+        contact.id,
+        content ?? '',
+        (normalizedInteractive?.interactivePayload as
+          | { replyId?: string | null; title?: string | null }
+          | undefined) ?? null,
+      )
       .then(() =>
         this.flowExecutor.triggerForConversation(
           conversation.id,
           workspaceId,
           contact.id,
           content,
+          ((normalizedInteractive?.interactivePayload as
+            | { replyId?: string | null; title?: string | null }
+            | undefined) ?? null),
           isNewConv,
         ),
       )

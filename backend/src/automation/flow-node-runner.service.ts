@@ -272,6 +272,8 @@ export class FlowNodeRunnerService {
     const footer = config.footer
       ? interpolate(String(config.footer), ctx.variables)
       : undefined;
+    const timeoutMs = config.timeoutMs ? Number(config.timeoutMs) : null;
+    const timeoutAt = timeoutMs ? new Date(Date.now() + timeoutMs) : null;
 
     let action: Record<string, unknown>;
 
@@ -301,6 +303,7 @@ export class FlowNodeRunnerService {
       action,
     };
     if (footer) interactive.footer = { text: footer };
+    let sent = false;
 
     try {
       const account = await this.prisma.whatsappAccount.findUnique({
@@ -331,6 +334,8 @@ export class FlowNodeRunnerService {
           senderType: 'system',
           type: 'interactive',
           content: body,
+          interactiveType,
+          interactivePayload: interactive as never,
           status: 'sent',
           externalId,
         },
@@ -340,11 +345,46 @@ export class FlowNodeRunnerService {
         where: { id: ctx.conversationId },
         data: { lastMessageAt: new Date() },
       });
+      sent = true;
     } catch (err) {
       this.logger.error(`[Bot] Falha ao enviar interactive: ${String(err)}`);
     }
 
-    return { kind: 'next', nodeId: null };
+    if (!sent) {
+      return { kind: 'done' };
+    }
+
+    await this.prisma.contactFlowState.update({
+      where: {
+        contactId_flowId: { contactId: ctx.contactId, flowId: ctx.flowId },
+      },
+      data: {
+        waitingForReply: true,
+        replyTimeoutAt: timeoutAt,
+      },
+    });
+
+    await this.prisma.flowExecutionLog.create({
+      data: {
+        flowId: ctx.flowId,
+        contactId: ctx.contactId,
+        nodeId: ctx.nodeId,
+        event: 'waiting',
+        detail: { timeoutAt, interactiveType },
+      },
+    });
+
+    if (timeoutMs) {
+      await this.scheduler.scheduleReplyTimeout(
+        timeoutMs,
+        ctx.contactId,
+        ctx.flowId,
+        ctx.conversationId,
+        ctx.nodeId,
+      );
+    }
+
+    return { kind: 'waiting' };
   }
 
   // ─── branch / condition ───────────────────────────────────────────────────

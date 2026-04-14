@@ -6,6 +6,8 @@ import { SchedulerService } from '../queues/scheduler.service';
 
 type FlowTriggerContext = {
   incomingText?: string | null;
+  replyId?: string | null;
+  replyTitle?: string | null;
   isNewConversation?: boolean;
   eventType?: FlowTriggerType;
   eventValue?: string | null;
@@ -28,6 +30,10 @@ export class FlowExecutorService {
     workspaceId: string,
     contactId: string,
     incomingText: string | null,
+    interactiveReply: {
+      replyId?: string | null;
+      title?: string | null;
+    } | null,
     isNewConversation: boolean,
   ) {
     const flows = await this.prisma.flow.findMany({
@@ -39,6 +45,8 @@ export class FlowExecutorService {
       if (
         !this.checkTrigger(flow.triggerType, flow.triggerValue, {
           incomingText,
+          replyId: interactiveReply?.replyId ?? null,
+          replyTitle: interactiveReply?.title ?? null,
           isNewConversation,
         })
       )
@@ -89,6 +97,10 @@ export class FlowExecutorService {
     conversationId: string,
     contactId: string,
     incomingText: string,
+    interactiveReply?: {
+      replyId?: string | null;
+      title?: string | null;
+    } | null,
   ) {
     const states = await this.prisma.contactFlowState.findMany({
       where: { contactId, isActive: true, waitingForReply: true },
@@ -110,11 +122,35 @@ export class FlowExecutorService {
         ...(state.variables as Record<string, string>),
         [varName]: incomingText,
         reply: incomingText,
+        ...(interactiveReply?.replyId
+          ? { replyId: interactiveReply.replyId }
+          : {}),
+        ...(interactiveReply?.title
+          ? { replyTitle: interactiveReply.title }
+          : {}),
       };
 
-      // Avança para o próximo nó via edge
-      const nextNodeId =
-        (await this.runner.resolveEdgeTarget(state.currentNodeId, null)) ??
+      const candidateLabels = [
+        interactiveReply?.replyId ?? null,
+        interactiveReply?.title ?? null,
+        incomingText || null,
+        null,
+      ].filter(
+        (label, index, values): label is string | null =>
+          values.indexOf(label) === index,
+      );
+
+      let nextNodeId: string | null = null;
+      for (const label of candidateLabels) {
+        nextNodeId = await this.runner.resolveEdgeTarget(
+          state.currentNodeId,
+          label,
+        );
+        if (nextNodeId) break;
+      }
+
+      nextNodeId =
+        nextNodeId ??
         (
           await this.prisma.flowNode.findUnique({
             where: { id: state.currentNodeId },
@@ -399,7 +435,11 @@ export class FlowExecutorService {
       case 'button_reply':
         return Boolean(
           triggerValue &&
-          ctx.incomingText?.toLowerCase() === triggerValue.toLowerCase(),
+          [ctx.replyId, ctx.replyTitle, ctx.incomingText]
+            .filter((value): value is string => Boolean(value))
+            .some(
+              (value) => value.toLowerCase() === triggerValue.toLowerCase(),
+            ),
         );
       case 'tag_applied':
       case 'stage_changed':
