@@ -74,7 +74,9 @@ function getRequestBaseUrl(request: Request) {
   const host = forwardedHost || request.get('host');
 
   if (!host) {
-    return process.env.API_BASE_URL ?? `http://localhost:${process.env.PORT ?? 3000}`;
+    return (
+      process.env.API_BASE_URL ?? `http://localhost:${process.env.PORT ?? 3000}`
+    );
   }
 
   return `${protocol}://${host}`;

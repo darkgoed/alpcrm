@@ -347,10 +347,7 @@ export class MessagesService {
     const existing = this.parseReactions(scopedMessage.reactions);
     const withoutCurrentSender = existing.filter(
       (reaction) =>
-        !(
-          reaction.senderType === 'user' &&
-          reaction.senderId === userId
-        ),
+        !(reaction.senderType === 'user' && reaction.senderId === userId),
     );
     const ownReaction = existing.find(
       (reaction) =>
@@ -374,9 +371,7 @@ export class MessagesService {
       where: { id: messageId },
       data: {
         reactions: nextReactions.length
-          ? (JSON.parse(
-              JSON.stringify(nextReactions),
-            ) as Prisma.InputJsonValue)
+          ? (JSON.parse(JSON.stringify(nextReactions)) as Prisma.InputJsonValue)
           : Prisma.DbNull,
       },
     });
@@ -496,7 +491,9 @@ export class MessagesService {
     });
   }
 
-  private parseReactions(value: Prisma.JsonValue | null): MessageReactionRecord[] {
+  private parseReactions(
+    value: Prisma.JsonValue | null,
+  ): MessageReactionRecord[] {
     if (!Array.isArray(value)) {
       return [];
     }

@@ -60,9 +60,7 @@ export class WebhookSignatureGuard implements CanActivate {
     }
 
     if (!rawBody) {
-      this.logger.error(
-        `Webhook rejeitado: rawBody ausente (ip=${ip})`,
-      );
+      this.logger.error(`Webhook rejeitado: rawBody ausente (ip=${ip})`);
       throw new ServiceUnavailableException(
         'rawBody é obrigatório para validar a assinatura do webhook',
       );
@@ -84,9 +82,7 @@ export class WebhookSignatureGuard implements CanActivate {
     );
 
     if (!appSecret) {
-      this.logger.error(
-        `Webhook rejeitado: App Secret ausente (ip=${ip})`,
-      );
+      this.logger.error(`Webhook rejeitado: App Secret ausente (ip=${ip})`);
       throw new ServiceUnavailableException(
         'Validação do webhook indisponível por configuração ausente',
       );
@@ -118,10 +114,7 @@ export class WebhookSignatureGuard implements CanActivate {
 
     // ── Proteção contra replay ────────────────────────────────────────────────
     pruneReplayCache();
-    const sigHash = crypto
-      .createHash('sha256')
-      .update(signature)
-      .digest('hex');
+    const sigHash = crypto.createHash('sha256').update(signature).digest('hex');
 
     if (replayCache.has(sigHash)) {
       this.logger.warn(

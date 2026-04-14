@@ -285,10 +285,14 @@ export class ConversationsService {
           },
         });
 
-        this.eventsGateway.emitToWorkspace(workspaceId, 'conversation_updated', {
-          conversationId: conversation.id,
-          conversation,
-        });
+        this.eventsGateway.emitToWorkspace(
+          workspaceId,
+          'conversation_updated',
+          {
+            conversationId: conversation.id,
+            conversation,
+          },
+        );
       } else {
         conversation = await this.prisma.conversation.create({
           data: {

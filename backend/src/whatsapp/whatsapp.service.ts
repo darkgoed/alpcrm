@@ -282,7 +282,9 @@ export class WhatsappService {
 
         if (defaultTeam) {
           teamId = defaultTeam.id;
-          assignedUserId = await this.teamsService.getNextMember(defaultTeam.id);
+          assignedUserId = await this.teamsService.getNextMember(
+            defaultTeam.id,
+          );
           if (assignedUserId) {
             this.logger.log(
               `Conversa atribuída via round-robin ao usuário ${assignedUserId}`,
@@ -318,13 +320,9 @@ export class WhatsappService {
       null;
 
     // Baixar mídia inbound da Meta, se houver
-    const metaMediaId =
-      normalizedStructured?.metaMediaId ??
-      null;
+    const metaMediaId = normalizedStructured?.metaMediaId ?? null;
 
-    const inboundMime =
-      normalizedStructured?.inboundMime ??
-      null;
+    const inboundMime = normalizedStructured?.inboundMime ?? null;
 
     let mediaUrl: string | null = null;
     let mimeType: string | null = inboundMime;
@@ -891,7 +889,10 @@ export class WhatsappService {
     }
 
     if (msg.type === 'location' && msg.location) {
-      const title = msg.location.name ?? msg.location.address ?? 'Localizacao compartilhada';
+      const title =
+        msg.location.name ??
+        msg.location.address ??
+        'Localizacao compartilhada';
       return {
         messageType: 'location',
         content: title,
