@@ -369,12 +369,13 @@ function toRFNodes(
 }
 
 function toRFEdges(nodes: NodeDraft[], edges: CanvasEdgeDraft[]): Edge[] {
+  const nodeMap = new Map(nodes.map((node) => [node.clientId, node]));
   const rfEdges: Edge[] = edges.map((e) => ({
     id: `${e.fromClientId}→${e.toClientId}→${e.label ?? 'out'}`,
     source: e.fromClientId,
     target: e.toClientId,
     label: e.label ?? undefined,
-    sourceHandle: e.label ?? 'out',
+    sourceHandle: resolveSourceHandle(nodeMap.get(e.fromClientId), e.label),
     markerEnd: { type: MarkerType.ArrowClosed },
     style: { stroke: '#6b7280' },
     labelStyle: { fontSize: 10, fill: '#6b7280' },
@@ -420,6 +421,15 @@ function toRFEdges(nodes: NodeDraft[], edges: CanvasEdgeDraft[]): Edge[] {
   }
 
   return rfEdges;
+}
+
+function resolveSourceHandle(node: NodeDraft | undefined, label?: string): string {
+  if (!label) return 'out';
+  if (label === 'yes' || label === 'no') return label;
+  if (!node || node.type !== 'send_interactive') return 'out';
+
+  const replies = interactiveReplyHandles(node as FlowNodeData);
+  return replies.find((reply) => reply.label === label)?.id ?? 'out';
 }
 
 // ─── Main canvas ───────────────────────────────────────────────────────────────
@@ -541,6 +551,11 @@ function FlowCanvasInner({
       ),
     );
   }, [rfEdges, setRFNodes]);
+
+  // Keep canvas edges aligned with the persisted draft state after save/reload.
+  useEffect(() => {
+    setRFEdges(toRFEdges(nodeDrafts, savedEdges));
+  }, [nodeDrafts, savedEdges, setRFEdges]);
 
   // Emit edges to parent whenever they change (skip trigger-to-first edge)
   useEffect(() => {
