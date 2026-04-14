@@ -259,7 +259,7 @@ function ConversationListItem({
     <button
       onClick={onOpen}
       className={cn(
-        'flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-left transition-colors hover:border-primary/30 hover:bg-accent/60',
+        'flex w-full min-w-0 items-start gap-3 overflow-hidden rounded-xl border px-3 py-3 text-left transition-colors hover:border-primary/30 hover:bg-accent/60',
         active ? 'border-primary/30 bg-primary/5' : 'border-transparent bg-background',
       )}
     >
@@ -268,8 +268,10 @@ function ConversationListItem({
       </Avatar>
       <div className="min-w-0 flex-1 space-y-0.5">
         <div className="flex items-center justify-between gap-1">
-          <p className="truncate text-sm font-medium text-foreground">{name}</p>
-          <div className="flex items-center gap-1.5">
+          <p className="min-w-0 flex-1 overflow-hidden text-sm font-medium text-foreground break-words [overflow-wrap:anywhere]">
+            {name}
+          </p>
+          <div className="shrink-0 flex items-center gap-1.5">
             {conversation.unreadCount > 0 ? (
               <Badge variant="default" className="h-5 min-w-5 justify-center rounded-full px-1.5 text-[10px]">
                 {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
@@ -280,13 +282,17 @@ function ConversationListItem({
             ) : null}
           </div>
         </div>
-        <p className="truncate text-xs text-muted-foreground">{preview}</p>
-        <div className="flex items-center gap-1.5 pt-0.5">
+        <p className="max-w-full text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">
+          {preview}
+        </p>
+        <div className="flex min-w-0 items-center gap-1.5 pt-0.5">
           <Badge variant={conversation.status === 'open' ? 'success' : 'muted'} className="text-[10px] px-1.5 py-0">
             {conversation.status === 'open' ? 'Aberta' : 'Fechada'}
           </Badge>
           {conversation.assignedUser ? (
-            <span className="truncate text-[10px] text-muted-foreground">{conversation.assignedUser.name}</span>
+            <span className="min-w-0 flex-1 text-[10px] text-muted-foreground break-words [overflow-wrap:anywhere]">
+              {conversation.assignedUser.name}
+            </span>
           ) : null}
         </div>
       </div>
