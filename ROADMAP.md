@@ -182,46 +182,46 @@ Meta: sair do fluxo linear simples e chegar a uma engine utilizável para atendi
 
 ### 3.1 — Engine de execução
 
-- [ ] Substituir recursão linear por executores de nó
-- [ ] Persistir histórico de execução
-- [ ] Tornar retomada via fila determinística
-- [ ] Garantir cancelamento limpo quando operador assume
+- [x] Substituir recursão linear por executores de nó
+- [x] Persistir histórico de execução
+- [x] Tornar retomada via fila determinística
+- [x] Garantir cancelamento limpo quando operador assume
 
 ### 3.2 — Novos tipos de nó
 
-- [ ] Condition real
-- [ ] Wait for reply
-- [ ] Branch
-- [ ] Tag contact
-- [ ] Move pipeline stage
-- [ ] Assign team/user
-- [ ] Send template
-- [ ] Send interactive message
-- [ ] Webhook call
+- [x] Condition real
+- [x] Wait for reply
+- [x] Branch
+- [x] Tag contact
+- [x] Move pipeline stage
+- [x] Assign team/user
+- [x] Send template
+- [x] Send interactive message
+- [x] Webhook call
 
 ### 3.3 — Estado por contato e conversa
 
-- [ ] Criar store de variáveis do flow
-- [ ] Registrar respostas do usuário por etapa
-- [ ] Permitir reutilização de variáveis em mensagens
-- [ ] Suportar timeout em espera de resposta
+- [x] Criar store de variáveis do flow
+- [x] Registrar respostas do usuário por etapa
+- [x] Permitir reutilização de variáveis em mensagens
+- [x] Suportar timeout em espera de resposta
 
 ### 3.4 — Triggers avançados
 
-- [ ] Trigger por nova conversa
-- [ ] Trigger por keyword
-- [ ] Trigger por tag
-- [ ] Trigger por stage
-- [ ] Trigger por evento de sistema
-- [ ] Trigger por template reply/button reply
+- [x] Trigger por nova conversa
+- [x] Trigger por keyword
+- [x] Trigger por tag
+- [x] Trigger por stage
+- [x] Trigger por evento de sistema
+- [x] Trigger por template reply/button reply
 
 ### 3.5 — UI de flow builder
 
-- [ ] Canvas com conexões reais
-- [ ] Painel lateral por tipo de nó
+- [x] Canvas com conexões reais
+- [x] Painel lateral por tipo de nó
 - [ ] Validação visual do flow
 - [ ] Simulador/test run
-- [ ] Publicação versionada
+- [x] Publicação versionada
 
 Critério de saída da fase:
 
