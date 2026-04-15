@@ -1,3 +1,46 @@
 {
-  "colorGroups": []
+  "colorGroups": [
+    {
+      "query": "tag:#graphify/code",
+      "color": {
+        "a": 1,
+        "rgb": 1928408
+      }
+    },
+    {
+      "query": "tag:#graphify/doc",
+      "color": {
+        "a": 1,
+        "rgb": 352137
+      }
+    },
+    {
+      "query": "tag:#graphify/INFERRED",
+      "color": {
+        "a": 1,
+        "rgb": 11817737
+      }
+    },
+    {
+      "query": "tag:#graphify/AMBIGUOUS",
+      "color": {
+        "a": 1,
+        "rgb": 12130844
+      }
+    },
+    {
+      "query": "tag:#community",
+      "color": {
+        "a": 1,
+        "rgb": 8140014
+      }
+    },
+    {
+      "query": "file:_COMMUNITY_",
+      "color": {
+        "a": 1,
+        "rgb": 8140014
+      }
+    }
+  ]
 }
