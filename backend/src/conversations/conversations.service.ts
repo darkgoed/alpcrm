@@ -114,21 +114,10 @@ export class ConversationsService {
     this.assertPermission(['close_conversation'], permissions);
     const conversation = await this.assertExists(id, workspaceId);
 
-    const mergeSource = await this.prisma.conversation.findFirst({
-      where: {
-        workspaceId,
-        contactId: conversation.contactId,
-        whatsappAccountId: conversation.whatsappAccountId,
-        status: 'closed',
-        id: { not: id },
-      },
-      orderBy: { lastMessageAt: 'desc' },
-    });
-
-    const updatedConversation = await this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       const closedConversation = await tx.conversation.update({
         where: { id },
-        data: { status: 'closed', isBotActive: false },
+        data: { status: 'closed', isBotActive: false, closedAt: new Date() },
       });
 
       await tx.contactFlowState.updateMany({
@@ -140,48 +129,8 @@ export class ConversationsService {
         },
       });
 
-      if (!mergeSource) {
-        return closedConversation;
-      }
-
-      await tx.message.updateMany({
-        where: { conversationId: mergeSource.id },
-        data: { conversationId: closedConversation.id },
-      });
-
-      const mergedConversation = await tx.conversation.update({
-        where: { id: closedConversation.id },
-        data: {
-          createdAt:
-            mergeSource.createdAt < closedConversation.createdAt
-              ? mergeSource.createdAt
-              : closedConversation.createdAt,
-          lastMessageAt: this.maxDate(
-            mergeSource.lastMessageAt,
-            closedConversation.lastMessageAt,
-          ),
-          lastContactMessageAt: this.maxDate(
-            mergeSource.lastContactMessageAt,
-            closedConversation.lastContactMessageAt,
-          ),
-          unreadCount: mergeSource.unreadCount + closedConversation.unreadCount,
-        },
-      });
-
-      await tx.conversation.delete({
-        where: { id: mergeSource.id },
-      });
-
-      return mergedConversation;
+      return closedConversation;
     });
-
-    if (mergeSource) {
-      this.eventsGateway.emitToWorkspace(workspaceId, 'conversation_deleted', {
-        conversationId: mergeSource.id,
-      });
-    }
-
-    return updatedConversation;
   }
 
   // ─── Reabrir conversa ───────────────────────────────────────────────────────
@@ -191,7 +140,7 @@ export class ConversationsService {
     await this.assertExists(id, workspaceId);
     return this.prisma.conversation.update({
       where: { id },
-      data: { status: 'open', isBotActive: true },
+      data: { status: 'open', isBotActive: true, closedAt: null },
     });
   }
 
@@ -425,12 +374,6 @@ export class ConversationsService {
     if (!hasAll) {
       throw new ForbiddenException('Permissão insuficiente');
     }
-  }
-
-  private maxDate(left: Date | null, right: Date | null) {
-    if (!left) return right;
-    if (!right) return left;
-    return left > right ? left : right;
   }
 
   private buildTemplateComponents(
