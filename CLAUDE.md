@@ -123,7 +123,7 @@ After implementing any roadmap item, mark it `[x]` in `ROADMAP.md` before closin
 
 Run in this order after each change:
 
-1. **Backend change** → `npm run lint` (scoped to touched files) → `npm run build` if structural
+1. **Backend change** →`npm run build`
 2. **Frontend change** → `npm run build`
 3. **Schema change** → tell the user to run:
    ```bash
