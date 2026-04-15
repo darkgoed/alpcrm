@@ -318,17 +318,17 @@ Meta: corrigir ingestão, persistência e envio para operação estável sob ret
 
 ### 5.4 — Meta error handling
 
-- [ ] Mapear erros da Cloud API por categoria
-- [ ] Exibir motivo de falha para operador
-- [ ] Persistir código e mensagem de erro da Meta
-- [ ] Diferenciar bloqueio de janela 24h, rate limit, número inválido, token inválido, mídia inválida
+- [x] Mapear erros da Cloud API por categoria
+- [ ] Exibir motivo de falha para operador <!-- parcial: failureReason persistido no banco, falta exibir na UI -->
+- [x] Persistir código e mensagem de erro da Meta
+- [x] Diferenciar bloqueio de janela 24h, rate limit, número inválido, token inválido, mídia inválida
 
 ### 5.5 — Rate limiting e throughput
 
-- [ ] Centralizar cliente de WhatsApp Cloud API
-- [ ] Implementar controle de taxa por `phone_number_id`
-- [ ] Implementar retry com jitter
-- [ ] Preparar fila para bursts por workspace
+- [ ] Centralizar cliente de WhatsApp Cloud API <!-- parcial: cada método faz fetch direto, centralização completa seria extrair para whatsapp-client.service.ts -->
+- [x] Implementar controle de taxa por `phone_number_id`
+- [x] Implementar retry com jitter
+- [x] Preparar fila para bursts por workspace
 
 Critério de saída da fase:
 

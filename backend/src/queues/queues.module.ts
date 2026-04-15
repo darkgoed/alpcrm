@@ -41,7 +41,15 @@ export {
       { name: FOLLOW_UP_QUEUE },
       { name: AUTO_CLOSE_QUEUE },
       { name: FLOW_REPLY_TIMEOUT_QUEUE },
-      { name: OUTBOUND_MESSAGE_QUEUE },
+      {
+        name: OUTBOUND_MESSAGE_QUEUE,
+        defaultJobOptions: {
+          attempts: 4,
+          backoff: { type: 'exponential', delay: 2000 },
+          removeOnComplete: true,
+          removeOnFail: { count: 1000 },
+        },
+      },
     ),
   ],
   providers: [SchedulerService, AutoCloseProcessor],
