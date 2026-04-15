@@ -4,17 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "b26b6eccbfe8f041",
+        "id": "e7590444561ff9d7",
         "type": "tabs",
         "children": [
           {
-            "id": "c782efb9b7c1d7e8",
+            "id": "b4a4c5b93527b7b5",
             "type": "leaf",
             "state": {
-              "type": "empty",
+              "type": "graph",
               "state": {},
-              "icon": "lucide-file",
-              "title": "Nova aba"
+              "icon": "lucide-git-fork",
+              "title": "Visualização em gráfico"
             }
           }
         ]
@@ -173,11 +173,10 @@
       "daily-notes:Abrir a nota de hoje": false,
       "templates:Inserir modelo": false,
       "command-palette:Abrir paleta de comandos": false,
-      "bases:Criar nova base": false,
-      "obsidian-git:Open Git source control": false
+      "bases:Criar nova base": false
     }
   },
-  "active": "c782efb9b7c1d7e8",
+  "active": "b4a4c5b93527b7b5",
   "lastOpenFiles": [
     "clippings/Whatsapp Cloud API/WhatsApp Business API - WhatsApp Account Number API.md",
     "clippings/Whatsapp Cloud API/Códigos de erro  Documentação do desenvolvedor.md",
