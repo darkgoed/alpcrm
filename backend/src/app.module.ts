@@ -46,6 +46,7 @@ import { MetricsModule } from './metrics/metrics.module';
     TemplatesModule,
     QuickRepliesModule,
     InteractiveTemplatesModule,
+    MetricsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

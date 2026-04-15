@@ -9,6 +9,7 @@ import { AutomationModule } from '../automation/automation.module';
 import { FollowUpProcessor } from '../queues/follow-up.processor';
 import { OutboundMessageProcessor } from '../queues/outbound-message.processor';
 import { QueuesModule } from '../queues/queues.module';
+import { MetricsModule } from '../metrics/metrics.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { QueuesModule } from '../queues/queues.module';
     forwardRef(() => TeamsModule),
     AutomationModule,
     QueuesModule,
+    MetricsModule,
   ],
   providers: [WhatsappService, WhatsappMetaClient, WebhookSignatureGuard, FollowUpProcessor, OutboundMessageProcessor],
   controllers: [WhatsappController],

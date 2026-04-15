@@ -22,6 +22,7 @@ import { MessageType, MessageStatus, Prisma } from '@prisma/client';
 import { isWithinBusinessHours } from '../common/utils/business-hours.util';
 import { logMsg } from '../common/logger/app-logger.service';
 import { WhatsappMetaClient } from './whatsapp-meta-client.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 export type WebhookRealtimeEvent = {
   workspaceId: string;
@@ -80,6 +81,7 @@ export class WhatsappService {
     private flowExecutor: FlowExecutorService,
     private scheduler: SchedulerService,
     private metaClient: WhatsappMetaClient,
+    private metrics: MetricsService,
   ) {}
 
   private getPublicUploadsUrl(fileName: string) {
@@ -451,6 +453,11 @@ export class WhatsappService {
           },
         },
       },
+    });
+
+    this.metrics.messagesReceivedTotal.inc({
+      workspace_id: conversation.workspaceId,
+      type: messageType,
     });
 
     // 6. Atualizar lastMessageAt e lastContactMessageAt da conversa

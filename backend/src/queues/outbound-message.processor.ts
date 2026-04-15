@@ -6,6 +6,7 @@ import { OUTBOUND_MESSAGE_QUEUE } from './queues.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { EventsGateway } from '../gateway/events.gateway';
+import { MetricsService } from '../metrics/metrics.service';
 
 export interface OutboundMessageJobData {
   messageId: string;
@@ -52,6 +53,7 @@ export class OutboundMessageProcessor extends WorkerHost {
     private prisma: PrismaService,
     private whatsapp: WhatsappService,
     private gateway: EventsGateway,
+    private metrics: MetricsService,
   ) {
     super();
   }
@@ -163,6 +165,8 @@ export class OutboundMessageProcessor extends WorkerHost {
       externalId: externalId || null,
     });
 
+    this.metrics.messagesSentTotal.inc({ workspace_id: workspaceId, status: 'sent' });
+
     this.logger.log(
       `[Outbound] Enviado messageId=${messageId} externalId=${externalId}`,
     );
@@ -185,5 +189,7 @@ export class OutboundMessageProcessor extends WorkerHost {
       status: 'failed',
       failureReason: reason.slice(0, 500),
     });
+
+    this.metrics.messagesFailedTotal.inc({ workspace_id: workspaceId, error_category: 'send_error' });
   }
 }
