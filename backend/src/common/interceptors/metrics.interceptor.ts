@@ -10,10 +10,10 @@ import type { Request, Response } from 'express';
 import { MetricsService } from '../../metrics/metrics.service';
 
 function getRoutePath(request: Request): string {
-  const route = Reflect.get(request as object, 'route');
+  const route: unknown = Reflect.get(request as object, 'route');
 
   if (typeof route === 'object' && route !== null) {
-    const path = Reflect.get(route, 'path');
+    const path: unknown = Reflect.get(route, 'path');
     if (typeof path === 'string') {
       return path;
     }
