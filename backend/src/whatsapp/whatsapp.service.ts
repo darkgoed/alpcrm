@@ -20,6 +20,7 @@ import {
 } from './dto/webhook.dto';
 import { MessageType, MessageStatus, Prisma } from '@prisma/client';
 import { isWithinBusinessHours } from '../common/utils/business-hours.util';
+import { logMsg } from '../common/logger/app-logger.service';
 
 interface WhatsappSendResponse {
   messages?: Array<{ id?: string }>;
@@ -160,7 +161,12 @@ export class WhatsappService {
           for (const msg of value.messages) {
             const contact = contacts.find((c) => c.wa_id === msg.from);
             this.logger.log(
-              `[Webhook] Evento de mensagem recebido phoneNumberId=${phoneNumberId} from=${msg.from} type=${msg.type} messageId=${msg.id}`,
+              logMsg('[Webhook] Mensagem recebida', {
+                phoneNumberId,
+                from: msg.from,
+                type: msg.type,
+                externalId: msg.id,
+              }),
             );
             try {
               await this.handleIncomingMessage(
@@ -172,7 +178,12 @@ export class WhatsappService {
             } catch (error) {
               const err = this.formatError(error);
               this.logger.error(
-                `[Webhook] Falha ao processar mensagem phoneNumberId=${phoneNumberId} from=${msg.from} messageId=${msg.id}: ${err.message}`,
+                logMsg('[Webhook] Falha ao processar mensagem', {
+                  phoneNumberId,
+                  from: msg.from,
+                  externalId: msg.id,
+                  reason: err.message,
+                }),
                 err.stack,
               );
             }
@@ -183,14 +194,21 @@ export class WhatsappService {
         if (value.statuses?.length) {
           for (const status of value.statuses) {
             this.logger.log(
-              `[Webhook] Evento de status recebido messageExternalId=${status.id} status=${status.status}`,
+              logMsg('[Webhook] Status recebido', {
+                externalId: status.id,
+                status: status.status,
+              }),
             );
             try {
               await this.handleStatusUpdate(status, onMessage);
             } catch (error) {
               const err = this.formatError(error);
               this.logger.error(
-                `[Webhook] Falha ao processar status messageExternalId=${status.id} status=${status.status}: ${err.message}`,
+                logMsg('[Webhook] Falha ao processar status', {
+                  externalId: status.id,
+                  status: status.status,
+                  reason: err.message,
+                }),
                 err.stack,
               );
             }
@@ -430,7 +448,12 @@ export class WhatsappService {
     });
 
     this.logger.log(
-      `Mensagem recebida de ${msg.from} → conversa ${conversation.id}`,
+      logMsg('[Webhook] Mensagem persistida', {
+        workspaceId,
+        conversationId: conversation.id,
+        from: msg.from,
+        externalId: msg.id,
+      }),
     );
 
     // 6a. Agendar follow-up e auto-close (reinicia timers a cada mensagem do contato)
@@ -537,7 +560,13 @@ export class WhatsappService {
     });
 
     this.logger.log(
-      `[Webhook] Status atualizado conversation=${message.conversationId} messageId=${message.id} externalId=${status.id} status=${mapped}`,
+      logMsg('[Webhook] Status atualizado', {
+        workspaceId: message.conversation.workspaceId,
+        conversationId: message.conversationId,
+        messageId: message.id,
+        externalId: status.id,
+        status: mapped,
+      }),
     );
   }
 

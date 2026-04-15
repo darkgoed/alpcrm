@@ -1,6 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job, UnrecoverableError } from 'bullmq';
 import { Logger } from '@nestjs/common';
+import { logMsg } from '../common/logger/app-logger.service';
 import { OUTBOUND_MESSAGE_QUEUE } from './queues.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
@@ -71,7 +72,14 @@ export class OutboundMessageProcessor extends WorkerHost {
     } = job.data;
 
     this.logger.log(
-      `[Outbound] Processando job messageId=${messageId} type=${type} attempt=${job.attemptsMade + 1}`,
+      logMsg('[Outbound] Processando job', {
+        jobId: job.id,
+        messageId,
+        workspaceId,
+        conversationId,
+        type,
+        attempt: job.attemptsMade + 1,
+      }),
     );
 
     // Marcar como "sending" (novo valor de enum — requer migration para tipagem)
@@ -116,7 +124,14 @@ export class OutboundMessageProcessor extends WorkerHost {
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
       this.logger.error(
-        `[Outbound] Falha ao enviar messageId=${messageId} attempt=${job.attemptsMade + 1}: ${reason}`,
+        logMsg('[Outbound] Falha ao enviar', {
+          jobId: job.id,
+          messageId,
+          workspaceId,
+          conversationId,
+          attempt: job.attemptsMade + 1,
+          reason,
+        }),
       );
 
       // Classificar erro

@@ -10,7 +10,7 @@ interface SocketHandlers {
     message: Message;
     unreadCount?: number;
   }) => void;
-  onMessageStatus?: (data: { messageId: string; status: string; conversationId: string }) => void;
+  onMessageStatus?: (data: { messageId: string; status: string; conversationId: string; failureReason?: string | null }) => void;
   onMessageUpdated?: (data: {
     conversationId: string;
     message: Message;

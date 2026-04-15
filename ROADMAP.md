@@ -319,7 +319,7 @@ Meta: corrigir ingestão, persistência e envio para operação estável sob ret
 ### 5.4 — Meta error handling
 
 - [x] Mapear erros da Cloud API por categoria
-- [ ] Exibir motivo de falha para operador <!-- parcial: failureReason persistido no banco, falta exibir na UI -->
+- [x] Exibir motivo de falha para operador
 - [x] Persistir código e mensagem de erro da Meta
 - [x] Diferenciar bloqueio de janela 24h, rate limit, número inválido, token inválido, mídia inválida
 
@@ -346,10 +346,10 @@ Meta: operar incidentes e evoluir o produto com segurança.
 
 ### 6.1 — Logging estruturado
 
-- [ ] Adotar logger estruturado
-- [ ] Incluir `workspaceId`, `conversationId`, `messageId`, `jobId`
-- [ ] Correlation ID por request e job
-- [ ] Logs padronizados para webhook, send, retry e processor
+- [x] Adotar logger estruturado
+- [x] Incluir `workspaceId`, `conversationId`, `messageId`, `jobId`
+- [x] Correlation ID por request e job
+- [x] Logs padronizados para webhook, send, retry e processor
 
 ### 6.2 — Error tracking
 
