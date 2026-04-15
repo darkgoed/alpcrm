@@ -1029,46 +1029,73 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
     return timeDiff !== 0 ? timeDiff : left.id.localeCompare(right.id);
   });
-  const conversationTimeline =
+  const conversationTimelineBlocks =
     timelineConversations.length > 0
-      ? timelineConversations.flatMap((item) => {
-          const timelineItems: Array<
-            | { type: 'divider'; id: string; closedAt: string }
-            | { type: 'message'; id: string; conversationId: string; message: Message }
-          > = [];
-
-          const sourceMessages =
-            item.id === conversation.id ? currentConversationMessages : item.messages;
-
-          timelineItems.push(
-            ...sourceMessages.map((message) => ({
-              type: 'message' as const,
-              id: message.id,
-              conversationId: item.id,
-              message,
-            })),
+      ? (() => {
+          const conversationMeta = new Map(
+            timelineConversations.map((item) => [
+              item.id,
+              {
+                id: item.id,
+                createdAt: item.createdAt,
+                closedAt: item.closedAt ?? (item.status === 'closed' ? item.updatedAt : null),
+              },
+            ]),
           );
+          conversationMeta.set(conversation.id, {
+            id: conversation.id,
+            createdAt: conversation.createdAt,
+            closedAt:
+              conversation.closedAt ??
+              (conversation.status === 'closed' ? conversation.updatedAt : null),
+          });
 
-          const closedAt =
-            item.closedAt ??
-            (item.status === 'closed' ? item.updatedAt : null);
+          const messagesByConversation = new Map<string, Message[]>();
 
-          if (closedAt) {
-            timelineItems.push({
-              type: 'divider',
-              id: `divider-${item.id}`,
-              closedAt,
-            });
+          for (const item of timelineConversations) {
+            const sourceMessages =
+              item.id === conversation.id ? currentConversationMessages : item.messages;
+
+            for (const message of sourceMessages) {
+              const targetConversationId = message.conversationId || item.id;
+              const bucket = messagesByConversation.get(targetConversationId) ?? [];
+              bucket.push(message);
+              messagesByConversation.set(targetConversationId, bucket);
+            }
           }
 
-          return timelineItems;
-        })
-      : currentConversationMessages.map((message) => ({
-          type: 'message' as const,
-          id: message.id,
-          conversationId: conversation.id,
-          message,
-        }));
+          return Array.from(messagesByConversation.entries())
+            .map(([conversationId, groupedMessages]) => {
+              const orderedMessages = mergeMessagePage(groupedMessages).sort((left, right) => {
+                const timeDiff =
+                  new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+                return timeDiff !== 0 ? timeDiff : left.id.localeCompare(right.id);
+              });
+              const meta = conversationMeta.get(conversationId);
+
+              return {
+                id: conversationId,
+                createdAt: meta?.createdAt ?? orderedMessages[0]?.createdAt ?? conversation.createdAt,
+                closedAt: meta?.closedAt ?? null,
+                messages: orderedMessages,
+              };
+            })
+            .sort((left, right) => {
+              const timeDiff =
+                new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+              return timeDiff !== 0 ? timeDiff : left.id.localeCompare(right.id);
+            });
+        })()
+      : [
+          {
+            id: conversation.id,
+            createdAt: conversation.createdAt,
+            closedAt:
+              conversation.closedAt ??
+              (conversation.status === 'closed' ? conversation.updatedAt : null),
+            messages: currentConversationMessages,
+          },
+        ];
   const lastCustomerInteraction =
     contactDetail?.conversations
       ?.map((item) => item.lastContactMessageAt)
@@ -1236,33 +1263,30 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                   <div className="flex min-h-40 items-center justify-center">
                     <LoaderCircle className="size-5 animate-spin text-primary" />
                   </div>
-                ) : conversationTimeline.length > 0 ? (
-                  conversationTimeline.map((item) => (
-                    <div key={item.id} className="space-y-2.5">
-                      {item.type === 'divider' ? (
-                        <div className="py-1 text-center text-xs text-muted-foreground">
-                          {formatConversationClosedDivider(item.closedAt)}
-                        </div>
-                      ) : null}
-                      {item.type === 'message' ? (
+                ) : conversationTimelineBlocks.length > 0 ? (
+                  conversationTimelineBlocks.map((block) => (
+                    <div key={block.id} className="space-y-2.5">
+                      {block.messages.map((message) => (
                         <ConversationMessageBubble
-                          message={item.message}
-                          onReply={
-                            item.conversationId === conversation.id
-                              ? handleReply
-                              : undefined
-                          }
+                          key={message.id}
+                          message={message}
+                          onReply={block.id === conversation.id ? handleReply : undefined}
                           onDelete={
-                            item.conversationId === conversation.id
+                            block.id === conversation.id
                               ? (target) => void handleDeleteMessage(target)
                               : undefined
                           }
                           onReact={
-                            item.conversationId === conversation.id
+                            block.id === conversation.id
                               ? (target, emoji) => void handleReact(target, emoji)
                               : undefined
                           }
                         />
+                      ))}
+                      {block.closedAt ? (
+                        <div className="py-1 text-center text-xs text-muted-foreground">
+                          {formatConversationClosedDivider(block.closedAt)}
+                        </div>
                       ) : null}
                     </div>
                   ))

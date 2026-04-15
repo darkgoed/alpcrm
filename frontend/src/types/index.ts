@@ -135,6 +135,8 @@ export interface Conversation {
   lastMessageAt: string | null;
   lastContactMessageAt: string | null;
   createdAt: string;
+  updatedAt: string;
+  closedAt?: string | null;
   contact: Contact;
   assignedUser: Pick<User, 'id' | 'name'> | null;
   team: { id: string; name: string } | null;
