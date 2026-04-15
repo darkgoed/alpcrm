@@ -1,7 +1,18 @@
+import * as Sentry from '@sentry/nestjs';
+
+// Initialize Sentry before any other imports so instrumentation is active
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV ?? 'development',
+  enabled: !!process.env.SENTRY_DSN,
+  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+});
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { AppLogger } from './common/logger/app-logger.service';
+import { SentryExceptionFilter } from './common/filters/sentry-exception.filter';
 import * as express from 'express';
 import { join } from 'path';
 
@@ -38,6 +49,8 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  app.useGlobalFilters(new SentryExceptionFilter());
 
   const corsOrigin = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())

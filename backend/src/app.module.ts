@@ -23,6 +23,7 @@ import { QueuesModule } from './queues/queues.module';
 import { TemplatesModule } from './templates/templates.module';
 import { QuickRepliesModule } from './quick-replies/quick-replies.module';
 import { InteractiveTemplatesModule } from './interactive-templates/interactive-templates.module';
+import { MetricsModule } from './metrics/metrics.module';
 
 @Module({
   imports: [
