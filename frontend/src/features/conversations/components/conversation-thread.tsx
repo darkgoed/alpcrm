@@ -1049,20 +1049,30 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                 },
               ];
 
+          const messagesByConversationId = mergeMessagePage(
+            orderedConversations.flatMap((item) =>
+              item.id === conversation.id ? currentConversationMessages : item.messages,
+            ),
+          ).reduce<Map<string, Message[]>>((acc, message) => {
+            const bucket = acc.get(message.conversationId);
+            if (bucket) {
+              bucket.push(message);
+            } else {
+              acc.set(message.conversationId, [message]);
+            }
+
+            return acc;
+          }, new Map());
+
           return orderedConversations
             .map((item) => {
-              const sourceMessages =
-                item.id === conversation.id ? currentConversationMessages : item.messages;
-              const orderedMessages = mergeMessagePage(
-                sourceMessages.filter(
-                  (message) =>
-                    !message.conversationId || message.conversationId === item.id,
-                ),
-              ).sort((left, right) => {
+              const orderedMessages = (messagesByConversationId.get(item.id) ?? []).sort(
+                (left, right) => {
                 const timeDiff =
                   new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
                 return timeDiff !== 0 ? timeDiff : left.id.localeCompare(right.id);
-              });
+                },
+              );
 
               return {
                 id: item.id,
