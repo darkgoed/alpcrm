@@ -301,20 +301,20 @@ Meta: corrigir ingestão, persistência e envio para operação estável sob ret
 
 ### 5.2 — Envio outbound via fila
 
-- [ ] Tirar envio Meta do request síncrono do operador
-- [ ] Criar job outbound de mensagem
-- [ ] Persistir estado `queued`, `sending`, `sent`, `failed`
-- [ ] Classificar erros retryable vs não retryable
-- [ ] Adicionar exponential backoff
-- [ ] Adicionar dead-letter strategy
-- [ ] Permitir reenvio manual de mensagens falhadas
+- [x] Tirar envio Meta do request síncrono do operador
+- [x] Criar job outbound de mensagem
+- [x] Persistir estado `queued`, `sending`, `sent`, `failed`
+- [x] Classificar erros retryable vs não retryable
+- [x] Adicionar exponential backoff
+- [x] Adicionar dead-letter strategy
+- [x] Permitir reenvio manual de mensagens falhadas
 
 ### 5.3 — Consistência de estado
 
-- [ ] Garantir atualização correta de `lastMessageAt`
-- [ ] Garantir consistência entre banco, fila e socket
-- [ ] Emitir socket só após persistência confirmada
-- [ ] Criar estratégia de recuperação para jobs órfãos
+- [x] Garantir atualização correta de `lastMessageAt`
+- [x] Garantir consistência entre banco, fila e socket
+- [x] Emitir socket só após persistência confirmada
+- [x] Criar estratégia de recuperação para jobs órfãos
 
 ### 5.4 — Meta error handling
 

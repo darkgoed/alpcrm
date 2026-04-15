@@ -147,6 +147,12 @@ export class MessagesController {
     );
   }
 
+  @Post(':id/retry')
+  @RequirePermissions('respond_conversation')
+  retry(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.messagesService.retry(id, user.workspaceId, user.permissions);
+  }
+
   @Delete(':id')
   @RequirePermissions('respond_conversation')
   remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {

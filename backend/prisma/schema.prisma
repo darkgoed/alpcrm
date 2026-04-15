@@ -285,6 +285,8 @@ enum MessageType {
 }
 
 enum MessageStatus {
+  queued
+  sending
   sent
   delivered
   read
@@ -309,6 +311,7 @@ model Message {
   interactivePayload Json?         @map("interactive_payload")
   status         MessageStatus     @default(sent)
   externalId     String?           @map("external_id") // ID na API do WhatsApp
+  failureReason  String?           @map("failure_reason")
   deletedAt      DateTime?         @map("deleted_at")
   deletedById    String?           @map("deleted_by_id")
   createdAt      DateTime          @default(now()) @map("created_at")

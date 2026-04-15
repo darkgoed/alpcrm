@@ -6,6 +6,8 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { Prisma } from '@prisma/client';
 
 const WINDOW_24H_MS = 24 * 60 * 60 * 1000;
@@ -15,6 +17,8 @@ import { EventsGateway } from '../gateway/events.gateway';
 import { FlowExecutorService } from '../automation/flow-executor.service';
 import { SchedulerService } from '../queues/scheduler.service';
 import { SendMessageDto } from './dto/send-message.dto';
+import { OUTBOUND_MESSAGE_QUEUE } from '../queues/queues.constants';
+import type { OutboundMessageJobData } from '../queues/outbound-message.processor';
 
 type MessageReactionRecord = {
   emoji: string;
@@ -33,6 +37,8 @@ export class MessagesService {
     private eventsGateway: EventsGateway,
     private flowExecutor: FlowExecutorService,
     private scheduler: SchedulerService,
+    @InjectQueue(OUTBOUND_MESSAGE_QUEUE)
+    private outboundQueue: Queue<OutboundMessageJobData>,
   ) {}
 
   // ─── Listar mensagens de uma conversa ────────────────────────────────────────
@@ -238,7 +244,7 @@ export class MessagesService {
       }
     }
 
-    // Salvar mensagem no banco com status "sent" (otimista)
+    // Salvar mensagem no banco com status "queued"
     const message = await this.prisma.message.create({
       data: {
         conversationId: dto.conversationId,
@@ -257,7 +263,7 @@ export class MessagesService {
               JSON.stringify(dto.interactivePayload),
             ) as Prisma.InputJsonValue)
           : undefined,
-        status: 'sent',
+        status: 'queued' as any,
       },
     });
     const hydratedMessage = await this.getHydratedMessage(message.id);
@@ -268,60 +274,91 @@ export class MessagesService {
       data: { lastMessageAt: new Date(), unreadCount: 0 },
     });
 
-    // Emitir pelo WebSocket imediatamente
+    // Emitir pelo WebSocket imediatamente (status queued)
     this.eventsGateway.emitToWorkspace(workspaceId, 'new_message', {
       conversationId: dto.conversationId,
       message: hydratedMessage,
       unreadCount: 0,
     });
 
-    // ── Enviar pela API do WhatsApp ───────────────────────────────────────────
-    try {
-      let externalId: string;
+    // Enfileirar envio para o processor (fora do request síncrono)
+    await this.outboundQueue.add(
+      'send',
+      {
+        messageId: message.id,
+        workspaceId,
+        conversationId: dto.conversationId,
+        whatsappAccountId: conversation.whatsappAccountId,
+        toPhone: conversation.contact.phone,
+        type: dto.type ?? 'text',
+        content: dto.content ?? null,
+        mediaUrl: dto.mediaUrl ?? null,
+        mimeType: dto.mimeType ?? null,
+        fileName: dto.fileName ?? null,
+        fileSize: dto.fileSize ?? null,
+        replyToExternalId: replyTargetExternalId,
+        interactiveType: dto.interactiveType ?? null,
+        interactivePayload: dto.interactivePayload ?? null,
+      },
+      {
+        attempts: 4,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: true,
+        removeOnFail: { count: 1000 },
+      },
+    );
 
-      if (dto.type === 'text' || !dto.type) {
-        externalId = await this.whatsappService.sendTextMessage(
-          conversation.whatsappAccountId,
-          conversation.contact.phone,
-          dto.content!,
-          replyTargetExternalId,
-        );
-      } else if (isMediaType) {
-        externalId = await this.whatsappService.sendMediaMessage(
-          conversation.whatsappAccountId,
-          conversation.contact.phone,
-          dto.type as 'image' | 'document' | 'audio' | 'video',
-          dto.mediaUrl!,
-          dto.content ?? undefined,
-          replyTargetExternalId,
-        );
-      } else if (isInteractive) {
-        externalId = await this.whatsappService.sendInteractiveMessage(
-          conversation.whatsappAccountId,
-          conversation.contact.phone,
-          dto.interactiveType!,
-          dto.interactivePayload!,
-          replyTargetExternalId,
-        );
-      } else {
-        externalId = '';
-      }
+    return hydratedMessage;
+  }
 
-      if (externalId) {
-        await this.prisma.message.update({
-          where: { id: message.id },
-          data: { externalId },
-        });
-      }
-    } catch (err) {
-      this.logger.error(`Erro ao enviar mensagem: ${err}`);
-      await this.prisma.message.update({
-        where: { id: message.id },
-        data: { status: 'failed' },
-      });
+  async retry(messageId: string, workspaceId: string, permissions: string[] = []) {
+    this.assertPermission(['respond_conversation'], permissions);
+
+    const message = await this.prisma.message.findFirst({
+      where: { id: messageId },
+      include: { conversation: { include: { contact: true, whatsappAccount: true } } },
+    });
+
+    if (!message) throw new NotFoundException('Mensagem não encontrada');
+    if (message.conversation.workspaceId !== workspaceId) {
+      throw new NotFoundException('Mensagem não encontrada');
+    }
+    if (message.status !== 'failed') {
+      throw new BadRequestException('Apenas mensagens com falha podem ser reenviadas');
     }
 
-    return this.getHydratedMessage(message.id);
+    await this.prisma.message.update({
+      where: { id: messageId },
+      data: { status: 'queued' as any, failureReason: null } as any,
+    });
+
+    await this.outboundQueue.add(
+      'send',
+      {
+        messageId: message.id,
+        workspaceId,
+        conversationId: message.conversationId,
+        whatsappAccountId: message.conversation.whatsappAccountId,
+        toPhone: message.conversation.contact.phone,
+        type: message.type,
+        content: message.content,
+        mediaUrl: message.mediaUrl,
+        mimeType: message.mimeType,
+        fileName: message.fileName,
+        fileSize: message.fileSize,
+        replyToExternalId: null,
+        interactiveType: message.interactiveType,
+        interactivePayload: message.interactivePayload as Record<string, unknown> | null,
+      },
+      {
+        attempts: 4,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: true,
+        removeOnFail: { count: 1000 },
+      },
+    );
+
+    return this.getHydratedMessage(messageId);
   }
 
   async react(

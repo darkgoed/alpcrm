@@ -6,6 +6,7 @@ import { WebhookSignatureGuard } from '../common/guards/webhook-signature.guard'
 import { TeamsModule } from '../teams/teams.module';
 import { AutomationModule } from '../automation/automation.module';
 import { FollowUpProcessor } from '../queues/follow-up.processor';
+import { OutboundMessageProcessor } from '../queues/outbound-message.processor';
 import { QueuesModule } from '../queues/queues.module';
 
 @Module({
@@ -15,7 +16,7 @@ import { QueuesModule } from '../queues/queues.module';
     AutomationModule,
     QueuesModule,
   ],
-  providers: [WhatsappService, WebhookSignatureGuard, FollowUpProcessor],
+  providers: [WhatsappService, WebhookSignatureGuard, FollowUpProcessor, OutboundMessageProcessor],
   controllers: [WhatsappController],
   exports: [WhatsappService],
 })

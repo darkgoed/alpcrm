@@ -541,6 +541,12 @@ export class WhatsappService {
     );
   }
 
+  private async throwApiError(response: Response, context: string): Promise<never> {
+    const body = await response.text().catch(() => '');
+    this.logger.error(`${context} status: ${response.status} body: ${body}`);
+    throw new Error(`WhatsApp API error status: ${response.status} body: ${body}`);
+  }
+
   private formatError(error: unknown): { message: string; stack?: string } {
     if (error instanceof Error) {
       return { message: error.message, stack: error.stack };
@@ -657,9 +663,7 @@ export class WhatsappService {
     });
 
     if (!response.ok) {
-      const err = await response.text();
-      this.logger.error(`Erro ao enviar mensagem: ${err}`);
-      throw new Error(`WhatsApp API error: ${err}`);
+      return this.throwApiError(response, 'Erro ao enviar mensagem');
     }
 
     return this.extractMessageId(response);
@@ -699,9 +703,7 @@ export class WhatsappService {
     });
 
     if (!response.ok) {
-      const err = await response.text();
-      this.logger.error(`Erro ao enviar template: ${err}`);
-      throw new Error(`WhatsApp API error: ${err}`);
+      return this.throwApiError(response, 'Erro ao enviar template');
     }
 
     return this.extractMessageId(response);
@@ -746,9 +748,7 @@ export class WhatsappService {
     });
 
     if (!response.ok) {
-      const err = await response.text();
-      this.logger.error(`Erro ao enviar mídia: ${err}`);
-      throw new Error(`WhatsApp API error: ${err}`);
+      return this.throwApiError(response, 'Erro ao enviar mídia');
     }
 
     return this.extractMessageId(response);
@@ -784,9 +784,7 @@ export class WhatsappService {
     });
 
     if (!response.ok) {
-      const err = await response.text();
-      this.logger.error(`Erro ao enviar mensagem interativa: ${err}`);
-      throw new Error(`WhatsApp API error: ${err}`);
+      return this.throwApiError(response, 'Erro ao enviar mensagem interativa');
     }
 
     return this.extractMessageId(response);
