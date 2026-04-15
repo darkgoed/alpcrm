@@ -369,10 +369,10 @@ Meta: operar incidentes e evoluir o produto com segurança.
 ### 6.4 — Testes
 
 - [ ] Unit tests para `WhatsappService`
-- [ ] Unit tests para `MessagesService`
-- [ ] Unit tests para `ConversationsService`
+- [x] Unit tests para `MessagesService`
+- [x] Unit tests para `ConversationsService`
 - [ ] Unit tests para `FlowExecutorService`
-- [ ] Tests de permissão e isolamento de workspace
+- [x] Tests de permissão e isolamento de workspace
 - [ ] E2E de webhook
 - [ ] E2E de outbound text/template/media
 - [ ] E2E de follow-up/auto-close
