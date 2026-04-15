@@ -40,7 +40,8 @@ export class AppLogger implements LoggerService {
 
   error(message: unknown, trace?: string, context?: string) {
     process.stderr.write(
-      buildEntry('error', message, context, trace ? { trace } : undefined) + '\n',
+      buildEntry('error', message, context, trace ? { trace } : undefined) +
+        '\n',
     );
   }
 

@@ -1,6 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job, UnrecoverableError } from 'bullmq';
 import { Logger } from '@nestjs/common';
+import { MessageStatus } from '@prisma/client';
 import { logMsg } from '../common/logger/app-logger.service';
 import { OUTBOUND_MESSAGE_QUEUE } from './queues.constants';
 import { PrismaService } from '../prisma/prisma.service';
@@ -33,8 +34,8 @@ const NON_RETRYABLE_CODES = new Set([
   131052, // Tipo de mídia não permitido
   131056, // Conta inativa para envio
   132001, // Template inválido
-  100,    // Invalid parameter (400)
-  190,    // Token expirado / inválido
+  100, // Invalid parameter (400)
+  190, // Token expirado / inválido
 ]);
 
 function isNonRetryable(statusCode: number, metaCode?: number): boolean {
@@ -84,17 +85,19 @@ export class OutboundMessageProcessor extends WorkerHost {
       }),
     );
 
-    // Marcar como "sending" (novo valor de enum — requer migration para tipagem)
+    // Marcar como "sending"
     await this.prisma.message.update({
       where: { id: messageId },
-      data: { status: 'sending' as any },
+      data: { status: MessageStatus.sending },
     });
 
     let externalId: string;
 
     try {
       const isInteractive = type === 'interactive';
-      const isMediaType = ['image', 'audio', 'video', 'document'].includes(type);
+      const isMediaType = ['image', 'audio', 'video', 'document'].includes(
+        type,
+      );
 
       if (type === 'text' || !type) {
         externalId = await this.whatsapp.sendTextMessage(
@@ -165,7 +168,10 @@ export class OutboundMessageProcessor extends WorkerHost {
       externalId: externalId || null,
     });
 
-    this.metrics.messagesSentTotal.inc({ workspace_id: workspaceId, status: 'sent' });
+    this.metrics.messagesSentTotal.inc({
+      workspace_id: workspaceId,
+      status: 'sent',
+    });
 
     this.logger.log(
       `[Outbound] Enviado messageId=${messageId} externalId=${externalId}`,
@@ -180,7 +186,10 @@ export class OutboundMessageProcessor extends WorkerHost {
   ) {
     await this.prisma.message.update({
       where: { id: messageId },
-      data: { status: 'failed' as any, failureReason: reason.slice(0, 500) } as any,
+      data: {
+        status: MessageStatus.failed,
+        failureReason: reason.slice(0, 500),
+      },
     });
 
     this.gateway.emitToWorkspace(workspaceId, 'message_status', {
@@ -190,6 +199,9 @@ export class OutboundMessageProcessor extends WorkerHost {
       failureReason: reason.slice(0, 500),
     });
 
-    this.metrics.messagesFailedTotal.inc({ workspace_id: workspaceId, error_category: 'send_error' });
+    this.metrics.messagesFailedTotal.inc({
+      workspace_id: workspaceId,
+      error_category: 'send_error',
+    });
   }
 }

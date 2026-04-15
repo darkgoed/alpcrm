@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { Prisma } from '@prisma/client';
+import { MessageStatus, Prisma } from '@prisma/client';
 
 const WINDOW_24H_MS = 24 * 60 * 60 * 1000;
 import { PrismaService } from '../prisma/prisma.service';
@@ -263,7 +263,7 @@ export class MessagesService {
               JSON.stringify(dto.interactivePayload),
             ) as Prisma.InputJsonValue)
           : undefined,
-        status: 'queued' as any,
+        status: MessageStatus.queued,
       },
     });
     const hydratedMessage = await this.getHydratedMessage(message.id);
@@ -311,12 +311,18 @@ export class MessagesService {
     return hydratedMessage;
   }
 
-  async retry(messageId: string, workspaceId: string, permissions: string[] = []) {
+  async retry(
+    messageId: string,
+    workspaceId: string,
+    permissions: string[] = [],
+  ) {
     this.assertPermission(['respond_conversation'], permissions);
 
     const message = await this.prisma.message.findFirst({
       where: { id: messageId },
-      include: { conversation: { include: { contact: true, whatsappAccount: true } } },
+      include: {
+        conversation: { include: { contact: true, whatsappAccount: true } },
+      },
     });
 
     if (!message) throw new NotFoundException('Mensagem não encontrada');
@@ -324,12 +330,17 @@ export class MessagesService {
       throw new NotFoundException('Mensagem não encontrada');
     }
     if (message.status !== 'failed') {
-      throw new BadRequestException('Apenas mensagens com falha podem ser reenviadas');
+      throw new BadRequestException(
+        'Apenas mensagens com falha podem ser reenviadas',
+      );
     }
 
     await this.prisma.message.update({
       where: { id: messageId },
-      data: { status: 'queued' as any, failureReason: null } as any,
+      data: {
+        status: MessageStatus.queued,
+        failureReason: null,
+      },
     });
 
     await this.outboundQueue.add(
@@ -348,7 +359,10 @@ export class MessagesService {
         fileSize: message.fileSize,
         replyToExternalId: null,
         interactiveType: message.interactiveType,
-        interactivePayload: message.interactivePayload as Record<string, unknown> | null,
+        interactivePayload: message.interactivePayload as Record<
+          string,
+          unknown
+        > | null,
       },
       {
         attempts: 4,

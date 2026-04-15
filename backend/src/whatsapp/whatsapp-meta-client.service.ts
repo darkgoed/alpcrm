@@ -43,13 +43,19 @@ export class WhatsappMetaClient {
 
   // ─── Buscar metadados de mídia ───────────────────────────────────────────────
 
-  async getMediaInfo(token: string, mediaId: string): Promise<MetaMediaInfo | null> {
+  async getMediaInfo(
+    token: string,
+    mediaId: string,
+  ): Promise<MetaMediaInfo | null> {
     const response = await fetch(`${GRAPH_API}/${mediaId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!response.ok) {
       this.logger.warn(
-        logMsg('Falha ao obter metadados de mídia', { mediaId, status: response.status }),
+        logMsg('Falha ao obter metadados de mídia', {
+          mediaId,
+          status: response.status,
+        }),
       );
       return null;
     }
@@ -78,11 +84,16 @@ export class WhatsappMetaClient {
     return data.messages?.[0]?.id ?? '';
   }
 
-  private async throwApiError(response: Response, context: string): Promise<never> {
+  private async throwApiError(
+    response: Response,
+    context: string,
+  ): Promise<never> {
     const body = await response.text().catch(() => '');
     this.logger.error(
       logMsg('Erro na Meta API', { context, status: response.status, body }),
     );
-    throw new Error(`WhatsApp API error status: ${response.status} body: ${body}`);
+    throw new Error(
+      `WhatsApp API error status: ${response.status} body: ${body}`,
+    );
   }
 }

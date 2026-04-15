@@ -10,8 +10,6 @@ export class MetricsController {
   @Header('Cache-Control', 'no-cache, no-store, must-revalidate')
   async getMetrics(@Res() res: Response): Promise<void> {
     const metrics = await this.metricsService.getMetrics();
-    res
-      .set('Content-Type', this.metricsService.getContentType())
-      .send(metrics);
+    res.set('Content-Type', this.metricsService.getContentType()).send(metrics);
   }
 }

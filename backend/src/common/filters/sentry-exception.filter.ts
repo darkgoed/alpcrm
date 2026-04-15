@@ -13,7 +13,9 @@ export class SentryExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request & { user?: { workspaceId?: string; sub?: string } }>();
+    const request = ctx.getRequest<
+      Request & { user?: { workspaceId?: string; sub?: string } }
+    >();
 
     const status =
       exception instanceof HttpException

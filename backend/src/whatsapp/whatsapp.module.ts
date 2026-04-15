@@ -19,7 +19,13 @@ import { MetricsModule } from '../metrics/metrics.module';
     QueuesModule,
     MetricsModule,
   ],
-  providers: [WhatsappService, WhatsappMetaClient, WebhookSignatureGuard, FollowUpProcessor, OutboundMessageProcessor],
+  providers: [
+    WhatsappService,
+    WhatsappMetaClient,
+    WebhookSignatureGuard,
+    FollowUpProcessor,
+    OutboundMessageProcessor,
+  ],
   controllers: [WhatsappController],
   exports: [WhatsappService, WhatsappMetaClient],
 })

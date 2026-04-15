@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { getQueueToken } from '@nestjs/bullmq';
 import { MessagesService } from './messages.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -32,7 +36,11 @@ function buildConversation(overrides: Record<string, unknown> = {}) {
     assignedUserId: null,
     whatsappAccountId: 'acct-1',
     lastContactMessageAt: new Date(),
-    contact: { id: 'contact-1', phone: '+5511999999999', optInStatus: 'opted_in' },
+    contact: {
+      id: 'contact-1',
+      phone: '+5511999999999',
+      optInStatus: 'opted_in',
+    },
     whatsappAccount: { id: 'acct-1' },
     ...overrides,
   };
@@ -51,7 +59,11 @@ describe('MessagesService', () => {
           provide: PrismaService,
           useValue: {
             conversation: { findFirst: jest.fn(), update: jest.fn() },
-            message: { create: jest.fn(), findFirst: jest.fn(), findUniqueOrThrow: jest.fn() },
+            message: {
+              create: jest.fn(),
+              findFirst: jest.fn(),
+              findUniqueOrThrow: jest.fn(),
+            },
           },
         },
         { provide: WhatsappService, useValue: {} },
@@ -84,13 +96,15 @@ describe('MessagesService', () => {
     }).compile();
 
     service = module.get(MessagesService);
-    prisma = module.get(PrismaService) as jest.Mocked<PrismaService>;
-    gateway = module.get(EventsGateway) as jest.Mocked<EventsGateway>;
+    prisma = module.get(PrismaService);
+    gateway = module.get(EventsGateway);
   });
 
   describe('send() — permission guard', () => {
     it('throws ForbiddenException when user lacks respond_conversation permission', async () => {
-      (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(buildConversation());
+      (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(
+        buildConversation(),
+      );
 
       await expect(
         service.send(buildDto({ content: 'hi' }), WORKSPACE_ID, USER_ID, []),
@@ -99,11 +113,15 @@ describe('MessagesService', () => {
 
     it('allows send when user has respond_conversation permission', async () => {
       const conversation = buildConversation();
-      (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(conversation);
+      (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(
+        conversation,
+      );
 
       const hydratedMsg = { id: 'msg-1', status: 'queued' };
       (prisma.message.create as jest.Mock).mockResolvedValue({ id: 'msg-1' });
-      (prisma.message.findUniqueOrThrow as jest.Mock).mockResolvedValue(hydratedMsg);
+      (prisma.message.findUniqueOrThrow as jest.Mock).mockResolvedValue(
+        hydratedMsg,
+      );
       (prisma.conversation.update as jest.Mock).mockResolvedValue(conversation);
 
       const result = await service.send(
@@ -120,11 +138,15 @@ describe('MessagesService', () => {
   describe('send() — opt-out guard', () => {
     it('throws ForbiddenException when contact has opted out', async () => {
       (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(
-        buildConversation({ contact: { id: 'c1', phone: '+55', optInStatus: 'opted_out' } }),
+        buildConversation({
+          contact: { id: 'c1', phone: '+55', optInStatus: 'opted_out' },
+        }),
       );
 
       await expect(
-        service.send(buildDto(), WORKSPACE_ID, USER_ID, ['respond_conversation']),
+        service.send(buildDto(), WORKSPACE_ID, USER_ID, [
+          'respond_conversation',
+        ]),
       ).rejects.toThrow(ForbiddenException);
     });
   });
@@ -137,7 +159,9 @@ describe('MessagesService', () => {
       );
 
       await expect(
-        service.send(buildDto(), WORKSPACE_ID, USER_ID, ['respond_conversation']),
+        service.send(buildDto(), WORKSPACE_ID, USER_ID, [
+          'respond_conversation',
+        ]),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -147,7 +171,9 @@ describe('MessagesService', () => {
       );
 
       await expect(
-        service.send(buildDto(), WORKSPACE_ID, USER_ID, ['respond_conversation']),
+        service.send(buildDto(), WORKSPACE_ID, USER_ID, [
+          'respond_conversation',
+        ]),
       ).rejects.toThrow(ForbiddenException);
     });
   });
@@ -159,17 +185,23 @@ describe('MessagesService', () => {
       );
 
       await expect(
-        service.send(buildDto(), WORKSPACE_ID, USER_ID, ['respond_conversation']),
+        service.send(buildDto(), WORKSPACE_ID, USER_ID, [
+          'respond_conversation',
+        ]),
       ).rejects.toThrow(ForbiddenException);
     });
 
     it('allows admin (view_all_conversations) to send on conversation assigned to another', async () => {
       const conversation = buildConversation({ assignedUserId: 'other-user' });
-      (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(conversation);
+      (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(
+        conversation,
+      );
 
       const hydratedMsg = { id: 'msg-1', status: 'queued' };
       (prisma.message.create as jest.Mock).mockResolvedValue({ id: 'msg-1' });
-      (prisma.message.findUniqueOrThrow as jest.Mock).mockResolvedValue(hydratedMsg);
+      (prisma.message.findUniqueOrThrow as jest.Mock).mockResolvedValue(
+        hydratedMsg,
+      );
       (prisma.conversation.update as jest.Mock).mockResolvedValue(conversation);
 
       const result = await service.send(
@@ -190,7 +222,9 @@ describe('MessagesService', () => {
       );
 
       await expect(
-        service.send(buildDto(), WORKSPACE_ID, USER_ID, ['respond_conversation']),
+        service.send(buildDto(), WORKSPACE_ID, USER_ID, [
+          'respond_conversation',
+        ]),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -200,10 +234,14 @@ describe('MessagesService', () => {
       (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(
         buildConversation({ assignedUserId: null }),
       );
-      (gateway.getActiveOperatorIds as jest.Mock).mockReturnValue(['other-user']);
+      (gateway.getActiveOperatorIds as jest.Mock).mockReturnValue([
+        'other-user',
+      ]);
 
       await expect(
-        service.send(buildDto(), WORKSPACE_ID, USER_ID, ['respond_conversation']),
+        service.send(buildDto(), WORKSPACE_ID, USER_ID, [
+          'respond_conversation',
+        ]),
       ).rejects.toThrow(ConflictException);
     });
   });

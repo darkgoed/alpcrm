@@ -220,7 +220,10 @@ export class WhatsappService {
 
   // ─── Mensagem recebida ───────────────────────────────────────────────────────
 
-  private async claimWebhookReceipt(eventId: string, eventType: string): Promise<boolean> {
+  private async claimWebhookReceipt(
+    eventId: string,
+    eventType: string,
+  ): Promise<boolean> {
     try {
       await this.prisma.webhookReceipt.create({ data: { eventId, eventType } });
       return true;
@@ -239,7 +242,10 @@ export class WhatsappService {
     const claimed = await this.claimWebhookReceipt(msg.id, 'message');
     if (!claimed) {
       this.logger.warn(
-        logMsg('[Webhook] Evento já processado (receipt)', { externalId: msg.id, type: 'message' }),
+        logMsg('[Webhook] Evento já processado (receipt)', {
+          externalId: msg.id,
+          type: 'message',
+        }),
       );
       return;
     }
@@ -557,7 +563,10 @@ export class WhatsappService {
     const claimed = await this.claimWebhookReceipt(receiptKey, 'status');
     if (!claimed) {
       this.logger.warn(
-        logMsg('[Webhook] Status duplicado ignorado', { externalId: status.id, status: status.status }),
+        logMsg('[Webhook] Status duplicado ignorado', {
+          externalId: status.id,
+          status: status.status,
+        }),
       );
       return;
     }
@@ -725,7 +734,11 @@ export class WhatsappService {
     return this.metaClient.sendMessage(account.token, account.metaAccountId, {
       to,
       type: 'template',
-      template: { name: templateName, language: { code: language }, components },
+      template: {
+        name: templateName,
+        language: { code: language },
+        components,
+      },
     });
   }
 
