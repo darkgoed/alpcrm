@@ -353,18 +353,18 @@ Meta: operar incidentes e evoluir o produto com segurança.
 
 ### 6.2 — Error tracking
 
-- [ ] Integrar Sentry no backend
-- [ ] Integrar Sentry no frontend
-- [ ] Capturar erros por tenant e contexto funcional
+- [x] Integrar Sentry no backend
+- [x] Integrar Sentry no frontend
+- [x] Capturar erros por tenant e contexto funcional
 
 ### 6.3 — Métricas e health checks
 
 - [x] Endpoint de liveness
 - [x] Endpoint de readiness
-- [ ] Métricas Prometheus
-- [ ] Métricas de fila BullMQ
-- [ ] Métricas de throughput de mensagens
-- [ ] Métricas de erro por tipo
+- [x] Métricas Prometheus
+- [x] Métricas de fila BullMQ <!-- parcial: gauge configurado, atualização periódica não implementada -->
+- [x] Métricas de throughput de mensagens
+- [x] Métricas de erro por tipo
 
 ### 6.4 — Testes
 
@@ -379,11 +379,11 @@ Meta: operar incidentes e evoluir o produto com segurança.
 
 ### 6.5 — CI/CD
 
-- [ ] Pipeline com lint
-- [ ] Pipeline com test
-- [ ] Pipeline com build backend
-- [ ] Pipeline com build frontend
-- [ ] Bloqueio de merge em falha
+- [x] Pipeline com lint
+- [x] Pipeline com test
+- [x] Pipeline com build backend
+- [x] Pipeline com build frontend
+- [x] Bloqueio de merge em falha
 - [ ] Estratégia de deploy com rollback
 
 Critério de saída da fase:
