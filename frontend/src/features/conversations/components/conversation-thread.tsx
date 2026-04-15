@@ -1032,54 +1032,46 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
   const conversationTimelineBlocks =
     timelineConversations.length > 0
       ? (() => {
-          const conversationMeta = new Map(
-            timelineConversations.map((item) => [
-              item.id,
-              {
-                id: item.id,
-                createdAt: item.createdAt,
-                closedAt: item.closedAt ?? (item.status === 'closed' ? item.updatedAt : null),
-              },
-            ]),
+          const hasCurrentConversation = timelineConversations.some(
+            (item) => item.id === conversation.id,
           );
-          conversationMeta.set(conversation.id, {
-            id: conversation.id,
-            createdAt: conversation.createdAt,
-            closedAt:
-              conversation.closedAt ??
-              (conversation.status === 'closed' ? conversation.updatedAt : null),
-          });
+          const orderedConversations = hasCurrentConversation
+            ? timelineConversations
+            : [
+                ...timelineConversations,
+                {
+                  id: conversation.id,
+                  status: conversation.status,
+                  createdAt: conversation.createdAt,
+                  closedAt: conversation.closedAt ?? null,
+                  updatedAt: conversation.updatedAt,
+                  messages: [],
+                },
+              ];
 
-          const messagesByConversation = new Map<string, Message[]>();
-
-          for (const item of timelineConversations) {
-            const sourceMessages =
-              item.id === conversation.id ? currentConversationMessages : item.messages;
-
-            for (const message of sourceMessages) {
-              const targetConversationId = message.conversationId || item.id;
-              const bucket = messagesByConversation.get(targetConversationId) ?? [];
-              bucket.push(message);
-              messagesByConversation.set(targetConversationId, bucket);
-            }
-          }
-
-          return Array.from(messagesByConversation.entries())
-            .map(([conversationId, groupedMessages]) => {
-              const orderedMessages = mergeMessagePage(groupedMessages).sort((left, right) => {
+          return orderedConversations
+            .map((item) => {
+              const sourceMessages =
+                item.id === conversation.id ? currentConversationMessages : item.messages;
+              const orderedMessages = mergeMessagePage(
+                sourceMessages.filter(
+                  (message) =>
+                    !message.conversationId || message.conversationId === item.id,
+                ),
+              ).sort((left, right) => {
                 const timeDiff =
                   new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
                 return timeDiff !== 0 ? timeDiff : left.id.localeCompare(right.id);
               });
-              const meta = conversationMeta.get(conversationId);
 
               return {
-                id: conversationId,
-                createdAt: meta?.createdAt ?? orderedMessages[0]?.createdAt ?? conversation.createdAt,
-                closedAt: meta?.closedAt ?? null,
+                id: item.id,
+                createdAt: item.createdAt,
+                closedAt: item.closedAt ?? (item.status === 'closed' ? item.updatedAt : null),
                 messages: orderedMessages,
               };
             })
+            .filter((item) => item.messages.length > 0 || item.closedAt)
             .sort((left, right) => {
               const timeDiff =
                 new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
