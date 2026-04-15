@@ -105,6 +105,14 @@ interface ContactDetail {
   }>;
 }
 
+interface ContactTimelineConversation {
+  id: string;
+  status: 'open' | 'closed' | 'pending';
+  createdAt: string;
+  updatedAt: string;
+  messages: Message[];
+}
+
 interface ResponseMetrics {
   firstResponseMs: number | null;
   averageResponseMs: number | null;
@@ -140,17 +148,6 @@ function formatTimelineDividerDate(dateStr: string) {
 
 function formatTimelineDividerDateTime(dateStr: string) {
   return `${formatTimelineDividerDate(dateStr)} • ${formatTime(dateStr)}`;
-}
-
-function isSameCalendarDay(left: string, right: string) {
-  const leftDate = new Date(left);
-  const rightDate = new Date(right);
-
-  return (
-    leftDate.getFullYear() === rightDate.getFullYear() &&
-    leftDate.getMonth() === rightDate.getMonth() &&
-    leftDate.getDate() === rightDate.getDate()
-  );
 }
 
 function formatDuration(durationMs: number) {
@@ -449,6 +446,8 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [contactDetail, setContactDetail] = useState<ContactDetail | null>(null);
+  const [contactTimeline, setContactTimeline] = useState<ContactTimelineConversation[]>([]);
+  const [loadingTimeline, setLoadingTimeline] = useState(true);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
 
   // Quick replies
@@ -517,6 +516,34 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
     api.get<ContactDetail>(`/contacts/${conversation.contact.id}?includeMessages=false`)
       .then((r) => setContactDetail(r.data))
       .catch(() => null);
+  }, [conversation?.contact.id]);
+
+  useEffect(() => {
+    if (!conversation?.contact.id) return;
+
+    let cancelled = false;
+    setLoadingTimeline(true);
+
+    api.get<{ conversations: ContactTimelineConversation[] }>(
+      `/contacts/${conversation.contact.id}`,
+    )
+      .then((r) => {
+        if (cancelled) return;
+        setContactTimeline(r.data.conversations ?? []);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setContactTimeline([]);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingTimeline(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [conversation?.contact.id]);
 
   useEffect(() => {
@@ -595,7 +622,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
 
     pendingScrollModeRef.current = null;
     scrollSnapshotRef.current = null;
-  }, [messages]);
+  }, [messages, contactTimeline]);
 
   const syncReadState = useEffectEvent(async () => {
     if (!conversation || conversation.unreadCount === 0) return;
@@ -965,27 +992,61 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       (left, right) =>
         new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
     );
-  const previousConversation = (contactDetail?.conversations ?? [])
+  const timelineConversations = contactTimeline
     .filter(
       (item) =>
-        item.id !== conversation.id &&
-        new Date(item.createdAt).getTime() < new Date(conversation.createdAt).getTime(),
+        new Date(item.createdAt).getTime() <=
+        new Date(conversation.createdAt).getTime(),
     )
     .sort(
       (left, right) =>
-        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
-    )[0];
-  const previousConversationClosedAt =
-    previousConversation?.status === 'closed' ? previousConversation.updatedAt : null;
-  const conversationTimeline = messages.map((message, index) => ({
-    message,
-    showDateDivider:
-      index === 0 ||
-      !isSameCalendarDay(
-        message.createdAt,
-        messages[index - 1]?.createdAt ?? message.createdAt,
-      ),
-  }));
+        new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
+    );
+  const currentConversationMessages = mergeMessagePage([
+    ...(timelineConversations.find((item) => item.id === conversation.id)?.messages ?? []),
+    ...messages,
+  ]).sort((left, right) => {
+    const timeDiff =
+      new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+    return timeDiff !== 0 ? timeDiff : left.id.localeCompare(right.id);
+  });
+  const conversationTimeline =
+    timelineConversations.length > 0
+      ? timelineConversations.flatMap((item, index, list) => {
+          const previousConversation = list[index - 1];
+          const timelineItems: Array<
+            | { type: 'divider'; id: string; closedAt: string }
+            | { type: 'message'; id: string; conversationId: string; message: Message }
+          > = [];
+
+          if (previousConversation?.status === 'closed') {
+            timelineItems.push({
+              type: 'divider',
+              id: `divider-${previousConversation.id}`,
+              closedAt: previousConversation.updatedAt,
+            });
+          }
+
+          const sourceMessages =
+            item.id === conversation.id ? currentConversationMessages : item.messages;
+
+          timelineItems.push(
+            ...sourceMessages.map((message) => ({
+              type: 'message' as const,
+              id: message.id,
+              conversationId: item.id,
+              message,
+            })),
+          );
+
+          return timelineItems;
+        })
+      : currentConversationMessages.map((message) => ({
+          type: 'message' as const,
+          id: message.id,
+          conversationId: conversation.id,
+          message,
+        }));
   const lastCustomerInteraction =
     contactDetail?.conversations
       ?.map((item) => item.lastContactMessageAt)
@@ -1132,7 +1193,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
               className="min-h-0 flex-1 rounded-xl border border-border/60 bg-[linear-gradient(180deg,#fbfcfd_0%,#f5f7fa_100%)] p-3"
             >
               <div className="space-y-2.5">
-                {showLoadOlderButton ? (
+                {showLoadOlderButton && contactTimeline.length === 0 ? (
                   <div className="sticky top-0 z-10 flex justify-center pb-1">
                     <Button
                       type="button"
@@ -1149,41 +1210,42 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                     </Button>
                   </div>
                 ) : null}
-                {previousConversationClosedAt ? (
-                  <div className="flex items-center gap-2 py-1">
-                    <Separator className="flex-1" />
-                    <span
-                      className="rounded-full border border-border/70 bg-background px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground"
-                      title={formatFullDateTime(previousConversationClosedAt)}
-                    >
-                      Conversa anterior encerrada as {formatTime(previousConversationClosedAt)}
-                    </span>
-                    <Separator className="flex-1" />
-                  </div>
-                ) : null}
-                {loadingMessages ? (
+                {loadingMessages || loadingTimeline ? (
                   <div className="flex min-h-40 items-center justify-center">
                     <LoaderCircle className="size-5 animate-spin text-primary" />
                   </div>
-                ) : messages.length > 0 ? (
-                  conversationTimeline.map(({ message, showDateDivider }) => (
-                    <div key={message.id} className="space-y-2.5">
-                      {showDateDivider ? (
+                ) : conversationTimeline.length > 0 ? (
+                  conversationTimeline.map((item) => (
+                    <div key={item.id} className="space-y-2.5">
+                      {item.type === 'divider' ? (
                         <div className="flex items-center gap-2 py-1">
                           <Separator className="flex-1" />
                           <span className="rounded-full border border-border/70 bg-background px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                            {formatTimelineDividerDate(message.createdAt)}
+                            Conversa encerrada as {formatTime(item.closedAt)}
                           </span>
                           <Separator className="flex-1" />
                         </div>
                       ) : null}
-
-                      <ConversationMessageBubble
-                        message={message}
-                        onReply={handleReply}
-                        onDelete={(target) => void handleDeleteMessage(target)}
-                        onReact={(target, emoji) => void handleReact(target, emoji)}
-                      />
+                      {item.type === 'message' ? (
+                        <ConversationMessageBubble
+                          message={item.message}
+                          onReply={
+                            item.conversationId === conversation.id
+                              ? handleReply
+                              : undefined
+                          }
+                          onDelete={
+                            item.conversationId === conversation.id
+                              ? (target) => void handleDeleteMessage(target)
+                              : undefined
+                          }
+                          onReact={
+                            item.conversationId === conversation.id
+                              ? (target, emoji) => void handleReact(target, emoji)
+                              : undefined
+                          }
+                        />
+                      ) : null}
                     </div>
                   ))
                 ) : (
