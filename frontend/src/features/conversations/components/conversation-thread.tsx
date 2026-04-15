@@ -95,6 +95,7 @@ interface ContactDetail {
     id: string;
     status: 'open' | 'closed' | 'pending';
     createdAt: string;
+    closedAt?: string | null;
     updatedAt: string;
     lastMessageAt: string | null;
     lastContactMessageAt: string | null;
@@ -109,6 +110,7 @@ interface ContactTimelineConversation {
   id: string;
   status: 'open' | 'closed' | 'pending';
   createdAt: string;
+  closedAt?: string | null;
   updatedAt: string;
   messages: Message[];
 }
@@ -148,6 +150,22 @@ function formatTimelineDividerDate(dateStr: string) {
 
 function formatTimelineDividerDateTime(dateStr: string) {
   return `${formatTimelineDividerDate(dateStr)} • ${formatTime(dateStr)}`;
+}
+
+function formatConversationClosedDivider(dateStr: string) {
+  const date = new Date(dateStr);
+  const formattedDate = date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+  const formattedTime = date.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  return `------------------- conversa encerrada em ${formattedDate}-${formattedTime} -------------------`;
 }
 
 function formatDuration(durationMs: number) {
@@ -1031,11 +1049,15 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
             })),
           );
 
-          if (item.status === 'closed') {
+          const closedAt =
+            item.closedAt ??
+            (item.status === 'closed' ? item.updatedAt : null);
+
+          if (closedAt) {
             timelineItems.push({
               type: 'divider',
               id: `divider-${item.id}`,
-              closedAt: item.updatedAt,
+              closedAt,
             });
           }
 
@@ -1218,12 +1240,8 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                   conversationTimeline.map((item) => (
                     <div key={item.id} className="space-y-2.5">
                       {item.type === 'divider' ? (
-                        <div className="flex items-center gap-2 py-1">
-                          <Separator className="flex-1" />
-                          <span className="rounded-full border border-border/70 bg-background px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                            Conversa encerrada as {formatTime(item.closedAt)}
-                          </span>
-                          <Separator className="flex-1" />
+                        <div className="py-1 text-center text-xs text-muted-foreground">
+                          {formatConversationClosedDivider(item.closedAt)}
                         </div>
                       ) : null}
                       {item.type === 'message' ? (
