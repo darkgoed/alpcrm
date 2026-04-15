@@ -460,6 +460,7 @@ function toRFNodes(
   triggerType: string,
   triggerValue: string,
   selectedClientId: string | null,
+  nodeErrors?: Record<string, string>,
 ): Node[] {
   const sortedNodes = sortNodeDrafts(nodes);
   const trigger: Node = {
@@ -475,7 +476,11 @@ function toRFNodes(
     id: n.clientId,
     type: 'flowNode',
     position: { x: 0, y: 0 },
-    data: { ...n, selected: n.clientId === selectedClientId } as FlowNodeData,
+    data: {
+      ...n,
+      selected: n.clientId === selectedClientId,
+      errorMessage: nodeErrors?.[n.clientId],
+    } as FlowNodeData,
     selected: n.clientId === selectedClientId,
   }));
 
@@ -568,6 +573,7 @@ function FlowCanvasInner({
   triggerType,
   triggerValue,
   selectedClientId,
+  nodeErrors,
   onNodeSelect,
   onNodesChange,
   onEdgesChange,
@@ -666,6 +672,18 @@ function FlowCanvasInner({
       ),
     );
   }, [selectedClientId, setRFNodes]);
+
+  // Sync nodeErrors into rfNodes for visual highlighting
+  useEffect(() => {
+    if (!nodeErrors) return;
+    setRFNodes((nds) =>
+      nds.map((n) =>
+        n.type === 'flowNode'
+          ? { ...n, data: { ...n.data, errorMessage: nodeErrors[n.id] ?? undefined } }
+          : n,
+      ),
+    );
+  }, [nodeErrors, setRFNodes]);
 
   useEffect(() => {
     const incomingLabelsByNode = new Map<string, string[]>();

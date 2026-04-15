@@ -219,7 +219,7 @@ Meta: sair do fluxo linear simples e chegar a uma engine utilizável para atendi
 
 - [x] Canvas com conexões reais
 - [x] Painel lateral por tipo de nó
-- [ ] Validação visual do flow
+- [x] Validação visual do flow
 - [ ] Simulador/test run
 - [x] Publicação versionada
 

@@ -38,6 +38,58 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
+// ─── Flow validation ─────────────────────────────────────────────────────────────
+
+function validateFlow(
+  nodes: NodeDraft[],
+  edges: { fromClientId: string; toClientId: string }[],
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (nodes.length === 0) return errors;
+
+  const connectedTargets = new Set(edges.map((e) => e.toClientId));
+
+  for (const node of nodes) {
+    const c = node.config ?? {};
+
+    // Verificar se o nó tem alguma conexão de entrada (exceto se só existe 1 nó)
+    if (nodes.length > 1 && !connectedTargets.has(node.clientId)) {
+      errors[node.clientId] = 'Nó sem conexão de entrada';
+      continue;
+    }
+
+    // Verificar campos obrigatórios por tipo
+    switch (node.type) {
+      case 'message':
+        if (!String(c.text ?? '').trim()) errors[node.clientId] = 'Texto da mensagem é obrigatório';
+        break;
+      case 'send_template':
+        if (!String(c.templateId ?? c.templateName ?? '').trim()) errors[node.clientId] = 'Template é obrigatório';
+        break;
+      case 'send_interactive':
+        if (!String(c.body ?? '').trim()) errors[node.clientId] = 'Corpo da mensagem é obrigatório';
+        break;
+      case 'condition':
+        if (!String(c.field ?? '').trim()) errors[node.clientId] = 'Campo de condição é obrigatório';
+        break;
+      case 'wait_for_reply':
+        if (!c.timeoutMinutes && !c.timeoutHours) errors[node.clientId] = 'Timeout é obrigatório';
+        break;
+      case 'assign_to':
+        if (!c.userId && !c.teamId) errors[node.clientId] = 'Usuário ou time é obrigatório';
+        break;
+      case 'tag_contact':
+        if (!c.tagId && !c.tagName) errors[node.clientId] = 'Tag é obrigatória';
+        break;
+      case 'webhook_call':
+        if (!String(c.url ?? '').trim()) errors[node.clientId] = 'URL do webhook é obrigatória';
+        break;
+    }
+  }
+
+  return errors;
+}
+
 // ─── Node type config ───────────────────────────────────────────────────────────
 
 const NODE_GROUPS = [
@@ -163,6 +215,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
   const [saving, setSaving] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [savedFeedback, setSavedFeedback] = useState(false);
+  const [nodeErrors, setNodeErrors] = useState<Record<string, string>>({});
 
   const pipelineStages = useMemo(
     () => pipelines.flatMap((p) => p.stages.map((s) => ({ id: s.id, name: s.name, pipelineName: p.name }))),
@@ -221,6 +274,9 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
 
   function updateNode(clientId: string, next: NodeDraft) {
     setNodes((cur) => cur.map((n) => (n.clientId === clientId ? next : n)));
+    if (nodeErrors[clientId]) {
+      setNodeErrors((cur) => { const n = { ...cur }; delete n[clientId]; return n; });
+    }
   }
 
   const handleEdgesChange = useCallback((edges: CanvasEdgeDraft[]) => {
@@ -229,6 +285,11 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
 
   async function handleSave() {
     if (!name.trim() || saving) return;
+
+    const errors = validateFlow(nodes, canvasEdges);
+    setNodeErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
     setSaving(true);
     try {
       const triggerVal =
@@ -355,6 +416,11 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
             {toggling ? <LoaderCircle className="size-3.5 animate-spin" /> : <Power className="size-3.5" />}
             {flow.isActive ? 'Pausar' : 'Ativar'}
           </Button>
+          {Object.keys(nodeErrors).length > 0 && (
+            <span className="text-xs font-medium text-destructive">
+              {Object.keys(nodeErrors).length} erro{Object.keys(nodeErrors).length > 1 ? 's' : ''} no flow
+            </span>
+          )}
           <Button size="sm" onClick={() => void handleSave()} disabled={saving || !name.trim()}>
             {saving ? <LoaderCircle className="size-3.5 animate-spin" />
               : savedFeedback ? <Check className="size-3.5" />
@@ -374,6 +440,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
             triggerType={triggerType}
             triggerValue={triggerValue}
             selectedClientId={selectedClientId}
+            nodeErrors={nodeErrors}
             onNodeSelect={setSelectedClientId}
             onNodesChange={setNodes}
             onEdgesChange={handleEdgesChange}
