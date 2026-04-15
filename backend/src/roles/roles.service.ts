@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRoleDto } from './dto/create-role.dto';
@@ -47,14 +48,16 @@ export class RolesService {
     });
     if (exists) throw new ConflictException('Já existe uma role com esse nome');
 
+    const permissionIds = await this.normalizePermissionIds(dto.permissionIds);
+
     return this.prisma.role.create({
       data: {
         workspaceId,
         name: dto.name,
-        ...(dto.permissionIds?.length
+        ...(permissionIds.length
           ? {
               rolePermissions: {
-                create: dto.permissionIds.map((permissionId) => ({
+                create: permissionIds.map((permissionId) => ({
                   permissionId,
                 })),
               },
@@ -73,13 +76,14 @@ export class RolesService {
     dto: UpdateRolePermissionsDto,
   ) {
     await this.assertExists(id, workspaceId);
+    const permissionIds = await this.normalizePermissionIds(dto.permissionIds);
 
     // Apaga todas as permissões atuais e recria (como um checkbox que salva tudo de uma vez)
     await this.prisma.rolePermission.deleteMany({ where: { roleId: id } });
 
-    if (dto.permissionIds.length) {
+    if (permissionIds.length) {
       await this.prisma.rolePermission.createMany({
-        data: dto.permissionIds.map((permissionId) => ({
+        data: permissionIds.map((permissionId) => ({
           roleId: id,
           permissionId,
         })),
@@ -115,5 +119,21 @@ export class RolesService {
     });
     if (!role) throw new NotFoundException('Role não encontrada');
     return role;
+  }
+
+  private async normalizePermissionIds(permissionIds: string[] = []) {
+    const uniqueIds = [...new Set(permissionIds)];
+    if (uniqueIds.length === 0) return uniqueIds;
+
+    const foundPermissions = await this.prisma.permission.findMany({
+      where: { id: { in: uniqueIds } },
+      select: { id: true },
+    });
+
+    if (foundPermissions.length !== uniqueIds.length) {
+      throw new BadRequestException('Uma ou mais permissões informadas são inválidas');
+    }
+
+    return uniqueIds;
   }
 }

@@ -14,9 +14,12 @@ import { FlowsService } from './flows.service';
 import { CreateFlowDto, UpdateFlowDto } from './dto/create-flow.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequireAnyPermissions } from '../common/decorators/permissions.decorator';
 
 @Controller('automation/flows')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequireAnyPermissions('manage_flows', 'manage_workspace')
 export class AutomationController {
   constructor(private flows: FlowsService) {}
 

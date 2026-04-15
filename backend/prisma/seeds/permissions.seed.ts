@@ -48,6 +48,18 @@ export const SYSTEM_PERMISSIONS = [
     key: 'manage_whatsapp_accounts',
     description: 'Adicionar e remover contas WhatsApp',
   },
+  {
+    key: 'manage_templates',
+    description: 'Gerenciar templates HSM aprovados e sincronização',
+  },
+  {
+    key: 'manage_interactive_templates',
+    description: 'Criar e editar templates interativos',
+  },
+  {
+    key: 'manage_quick_replies',
+    description: 'Criar e editar respostas rápidas',
+  },
 
   // Contatos
   { key: 'manage_contacts', description: 'Editar e excluir contatos' },
@@ -59,7 +71,22 @@ export const SYSTEM_PERMISSIONS = [
   { key: 'manage_flows', description: 'Criar e editar fluxos de automação' },
 
   // Workspace
-  { key: 'manage_workspace', description: 'Configurações gerais do workspace' },
+  {
+    key: 'manage_workspace_settings',
+    description: 'Editar configurações gerais do workspace',
+  },
+  {
+    key: 'manage_follow_up_rules',
+    description: 'Criar e editar regras de follow-up automático',
+  },
+  {
+    key: 'view_audit_logs',
+    description: 'Visualizar auditoria do workspace',
+  },
+  {
+    key: 'manage_workspace',
+    description: 'Acesso amplo às configurações do workspace',
+  },
 ];
 
 async function main() {

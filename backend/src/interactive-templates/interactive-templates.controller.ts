@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import { RequirePermissions } from '../common/decorators/permissions.decorator';
+import { RequireAnyPermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { InteractiveTemplatesService } from './interactive-templates.service';
@@ -18,6 +18,7 @@ import { CreateInteractiveTemplateDto } from './dto/create-interactive-template.
 import { UpdateInteractiveTemplateDto } from './dto/update-interactive-template.dto';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequireAnyPermissions('manage_interactive_templates', 'manage_workspace')
 @Controller('interactive-templates')
 export class InteractiveTemplatesController {
   constructor(private readonly service: InteractiveTemplatesService) {}
@@ -28,7 +29,6 @@ export class InteractiveTemplatesController {
   }
 
   @Post()
-  @RequirePermissions('manage_workspace')
   create(
     @Body() dto: CreateInteractiveTemplateDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -37,7 +37,6 @@ export class InteractiveTemplatesController {
   }
 
   @Patch(':id')
-  @RequirePermissions('manage_workspace')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateInteractiveTemplateDto,
@@ -47,7 +46,6 @@ export class InteractiveTemplatesController {
   }
 
   @Delete(':id')
-  @RequirePermissions('manage_workspace')
   remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.service.remove(id, user.workspaceId);
   }

@@ -13,7 +13,10 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import { RequirePermissions } from '../common/decorators/permissions.decorator';
+import {
+  RequireAnyPermissions,
+  RequirePermissions,
+} from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { WorkspacesService } from './workspaces.service';
@@ -36,13 +39,13 @@ export class WorkspacesController {
   // ─── Configurações ────────────────────────────────────────────────────────────
 
   @Get('settings')
-  @RequirePermissions('manage_workspace')
+  @RequireAnyPermissions('manage_workspace_settings', 'manage_workspace')
   getSettings(@CurrentUser() user: AuthenticatedUser) {
     return this.workspacesService.getSettings(user.workspaceId);
   }
 
   @Patch('settings')
-  @RequirePermissions('manage_workspace')
+  @RequireAnyPermissions('manage_workspace_settings', 'manage_workspace')
   updateSettings(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateWorkspaceSettingsDto,
@@ -53,13 +56,13 @@ export class WorkspacesController {
   // ─── Regras de follow-up ──────────────────────────────────────────────────────
 
   @Get('follow-up-rules')
-  @RequirePermissions('manage_workspace')
+  @RequireAnyPermissions('manage_follow_up_rules', 'manage_workspace')
   listFollowUpRules(@CurrentUser() user: AuthenticatedUser) {
     return this.workspacesService.listFollowUpRules(user.workspaceId);
   }
 
   @Post('follow-up-rules')
-  @RequirePermissions('manage_workspace')
+  @RequireAnyPermissions('manage_follow_up_rules', 'manage_workspace')
   createFollowUpRule(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateFollowUpRuleDto,
@@ -68,7 +71,7 @@ export class WorkspacesController {
   }
 
   @Patch('follow-up-rules/:id')
-  @RequirePermissions('manage_workspace')
+  @RequireAnyPermissions('manage_follow_up_rules', 'manage_workspace')
   updateFollowUpRule(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
@@ -78,7 +81,7 @@ export class WorkspacesController {
   }
 
   @Delete('follow-up-rules/:id')
-  @RequirePermissions('manage_workspace')
+  @RequireAnyPermissions('manage_follow_up_rules', 'manage_workspace')
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteFollowUpRule(
     @CurrentUser() user: AuthenticatedUser,
@@ -90,13 +93,13 @@ export class WorkspacesController {
   // ─── Contas WhatsApp ──────────────────────────────────────────────────────────
 
   @Get('whatsapp-accounts')
-  @RequirePermissions('manage_workspace')
+  @RequireAnyPermissions('manage_whatsapp_accounts', 'manage_workspace')
   listWhatsappAccounts(@CurrentUser() user: AuthenticatedUser) {
     return this.workspacesService.listWhatsappAccounts(user.workspaceId);
   }
 
   @Post('whatsapp-accounts')
-  @RequirePermissions('manage_workspace')
+  @RequireAnyPermissions('manage_whatsapp_accounts', 'manage_workspace')
   createWhatsappAccount(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateWhatsappAccountDto,
@@ -105,7 +108,7 @@ export class WorkspacesController {
   }
 
   @Post('whatsapp-accounts/test-connection')
-  @RequirePermissions('manage_workspace')
+  @RequireAnyPermissions('manage_whatsapp_accounts', 'manage_workspace')
   testWhatsappConnection(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: TestWhatsappConnectionDto,
@@ -114,7 +117,7 @@ export class WorkspacesController {
   }
 
   @Patch('whatsapp-accounts/:id')
-  @RequirePermissions('manage_workspace')
+  @RequireAnyPermissions('manage_whatsapp_accounts', 'manage_workspace')
   updateWhatsappAccount(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
@@ -128,7 +131,7 @@ export class WorkspacesController {
   }
 
   @Delete('whatsapp-accounts/:id')
-  @RequirePermissions('manage_workspace')
+  @RequireAnyPermissions('manage_whatsapp_accounts', 'manage_workspace')
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteWhatsappAccount(
     @CurrentUser() user: AuthenticatedUser,
@@ -140,7 +143,7 @@ export class WorkspacesController {
   // ─── Audit Logs ───────────────────────────────────────────────────────────────
 
   @Get('audit-logs')
-  @RequirePermissions('manage_workspace')
+  @RequireAnyPermissions('view_audit_logs', 'manage_workspace')
   listAuditLogs(
     @CurrentUser() user: AuthenticatedUser,
     @Query('entity') entity?: string,

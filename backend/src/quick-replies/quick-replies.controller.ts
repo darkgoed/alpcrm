@@ -17,8 +17,10 @@ import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
+import { RequireAnyPermissions } from '../common/decorators/permissions.decorator';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequireAnyPermissions('manage_quick_replies', 'manage_workspace')
 @Controller('quick-replies')
 export class QuickRepliesController {
   constructor(private readonly svc: QuickRepliesService) {}
@@ -32,7 +34,6 @@ export class QuickRepliesController {
   }
 
   @Post()
-  @RequirePermissions('manage_workspace')
   create(
     @Body() dto: CreateQuickReplyDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -41,7 +42,6 @@ export class QuickRepliesController {
   }
 
   @Patch(':id')
-  @RequirePermissions('manage_workspace')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateQuickReplyDto,
@@ -51,7 +51,6 @@ export class QuickRepliesController {
   }
 
   @Delete(':id')
-  @RequirePermissions('manage_workspace')
   remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.svc.remove(id, user.workspaceId);
   }
