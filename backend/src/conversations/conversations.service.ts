@@ -255,7 +255,8 @@ export class ConversationsService {
       throw new BadRequestException('Template não aprovado pela Meta');
     }
 
-    // Reutiliza conversa aberta; se nao houver, reabre a ultima fechada
+    // Reutiliza conversa aberta; se nao houver, cria uma nova conversa
+    // reaproveitando o contexto da ultima fechada quando existir.
     let conversation = await this.prisma.conversation.findFirst({
       where: {
         contactId: contact.id,
@@ -277,11 +278,15 @@ export class ConversationsService {
       });
 
       if (lastClosedConversation) {
-        conversation = await this.prisma.conversation.update({
-          where: { id: lastClosedConversation.id },
+        conversation = await this.prisma.conversation.create({
           data: {
+            workspaceId,
+            contactId: contact.id,
+            whatsappAccountId: account.id,
             status: 'open',
             isBotActive: false,
+            assignedUserId: lastClosedConversation.assignedUserId ?? userId,
+            teamId: lastClosedConversation.teamId,
           },
         });
 
