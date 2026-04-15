@@ -1013,20 +1013,11 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
   });
   const conversationTimeline =
     timelineConversations.length > 0
-      ? timelineConversations.flatMap((item, index, list) => {
-          const previousConversation = list[index - 1];
+      ? timelineConversations.flatMap((item) => {
           const timelineItems: Array<
             | { type: 'divider'; id: string; closedAt: string }
             | { type: 'message'; id: string; conversationId: string; message: Message }
           > = [];
-
-          if (previousConversation?.status === 'closed') {
-            timelineItems.push({
-              type: 'divider',
-              id: `divider-${previousConversation.id}`,
-              closedAt: previousConversation.updatedAt,
-            });
-          }
 
           const sourceMessages =
             item.id === conversation.id ? currentConversationMessages : item.messages;
@@ -1039,6 +1030,14 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
               message,
             })),
           );
+
+          if (item.status === 'closed') {
+            timelineItems.push({
+              type: 'divider',
+              id: `divider-${item.id}`,
+              closedAt: item.updatedAt,
+            });
+          }
 
           return timelineItems;
         })
