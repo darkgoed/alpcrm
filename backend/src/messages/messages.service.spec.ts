@@ -7,11 +7,21 @@ import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { EventsGateway } from '../gateway/events.gateway';
 import { FlowExecutorService } from '../automation/flow-executor.service';
 import { SchedulerService } from '../queues/scheduler.service';
+import { SendMessageDto } from './dto/send-message.dto';
 import { OUTBOUND_MESSAGE_QUEUE } from '../queues/queues.constants';
 
 const WORKSPACE_ID = 'ws-1';
 const USER_ID = 'user-1';
 const CONVERSATION_ID = 'conv-1';
+
+function buildDto(overrides: Partial<SendMessageDto> = {}): SendMessageDto {
+  return Object.assign(new SendMessageDto(), {
+    conversationId: CONVERSATION_ID,
+    content: 'hi',
+    type: 'text' as SendMessageDto['type'],
+    ...overrides,
+  });
+}
 
 function buildConversation(overrides: Record<string, unknown> = {}) {
   return {
@@ -21,7 +31,7 @@ function buildConversation(overrides: Record<string, unknown> = {}) {
     isBotActive: false,
     assignedUserId: null,
     whatsappAccountId: 'acct-1',
-    lastContactMessageAt: new Date(), // inside 24h window by default
+    lastContactMessageAt: new Date(),
     contact: { id: 'contact-1', phone: '+5511999999999', optInStatus: 'opted_in' },
     whatsappAccount: { id: 'acct-1' },
     ...overrides,
@@ -32,8 +42,6 @@ describe('MessagesService', () => {
   let service: MessagesService;
   let prisma: jest.Mocked<PrismaService>;
   let gateway: jest.Mocked<EventsGateway>;
-  let scheduler: jest.Mocked<SchedulerService>;
-  let flowExecutor: jest.Mocked<FlowExecutorService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -46,10 +54,7 @@ describe('MessagesService', () => {
             message: { create: jest.fn(), findFirst: jest.fn(), findUniqueOrThrow: jest.fn() },
           },
         },
-        {
-          provide: WhatsappService,
-          useValue: {},
-        },
+        { provide: WhatsappService, useValue: {} },
         {
           provide: EventsGateway,
           useValue: {
@@ -81,8 +86,6 @@ describe('MessagesService', () => {
     service = module.get(MessagesService);
     prisma = module.get(PrismaService) as jest.Mocked<PrismaService>;
     gateway = module.get(EventsGateway) as jest.Mocked<EventsGateway>;
-    scheduler = module.get(SchedulerService) as jest.Mocked<SchedulerService>;
-    flowExecutor = module.get(FlowExecutorService) as jest.Mocked<FlowExecutorService>;
   });
 
   describe('send() — permission guard', () => {
@@ -90,12 +93,7 @@ describe('MessagesService', () => {
       (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(buildConversation());
 
       await expect(
-        service.send(
-          { conversationId: CONVERSATION_ID, content: 'hi' } as any,
-          WORKSPACE_ID,
-          USER_ID,
-          [], // no permissions
-        ),
+        service.send(buildDto({ content: 'hi' }), WORKSPACE_ID, USER_ID, []),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -109,7 +107,7 @@ describe('MessagesService', () => {
       (prisma.conversation.update as jest.Mock).mockResolvedValue(conversation);
 
       const result = await service.send(
-        { conversationId: CONVERSATION_ID, content: 'hello', type: 'text' } as any,
+        buildDto({ content: 'hello' }),
         WORKSPACE_ID,
         USER_ID,
         ['respond_conversation'],
@@ -126,30 +124,20 @@ describe('MessagesService', () => {
       );
 
       await expect(
-        service.send(
-          { conversationId: CONVERSATION_ID, content: 'hi' } as any,
-          WORKSPACE_ID,
-          USER_ID,
-          ['respond_conversation'],
-        ),
+        service.send(buildDto(), WORKSPACE_ID, USER_ID, ['respond_conversation']),
       ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('send() — 24h window', () => {
     it('throws ForbiddenException when 24h window has expired', async () => {
-      const expiredTimestamp = new Date(Date.now() - 25 * 60 * 60 * 1000); // 25h ago
+      const expiredTimestamp = new Date(Date.now() - 25 * 60 * 60 * 1000);
       (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(
         buildConversation({ lastContactMessageAt: expiredTimestamp }),
       );
 
       await expect(
-        service.send(
-          { conversationId: CONVERSATION_ID, content: 'hi', type: 'text' } as any,
-          WORKSPACE_ID,
-          USER_ID,
-          ['respond_conversation'],
-        ),
+        service.send(buildDto(), WORKSPACE_ID, USER_ID, ['respond_conversation']),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -159,12 +147,7 @@ describe('MessagesService', () => {
       );
 
       await expect(
-        service.send(
-          { conversationId: CONVERSATION_ID, content: 'hi', type: 'text' } as any,
-          WORKSPACE_ID,
-          USER_ID,
-          ['respond_conversation'],
-        ),
+        service.send(buildDto(), WORKSPACE_ID, USER_ID, ['respond_conversation']),
       ).rejects.toThrow(ForbiddenException);
     });
   });
@@ -176,12 +159,7 @@ describe('MessagesService', () => {
       );
 
       await expect(
-        service.send(
-          { conversationId: CONVERSATION_ID, content: 'hi', type: 'text' } as any,
-          WORKSPACE_ID,
-          USER_ID,
-          ['respond_conversation'],
-        ),
+        service.send(buildDto(), WORKSPACE_ID, USER_ID, ['respond_conversation']),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -195,7 +173,7 @@ describe('MessagesService', () => {
       (prisma.conversation.update as jest.Mock).mockResolvedValue(conversation);
 
       const result = await service.send(
-        { conversationId: CONVERSATION_ID, content: 'hello', type: 'text' } as any,
+        buildDto({ content: 'hello' }),
         WORKSPACE_ID,
         USER_ID,
         ['respond_conversation', 'view_all_conversations'],
@@ -212,12 +190,7 @@ describe('MessagesService', () => {
       );
 
       await expect(
-        service.send(
-          { conversationId: CONVERSATION_ID, content: 'hi' } as any,
-          WORKSPACE_ID,
-          USER_ID,
-          ['respond_conversation'],
-        ),
+        service.send(buildDto(), WORKSPACE_ID, USER_ID, ['respond_conversation']),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -230,12 +203,7 @@ describe('MessagesService', () => {
       (gateway.getActiveOperatorIds as jest.Mock).mockReturnValue(['other-user']);
 
       await expect(
-        service.send(
-          { conversationId: CONVERSATION_ID, content: 'hi', type: 'text' } as any,
-          WORKSPACE_ID,
-          USER_ID,
-          ['respond_conversation'],
-        ),
+        service.send(buildDto(), WORKSPACE_ID, USER_ID, ['respond_conversation']),
       ).rejects.toThrow(ConflictException);
     });
   });

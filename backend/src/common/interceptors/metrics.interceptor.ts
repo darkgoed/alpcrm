@@ -6,8 +6,12 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { MetricsService } from '../../metrics/metrics.service';
+
+interface ExpressRequestWithRoute extends Request {
+  route?: { path?: string };
+}
 
 @Injectable()
 export class MetricsInterceptor implements NestInterceptor {
@@ -15,12 +19,11 @@ export class MetricsInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const ctx = context.switchToHttp();
-    const request = ctx.getRequest<Request>();
+    const request = ctx.getRequest<ExpressRequestWithRoute>();
     const response = ctx.getResponse<Response>();
 
     const start = Date.now();
     const method = request.method;
-    // Normalize route to avoid cardinality explosion
     const route = request.route?.path ?? request.path ?? 'unknown';
 
     return next.handle().pipe(
