@@ -114,20 +114,72 @@ export class ConversationsService {
     this.assertPermission(['close_conversation'], permissions);
     const conversation = await this.assertExists(id, workspaceId);
 
-    const [updatedConversation] = await this.prisma.$transaction([
-      this.prisma.conversation.update({
+    const mergeSource = await this.prisma.conversation.findFirst({
+      where: {
+        workspaceId,
+        contactId: conversation.contactId,
+        whatsappAccountId: conversation.whatsappAccountId,
+        status: 'closed',
+        id: { not: id },
+      },
+      orderBy: { lastMessageAt: 'desc' },
+    });
+
+    const updatedConversation = await this.prisma.$transaction(async (tx) => {
+      const closedConversation = await tx.conversation.update({
         where: { id },
         data: { status: 'closed', isBotActive: false },
-      }),
-      this.prisma.contactFlowState.updateMany({
+      });
+
+      await tx.contactFlowState.updateMany({
         where: { contactId: conversation.contactId, isActive: true },
         data: {
           isActive: false,
           waitingForReply: false,
           replyTimeoutAt: null,
         },
-      }),
-    ]);
+      });
+
+      if (!mergeSource) {
+        return closedConversation;
+      }
+
+      await tx.message.updateMany({
+        where: { conversationId: mergeSource.id },
+        data: { conversationId: closedConversation.id },
+      });
+
+      const mergedConversation = await tx.conversation.update({
+        where: { id: closedConversation.id },
+        data: {
+          createdAt:
+            mergeSource.createdAt < closedConversation.createdAt
+              ? mergeSource.createdAt
+              : closedConversation.createdAt,
+          lastMessageAt: this.maxDate(
+            mergeSource.lastMessageAt,
+            closedConversation.lastMessageAt,
+          ),
+          lastContactMessageAt: this.maxDate(
+            mergeSource.lastContactMessageAt,
+            closedConversation.lastContactMessageAt,
+          ),
+          unreadCount: mergeSource.unreadCount + closedConversation.unreadCount,
+        },
+      });
+
+      await tx.conversation.delete({
+        where: { id: mergeSource.id },
+      });
+
+      return mergedConversation;
+    });
+
+    if (mergeSource) {
+      this.eventsGateway.emitToWorkspace(workspaceId, 'conversation_deleted', {
+        conversationId: mergeSource.id,
+      });
+    }
 
     return updatedConversation;
   }
@@ -373,6 +425,12 @@ export class ConversationsService {
     if (!hasAll) {
       throw new ForbiddenException('Permissão insuficiente');
     }
+  }
+
+  private maxDate(left: Date | null, right: Date | null) {
+    if (!left) return right;
+    if (!right) return left;
+    return left > right ? left : right;
   }
 
   private buildTemplateComponents(
