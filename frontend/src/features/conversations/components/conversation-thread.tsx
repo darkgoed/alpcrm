@@ -1021,6 +1021,24 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       (left, right) =>
         new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
     );
+  const conversationMetaById = new Map(
+    [
+      ...(contactDetail?.conversations ?? []).map((item) => ({
+        id: item.id,
+        status: item.status,
+        createdAt: item.createdAt,
+        closedAt: item.closedAt ?? null,
+        updatedAt: item.updatedAt,
+      })),
+      {
+        id: conversation.id,
+        status: conversation.status,
+        createdAt: conversation.createdAt,
+        closedAt: conversation.closedAt ?? null,
+        updatedAt: conversation.updatedAt,
+      },
+    ].map((item) => [item.id, item] as const),
+  );
   const currentConversationMessages = mergeMessagePage([
     ...(timelineConversations.find((item) => item.id === conversation.id)?.messages ?? []),
     ...messages,
@@ -1066,18 +1084,24 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
 
           return orderedConversations
             .map((item) => {
+              const conversationMeta = conversationMetaById.get(item.id);
               const orderedMessages = (messagesByConversationId.get(item.id) ?? []).sort(
                 (left, right) => {
-                const timeDiff =
-                  new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
-                return timeDiff !== 0 ? timeDiff : left.id.localeCompare(right.id);
+                  const timeDiff =
+                    new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+                  return timeDiff !== 0 ? timeDiff : left.id.localeCompare(right.id);
                 },
               );
 
               return {
                 id: item.id,
-                createdAt: item.createdAt,
-                closedAt: item.closedAt ?? (item.status === 'closed' ? item.updatedAt : null),
+                createdAt: conversationMeta?.createdAt ?? item.createdAt,
+                closedAt:
+                  conversationMeta?.closedAt ??
+                  item.closedAt ??
+                  ((conversationMeta?.status ?? item.status) === 'closed'
+                    ? conversationMeta?.updatedAt ?? item.updatedAt
+                    : null),
                 messages: orderedMessages,
               };
             })
