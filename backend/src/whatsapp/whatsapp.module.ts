@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { WhatsappService } from './whatsapp.service';
+import { WhatsappMetaClient } from './whatsapp-meta-client.service';
 import { WhatsappController } from './whatsapp.controller';
 import { GatewayModule } from '../gateway/gateway.module';
 import { WebhookSignatureGuard } from '../common/guards/webhook-signature.guard';
@@ -16,8 +17,8 @@ import { QueuesModule } from '../queues/queues.module';
     AutomationModule,
     QueuesModule,
   ],
-  providers: [WhatsappService, WebhookSignatureGuard, FollowUpProcessor, OutboundMessageProcessor],
+  providers: [WhatsappService, WhatsappMetaClient, WebhookSignatureGuard, FollowUpProcessor, OutboundMessageProcessor],
   controllers: [WhatsappController],
-  exports: [WhatsappService],
+  exports: [WhatsappService, WhatsappMetaClient],
 })
 export class WhatsappModule {}

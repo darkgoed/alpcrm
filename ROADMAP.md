@@ -296,7 +296,7 @@ Meta: corrigir ingestão, persistência e envio para operação estável sob ret
 - [x] Tornar `Message.externalId` único quando presente
 - [x] Implementar deduplicação de mensagens recebidas
 - [x] Implementar deduplicação de status webhook
-- [ ] Criar tabela ou mecanismo de receipts de processamento de webhook
+- [x] Criar tabela ou mecanismo de receipts de processamento de webhook
 - [x] Garantir que retry da Meta não gere mensagem duplicada
 
 ### 5.2 — Envio outbound via fila
@@ -325,7 +325,7 @@ Meta: corrigir ingestão, persistência e envio para operação estável sob ret
 
 ### 5.5 — Rate limiting e throughput
 
-- [ ] Centralizar cliente de WhatsApp Cloud API <!-- parcial: cada método faz fetch direto, centralização completa seria extrair para whatsapp-client.service.ts -->
+- [x] Centralizar cliente de WhatsApp Cloud API
 - [x] Implementar controle de taxa por `phone_number_id`
 - [x] Implementar retry com jitter
 - [x] Preparar fila para bursts por workspace

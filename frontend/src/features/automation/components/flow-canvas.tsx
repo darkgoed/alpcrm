@@ -45,6 +45,7 @@ interface FlowCanvasProps {
   triggerType: string;
   triggerValue: string;
   selectedClientId: string | null;
+  nodeErrors?: Record<string, string>; // clientId → error message
   onNodeSelect: (clientId: string | null) => void;
   onNodesChange: (nodes: NodeDraft[]) => void;
   onEdgesChange: (edges: CanvasEdgeDraft[]) => void;
@@ -135,6 +136,7 @@ const BRANCH_TYPES: FlowNodeType[] = ['branch', 'condition'];
 type FlowNodeData = NodeDraft & {
   selected: boolean;
   incomingLabels?: string[];
+  errorMessage?: string;
 } & Record<string, unknown>;
 
 type RemovableEdgeData = {
@@ -192,6 +194,7 @@ function FlowNode({ data, selected }: NodeProps & { data: FlowNodeData }) {
   const incomingLabels = (data.incomingLabels ?? []).filter(Boolean);
   const interactiveReplies = interactiveReplyPreview(data);
   const replyHandles = interactiveReplyHandles(data);
+  const hasError = Boolean(data.errorMessage);
 
   return (
     <div
@@ -199,6 +202,7 @@ function FlowNode({ data, selected }: NodeProps & { data: FlowNodeData }) {
         'flex w-[280px] cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 shadow-sm transition-all hover:shadow-md',
         colorClass,
         selected && 'ring-2 ring-primary ring-offset-2',
+        hasError && 'ring-2 ring-destructive ring-offset-2',
       )}
     >
       <Handle
@@ -218,6 +222,9 @@ function FlowNode({ data, selected }: NodeProps & { data: FlowNodeData }) {
           </span>
         </div>
         <p className="mt-1 truncate text-xs opacity-80">{nodePreview(data)}</p>
+        {hasError && (
+          <p className="mt-1 truncate text-[10px] font-medium text-destructive">{data.errorMessage}</p>
+        )}
         {interactiveReplies.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {interactiveReplies.map((reply) => (

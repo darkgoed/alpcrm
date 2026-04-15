@@ -21,10 +21,7 @@ import {
 import { MessageType, MessageStatus, Prisma } from '@prisma/client';
 import { isWithinBusinessHours } from '../common/utils/business-hours.util';
 import { logMsg } from '../common/logger/app-logger.service';
-
-interface WhatsappSendResponse {
-  messages?: Array<{ id?: string }>;
-}
+import { WhatsappMetaClient } from './whatsapp-meta-client.service';
 
 export type WebhookRealtimeEvent = {
   workspaceId: string;
@@ -82,6 +79,7 @@ export class WhatsappService {
     private teamsService: TeamsService,
     private flowExecutor: FlowExecutorService,
     private scheduler: SchedulerService,
+    private metaClient: WhatsappMetaClient,
   ) {}
 
   private getPublicUploadsUrl(fileName: string) {
@@ -220,12 +218,30 @@ export class WhatsappService {
 
   // ─── Mensagem recebida ───────────────────────────────────────────────────────
 
+  private async claimWebhookReceipt(eventId: string, eventType: string): Promise<boolean> {
+    try {
+      await this.prisma.webhookReceipt.create({ data: { eventId, eventType } });
+      return true;
+    } catch {
+      return false; // unique constraint — already processed
+    }
+  }
+
   private async handleIncomingMessage(
     phoneNumberId: string,
     msg: WhatsappMessage,
     waContact: WhatsappContact | undefined,
     onMessage: (data: any) => void,
   ) {
+    // Idempotência: garantir que cada evento da Meta seja processado exatamente uma vez
+    const claimed = await this.claimWebhookReceipt(msg.id, 'message');
+    if (!claimed) {
+      this.logger.warn(
+        logMsg('[Webhook] Evento já processado (receipt)', { externalId: msg.id, type: 'message' }),
+      );
+      return;
+    }
+
     // 1. Encontrar a conta WhatsApp pelo phone_number_id (meta_account_id)
     const account = await this.prisma.whatsappAccount.findFirst({
       where: { metaAccountId: phoneNumberId, isActive: true },
@@ -529,6 +545,16 @@ export class WhatsappService {
     status: WhatsappStatus,
     onMessage: (data: WebhookRealtimeEvent) => void,
   ) {
+    // Idempotência: status events para o mesmo externalId+status são deduplicados
+    const receiptKey = `${status.id}:${status.status}`;
+    const claimed = await this.claimWebhookReceipt(receiptKey, 'status');
+    if (!claimed) {
+      this.logger.warn(
+        logMsg('[Webhook] Status duplicado ignorado', { externalId: status.id, status: status.status }),
+      );
+      return;
+    }
+
     const statusMap: Record<string, MessageStatus> = {
       sent: 'sent',
       delivered: 'delivered',
@@ -568,12 +594,6 @@ export class WhatsappService {
         status: mapped,
       }),
     );
-  }
-
-  private async throwApiError(response: Response, context: string): Promise<never> {
-    const body = await response.text().catch(() => '');
-    this.logger.error(`${context} status: ${response.status} body: ${body}`);
-    throw new Error(`WhatsApp API error status: ${response.status} body: ${body}`);
   }
 
   private formatError(error: unknown): { message: string; stack?: string } {
@@ -671,31 +691,14 @@ export class WhatsappService {
     const account = await this.prisma.whatsappAccount.findUnique({
       where: { id: accountId },
     });
-
     if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
 
-    const url = `https://graph.facebook.com/v19.0/${account.metaAccountId}/messages`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${account.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to,
-        type: 'text',
-        text: { body: text },
-        ...(this.buildReplyContext(replyToExternalId) ?? {}),
-      }),
+    return this.metaClient.sendMessage(account.token, account.metaAccountId, {
+      to,
+      type: 'text',
+      text: { body: text },
+      ...(this.buildReplyContext(replyToExternalId) ?? {}),
     });
-
-    if (!response.ok) {
-      return this.throwApiError(response, 'Erro ao enviar mensagem');
-    }
-
-    return this.extractMessageId(response);
   }
 
   // ─── Enviar template HSM (outbound / janela de 24h) ─────────────────────────
@@ -712,30 +715,11 @@ export class WhatsappService {
     });
     if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
 
-    const url = `https://graph.facebook.com/v19.0/${account.metaAccountId}/messages`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${account.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to,
-        type: 'template',
-        template: {
-          name: templateName,
-          language: { code: language },
-          components,
-        },
-      }),
+    return this.metaClient.sendMessage(account.token, account.metaAccountId, {
+      to,
+      type: 'template',
+      template: { name: templateName, language: { code: language }, components },
     });
-
-    if (!response.ok) {
-      return this.throwApiError(response, 'Erro ao enviar template');
-    }
-
-    return this.extractMessageId(response);
   }
 
   // ─── Enviar mídia ─────────────────────────────────────────────────────────────
@@ -753,7 +737,6 @@ export class WhatsappService {
     });
     if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
 
-    const url = `https://graph.facebook.com/v19.0/${account.metaAccountId}/messages`;
     const mediaPayload: OutboundMediaPayload = {
       link: this.resolveOutboundMediaUrl(mediaUrl),
     };
@@ -761,26 +744,12 @@ export class WhatsappService {
       mediaPayload.caption = caption;
     }
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${account.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to,
-        type: mediaType,
-        [mediaType]: mediaPayload,
-        ...(this.buildReplyContext(replyToExternalId) ?? {}),
-      }),
+    return this.metaClient.sendMessage(account.token, account.metaAccountId, {
+      to,
+      type: mediaType,
+      [mediaType]: mediaPayload,
+      ...(this.buildReplyContext(replyToExternalId) ?? {}),
     });
-
-    if (!response.ok) {
-      return this.throwApiError(response, 'Erro ao enviar mídia');
-    }
-
-    return this.extractMessageId(response);
   }
 
   async sendInteractiveMessage(
@@ -796,27 +765,12 @@ export class WhatsappService {
     if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
 
     const interactive = this.buildInteractivePayload(interactiveType, payload);
-    const url = `https://graph.facebook.com/v19.0/${account.metaAccountId}/messages`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${account.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to,
-        type: 'interactive',
-        interactive,
-        ...(this.buildReplyContext(replyToExternalId) ?? {}),
-      }),
+    return this.metaClient.sendMessage(account.token, account.metaAccountId, {
+      to,
+      type: 'interactive',
+      interactive,
+      ...(this.buildReplyContext(replyToExternalId) ?? {}),
     });
-
-    if (!response.ok) {
-      return this.throwApiError(response, 'Erro ao enviar mensagem interativa');
-    }
-
-    return this.extractMessageId(response);
   }
 
   // ─── Download de mídia inbound da Meta ───────────────────────────────────────
@@ -834,16 +788,8 @@ export class WhatsappService {
   } | null> {
     try {
       // 1. Buscar URL de download da Meta
-      const infoRes = await fetch(
-        `https://graph.facebook.com/v19.0/${mediaId}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      if (!infoRes.ok) return null;
-      const info = (await infoRes.json()) as {
-        url: string;
-        mime_type?: string;
-        file_size?: number;
-      };
+      const info = await this.metaClient.getMediaInfo(token, mediaId);
+      if (!info) return null;
 
       const downloadUrl: string = info.url;
       const mimeType: string =
@@ -851,10 +797,8 @@ export class WhatsappService {
       const fileSize: number = info.file_size ?? 0;
 
       // 2. Baixar o conteúdo binário
-      const mediaRes = await fetch(downloadUrl, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!mediaRes.ok) return null;
+      const buffer = await this.metaClient.downloadMedia(token, downloadUrl);
+      if (!buffer) return null;
 
       // 3. Determinar extensão e nome de arquivo
       const mimeExt: Record<string, string> = {
@@ -878,7 +822,6 @@ export class WhatsappService {
       // 4. Salvar em uploads/
       const uploadsDir = join(process.cwd(), 'uploads');
       await fs.mkdir(uploadsDir, { recursive: true });
-      const buffer = Buffer.from(await mediaRes.arrayBuffer());
       await fs.writeFile(join(uploadsDir, storedName), buffer);
 
       return {
@@ -1021,11 +964,6 @@ export class WhatsappService {
         null,
       fileName: msg.document?.filename ?? null,
     };
-  }
-
-  private async extractMessageId(response: Response): Promise<string> {
-    const data = (await response.json()) as WhatsappSendResponse;
-    return data.messages?.[0]?.id ?? '';
   }
 
   private normalizeInboundInteractiveMessage(msg: WhatsappMessage): {
