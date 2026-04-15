@@ -117,7 +117,7 @@ export class ConversationsService {
     return this.prisma.$transaction(async (tx) => {
       const closedConversation = await tx.conversation.update({
         where: { id },
-        data: { status: 'closed', isBotActive: false, closedAt: new Date() },
+        data: { status: 'closed', isBotActive: false },
       });
 
       await tx.contactFlowState.updateMany({
@@ -140,7 +140,7 @@ export class ConversationsService {
     await this.assertExists(id, workspaceId);
     return this.prisma.conversation.update({
       where: { id },
-      data: { status: 'open', isBotActive: true, closedAt: null },
+      data: { status: 'open', isBotActive: true },
     });
   }
 
