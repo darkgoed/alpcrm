@@ -317,6 +317,7 @@ model Message {
   replyToMessage Message? @relation("MessageReplies", fields: [replyToMessageId], references: [id], onDelete: SetNull)
   replies        Message[] @relation("MessageReplies")
 
+  @@unique([externalId])
   @@map("messages")
 }
 

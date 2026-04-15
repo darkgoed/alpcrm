@@ -323,7 +323,19 @@ export class WhatsappService {
       }
     }
 
-    // 4. Salvar mensagem
+    // 4. Deduplicação: ignorar mensagem já processada (retry da Meta)
+    const alreadyExists = await this.prisma.message.findFirst({
+      where: { externalId: msg.id },
+      select: { id: true },
+    });
+    if (alreadyExists) {
+      this.logger.warn(
+        `[Webhook] Mensagem duplicada ignorada externalId=${msg.id}`,
+      );
+      return;
+    }
+
+    // 5. Salvar mensagem
     const normalizedInteractive = this.normalizeInboundInteractiveMessage(msg);
     const normalizedStructured = this.normalizeStructuredMessage(msg);
     const messageType =
@@ -364,10 +376,7 @@ export class WhatsappService {
 
     if (msg.context?.id) {
       const repliedMessage = await this.prisma.message.findFirst({
-        where: {
-          conversationId: conversation.id,
-          externalId: msg.context.id,
-        },
+        where: { externalId: msg.context.id },
         select: { id: true },
       });
       replyToMessageId = repliedMessage?.id ?? null;
@@ -410,7 +419,7 @@ export class WhatsappService {
       },
     });
 
-    // 5. Atualizar lastMessageAt e lastContactMessageAt da conversa
+    // 6. Atualizar lastMessageAt e lastContactMessageAt da conversa
     await this.prisma.conversation.update({
       where: { id: conversation.id },
       data: {
@@ -424,7 +433,7 @@ export class WhatsappService {
       `Mensagem recebida de ${msg.from} → conversa ${conversation.id}`,
     );
 
-    // 5a. Agendar follow-up e auto-close (reinicia timers a cada mensagem do contato)
+    // 6a. Agendar follow-up e auto-close (reinicia timers a cada mensagem do contato)
     this.scheduler
       .cancelFollowUps(conversation.id, workspaceId)
       .catch(() => null);
@@ -435,7 +444,7 @@ export class WhatsappService {
       .scheduleAutoClose(conversation.id, workspaceId)
       .catch(() => null);
 
-    // 5b. Mensagem automática de fora de horário
+    // 6b. Mensagem automática de fora de horário
     await this.sendOutOfHoursMessageIfNeeded(
       workspaceId,
       account.id,
@@ -444,7 +453,7 @@ export class WhatsappService {
       onMessage,
     );
 
-    // 6. Emitir evento para o WebSocket
+    // 7. Emitir evento para o WebSocket
     onMessage({
       event: 'new_message',
       workspaceId,
@@ -454,7 +463,7 @@ export class WhatsappService {
       unreadCount: (conversation.unreadCount ?? 0) + 1,
     });
 
-    // 7. Retomar wait_for_reply ou disparar novo flow
+    // 8. Retomar wait_for_reply ou disparar novo flow
     const isNewConv = !existingConversation;
     this.flowExecutor
       .resumeWaitingFlows(

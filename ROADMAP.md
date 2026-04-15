@@ -260,7 +260,7 @@ Meta: corrigir riscos de acesso indevido, configuração insegura e entrada fals
 - [x] Exigir permissão explícita para fechar/reabrir conversa
 - [x] Exigir permissão explícita para iniciar conversa outbound
 - [x] Exigir permissão explícita para notas internas
-- [ ] Exigir permissão explícita para ler usuários, roles e times
+- [x] Exigir permissão explícita para ler usuários, roles e times
 - [ ] Revalidar autorização no service layer, não só no controller <!-- parcial: conversas sensíveis e envio já revalidam permissão no service; falta expandir para leitura e demais superfícies -->
 
 ### 4.4 — Segurança de websocket
@@ -272,8 +272,8 @@ Meta: corrigir riscos de acesso indevido, configuração insegura e entrada fals
 
 ### 4.5 — Segredos e credenciais
 
-- [ ] Nunca expor token da Meta no frontend
-- [ ] Mover "testar conexão WhatsApp" para endpoint backend
+- [x] Nunca expor token da Meta no frontend
+- [x] Mover "testar conexão WhatsApp" para endpoint backend
 - [ ] Definir política de criptografia para tokens armazenados
 - [ ] Adicionar rotação de credenciais de conta WhatsApp
 
@@ -293,11 +293,11 @@ Meta: corrigir ingestão, persistência e envio para operação estável sob ret
 
 ### 5.1 — Idempotência inbound
 
-- [ ] Tornar `Message.externalId` único quando presente
-- [ ] Implementar deduplicação de mensagens recebidas
-- [ ] Implementar deduplicação de status webhook
+- [x] Tornar `Message.externalId` único quando presente
+- [x] Implementar deduplicação de mensagens recebidas
+- [x] Implementar deduplicação de status webhook
 - [ ] Criar tabela ou mecanismo de receipts de processamento de webhook
-- [ ] Garantir que retry da Meta não gere mensagem duplicada
+- [x] Garantir que retry da Meta não gere mensagem duplicada
 
 ### 5.2 — Envio outbound via fila
 

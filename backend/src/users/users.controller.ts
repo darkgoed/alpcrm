@@ -13,7 +13,7 @@ import { InviteUserDto } from './dto/invite-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import { RequirePermissions } from '../common/decorators/permissions.decorator';
+import { RequirePermissions, RequireAnyPermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 
@@ -23,11 +23,13 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
+  @RequireAnyPermissions('manage_users', 'manage_workspace')
   findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.usersService.findAll(user.workspaceId);
   }
 
   @Get(':id')
+  @RequireAnyPermissions('manage_users', 'manage_workspace')
   findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.usersService.findOne(id, user.workspaceId);
   }

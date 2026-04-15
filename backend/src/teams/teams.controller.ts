@@ -13,7 +13,7 @@ import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import { RequirePermissions } from '../common/decorators/permissions.decorator';
+import { RequirePermissions, RequireAnyPermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 
@@ -23,11 +23,13 @@ export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
 
   @Get()
+  @RequireAnyPermissions('manage_teams', 'assign_conversation', 'manage_workspace')
   findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.teamsService.findAll(user.workspaceId);
   }
 
   @Get(':id')
+  @RequireAnyPermissions('manage_teams', 'assign_conversation', 'manage_workspace')
   findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.teamsService.findOne(id, user.workspaceId);
   }
