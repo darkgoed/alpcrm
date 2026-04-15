@@ -56,10 +56,322 @@
   color: var(--graphify-ambiguous);
 }
 
-.markdown-rendered a.tag[href^="#community/"],
-.markdown-rendered a.tag[href^="#community%2F"] {
-  background: color-mix(in srgb, var(--graphify-community) 18%, transparent);
-  color: var(--graphify-community);
+.markdown-rendered a.tag[href="#community/Community_0"],
+.markdown-rendered a.tag[href="#community%2FCommunity_0"] {
+  background: color-mix(in srgb, #e11d48 18%, transparent);
+  color: #e11d48;
+}
+
+.markdown-rendered a.tag[href="#community/Community_1"],
+.markdown-rendered a.tag[href="#community%2FCommunity_1"] {
+  background: color-mix(in srgb, #f97316 18%, transparent);
+  color: #f97316;
+}
+
+.markdown-rendered a.tag[href="#community/Community_2"],
+.markdown-rendered a.tag[href="#community%2FCommunity_2"] {
+  background: color-mix(in srgb, #eab308 18%, transparent);
+  color: #eab308;
+}
+
+.markdown-rendered a.tag[href="#community/Community_3"],
+.markdown-rendered a.tag[href="#community%2FCommunity_3"] {
+  background: color-mix(in srgb, #22c55e 18%, transparent);
+  color: #22c55e;
+}
+
+.markdown-rendered a.tag[href="#community/Community_4"],
+.markdown-rendered a.tag[href="#community%2FCommunity_4"] {
+  background: color-mix(in srgb, #14b8a6 18%, transparent);
+  color: #14b8a6;
+}
+
+.markdown-rendered a.tag[href="#community/Community_5"],
+.markdown-rendered a.tag[href="#community%2FCommunity_5"] {
+  background: color-mix(in srgb, #06b6d4 18%, transparent);
+  color: #06b6d4;
+}
+
+.markdown-rendered a.tag[href="#community/Community_6"],
+.markdown-rendered a.tag[href="#community%2FCommunity_6"] {
+  background: color-mix(in srgb, #3b82f6 18%, transparent);
+  color: #3b82f6;
+}
+
+.markdown-rendered a.tag[href="#community/Community_7"],
+.markdown-rendered a.tag[href="#community%2FCommunity_7"] {
+  background: color-mix(in srgb, #6366f1 18%, transparent);
+  color: #6366f1;
+}
+
+.markdown-rendered a.tag[href="#community/Community_8"],
+.markdown-rendered a.tag[href="#community%2FCommunity_8"] {
+  background: color-mix(in srgb, #8b5cf6 18%, transparent);
+  color: #8b5cf6;
+}
+
+.markdown-rendered a.tag[href="#community/Community_9"],
+.markdown-rendered a.tag[href="#community%2FCommunity_9"] {
+  background: color-mix(in srgb, #d946ef 18%, transparent);
+  color: #d946ef;
+}
+
+.markdown-rendered a.tag[href="#community/Community_10"],
+.markdown-rendered a.tag[href="#community%2FCommunity_10"] {
+  background: color-mix(in srgb, #ec4899 18%, transparent);
+  color: #ec4899;
+}
+
+.markdown-rendered a.tag[href="#community/Community_11"],
+.markdown-rendered a.tag[href="#community%2FCommunity_11"] {
+  background: color-mix(in srgb, #84cc16 18%, transparent);
+  color: #84cc16;
+}
+
+.markdown-rendered a.tag[href="#community/Community_12"],
+.markdown-rendered a.tag[href="#community%2FCommunity_12"] {
+  background: color-mix(in srgb, #e11d48 18%, transparent);
+  color: #e11d48;
+}
+
+.markdown-rendered a.tag[href="#community/Community_13"],
+.markdown-rendered a.tag[href="#community%2FCommunity_13"] {
+  background: color-mix(in srgb, #f97316 18%, transparent);
+  color: #f97316;
+}
+
+.markdown-rendered a.tag[href="#community/Community_14"],
+.markdown-rendered a.tag[href="#community%2FCommunity_14"] {
+  background: color-mix(in srgb, #eab308 18%, transparent);
+  color: #eab308;
+}
+
+.markdown-rendered a.tag[href="#community/Community_15"],
+.markdown-rendered a.tag[href="#community%2FCommunity_15"] {
+  background: color-mix(in srgb, #22c55e 18%, transparent);
+  color: #22c55e;
+}
+
+.markdown-rendered a.tag[href="#community/Community_16"],
+.markdown-rendered a.tag[href="#community%2FCommunity_16"] {
+  background: color-mix(in srgb, #14b8a6 18%, transparent);
+  color: #14b8a6;
+}
+
+.markdown-rendered a.tag[href="#community/Community_17"],
+.markdown-rendered a.tag[href="#community%2FCommunity_17"] {
+  background: color-mix(in srgb, #06b6d4 18%, transparent);
+  color: #06b6d4;
+}
+
+.markdown-rendered a.tag[href="#community/Community_18"],
+.markdown-rendered a.tag[href="#community%2FCommunity_18"] {
+  background: color-mix(in srgb, #3b82f6 18%, transparent);
+  color: #3b82f6;
+}
+
+.markdown-rendered a.tag[href="#community/Community_19"],
+.markdown-rendered a.tag[href="#community%2FCommunity_19"] {
+  background: color-mix(in srgb, #6366f1 18%, transparent);
+  color: #6366f1;
+}
+
+.markdown-rendered a.tag[href="#community/Community_20"],
+.markdown-rendered a.tag[href="#community%2FCommunity_20"] {
+  background: color-mix(in srgb, #8b5cf6 18%, transparent);
+  color: #8b5cf6;
+}
+
+.markdown-rendered a.tag[href="#community/Community_21"],
+.markdown-rendered a.tag[href="#community%2FCommunity_21"] {
+  background: color-mix(in srgb, #d946ef 18%, transparent);
+  color: #d946ef;
+}
+
+.markdown-rendered a.tag[href="#community/Community_22"],
+.markdown-rendered a.tag[href="#community%2FCommunity_22"] {
+  background: color-mix(in srgb, #ec4899 18%, transparent);
+  color: #ec4899;
+}
+
+.markdown-rendered a.tag[href="#community/Community_23"],
+.markdown-rendered a.tag[href="#community%2FCommunity_23"] {
+  background: color-mix(in srgb, #84cc16 18%, transparent);
+  color: #84cc16;
+}
+
+.markdown-rendered a.tag[href="#community/Community_24"],
+.markdown-rendered a.tag[href="#community%2FCommunity_24"] {
+  background: color-mix(in srgb, #e11d48 18%, transparent);
+  color: #e11d48;
+}
+
+.markdown-rendered a.tag[href="#community/Community_25"],
+.markdown-rendered a.tag[href="#community%2FCommunity_25"] {
+  background: color-mix(in srgb, #f97316 18%, transparent);
+  color: #f97316;
+}
+
+.markdown-rendered a.tag[href="#community/Community_26"],
+.markdown-rendered a.tag[href="#community%2FCommunity_26"] {
+  background: color-mix(in srgb, #eab308 18%, transparent);
+  color: #eab308;
+}
+
+.markdown-rendered a.tag[href="#community/Community_27"],
+.markdown-rendered a.tag[href="#community%2FCommunity_27"] {
+  background: color-mix(in srgb, #22c55e 18%, transparent);
+  color: #22c55e;
+}
+
+.markdown-rendered a.tag[href="#community/Community_28"],
+.markdown-rendered a.tag[href="#community%2FCommunity_28"] {
+  background: color-mix(in srgb, #14b8a6 18%, transparent);
+  color: #14b8a6;
+}
+
+.markdown-rendered a.tag[href="#community/Community_29"],
+.markdown-rendered a.tag[href="#community%2FCommunity_29"] {
+  background: color-mix(in srgb, #06b6d4 18%, transparent);
+  color: #06b6d4;
+}
+
+.markdown-rendered a.tag[href="#community/Community_30"],
+.markdown-rendered a.tag[href="#community%2FCommunity_30"] {
+  background: color-mix(in srgb, #3b82f6 18%, transparent);
+  color: #3b82f6;
+}
+
+.markdown-rendered a.tag[href="#community/Community_31"],
+.markdown-rendered a.tag[href="#community%2FCommunity_31"] {
+  background: color-mix(in srgb, #6366f1 18%, transparent);
+  color: #6366f1;
+}
+
+.markdown-rendered a.tag[href="#community/Community_32"],
+.markdown-rendered a.tag[href="#community%2FCommunity_32"] {
+  background: color-mix(in srgb, #8b5cf6 18%, transparent);
+  color: #8b5cf6;
+}
+
+.markdown-rendered a.tag[href="#community/Community_33"],
+.markdown-rendered a.tag[href="#community%2FCommunity_33"] {
+  background: color-mix(in srgb, #d946ef 18%, transparent);
+  color: #d946ef;
+}
+
+.markdown-rendered a.tag[href="#community/Community_34"],
+.markdown-rendered a.tag[href="#community%2FCommunity_34"] {
+  background: color-mix(in srgb, #ec4899 18%, transparent);
+  color: #ec4899;
+}
+
+.markdown-rendered a.tag[href="#community/Community_35"],
+.markdown-rendered a.tag[href="#community%2FCommunity_35"] {
+  background: color-mix(in srgb, #84cc16 18%, transparent);
+  color: #84cc16;
+}
+
+.markdown-rendered a.tag[href="#community/Community_36"],
+.markdown-rendered a.tag[href="#community%2FCommunity_36"] {
+  background: color-mix(in srgb, #e11d48 18%, transparent);
+  color: #e11d48;
+}
+
+.markdown-rendered a.tag[href="#community/Community_37"],
+.markdown-rendered a.tag[href="#community%2FCommunity_37"] {
+  background: color-mix(in srgb, #f97316 18%, transparent);
+  color: #f97316;
+}
+
+.markdown-rendered a.tag[href="#community/Community_38"],
+.markdown-rendered a.tag[href="#community%2FCommunity_38"] {
+  background: color-mix(in srgb, #eab308 18%, transparent);
+  color: #eab308;
+}
+
+.markdown-rendered a.tag[href="#community/Community_39"],
+.markdown-rendered a.tag[href="#community%2FCommunity_39"] {
+  background: color-mix(in srgb, #22c55e 18%, transparent);
+  color: #22c55e;
+}
+
+.markdown-rendered a.tag[href="#community/Community_40"],
+.markdown-rendered a.tag[href="#community%2FCommunity_40"] {
+  background: color-mix(in srgb, #14b8a6 18%, transparent);
+  color: #14b8a6;
+}
+
+.markdown-rendered a.tag[href="#community/Community_41"],
+.markdown-rendered a.tag[href="#community%2FCommunity_41"] {
+  background: color-mix(in srgb, #06b6d4 18%, transparent);
+  color: #06b6d4;
+}
+
+.markdown-rendered a.tag[href="#community/Community_42"],
+.markdown-rendered a.tag[href="#community%2FCommunity_42"] {
+  background: color-mix(in srgb, #3b82f6 18%, transparent);
+  color: #3b82f6;
+}
+
+.markdown-rendered a.tag[href="#community/Community_43"],
+.markdown-rendered a.tag[href="#community%2FCommunity_43"] {
+  background: color-mix(in srgb, #6366f1 18%, transparent);
+  color: #6366f1;
+}
+
+.markdown-rendered a.tag[href="#community/Community_44"],
+.markdown-rendered a.tag[href="#community%2FCommunity_44"] {
+  background: color-mix(in srgb, #8b5cf6 18%, transparent);
+  color: #8b5cf6;
+}
+
+.markdown-rendered a.tag[href="#community/Community_45"],
+.markdown-rendered a.tag[href="#community%2FCommunity_45"] {
+  background: color-mix(in srgb, #d946ef 18%, transparent);
+  color: #d946ef;
+}
+
+.markdown-rendered a.tag[href="#community/Community_46"],
+.markdown-rendered a.tag[href="#community%2FCommunity_46"] {
+  background: color-mix(in srgb, #ec4899 18%, transparent);
+  color: #ec4899;
+}
+
+.markdown-rendered a.tag[href="#community/Community_47"],
+.markdown-rendered a.tag[href="#community%2FCommunity_47"] {
+  background: color-mix(in srgb, #84cc16 18%, transparent);
+  color: #84cc16;
+}
+
+.markdown-rendered a.tag[href="#community/Community_48"],
+.markdown-rendered a.tag[href="#community%2FCommunity_48"] {
+  background: color-mix(in srgb, #e11d48 18%, transparent);
+  color: #e11d48;
+}
+
+.markdown-rendered a.tag[href="#community/Community_49"],
+.markdown-rendered a.tag[href="#community%2FCommunity_49"] {
+  background: color-mix(in srgb, #f97316 18%, transparent);
+  color: #f97316;
+}
+
+.markdown-rendered a.tag[href="#community/Community_50"],
+.markdown-rendered a.tag[href="#community%2FCommunity_50"] {
+  background: color-mix(in srgb, #eab308 18%, transparent);
+  color: #eab308;
+}
+
+.markdown-rendered a.tag[href="#community/Community_51"],
+.markdown-rendered a.tag[href="#community%2FCommunity_51"] {
+  background: color-mix(in srgb, #22c55e 18%, transparent);
+  color: #22c55e;
+}
+
+.markdown-rendered a.tag[href="#community/Community_52"],
+.markdown-rendered a.tag[href="#community%2FCommunity_52"] {
+  background: color-mix(in srgb, #14b8a6 18%, transparent);
+  color: #14b8a6;
 }
 
 .markdown-rendered ul li {
