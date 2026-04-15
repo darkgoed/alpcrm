@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { AppLogger } from './common/logger/app-logger.service';
 import * as express from 'express';
 import { join } from 'path';
 
@@ -13,7 +14,8 @@ async function bootstrap() {
     throw new Error('JWT_SECRET environment variable is required');
   }
 
-  const app = await NestFactory.create(AppModule);
+  const appLogger = new AppLogger();
+  const app = await NestFactory.create(AppModule, { logger: appLogger });
 
   app.setGlobalPrefix('api');
 
@@ -44,6 +46,6 @@ async function bootstrap() {
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
-  console.log(`CRM Backend rodando em http://localhost:${port}/api`);
+  appLogger.log(`CRM Backend rodando em http://localhost:${port}/api`, 'Bootstrap');
 }
 void bootstrap();

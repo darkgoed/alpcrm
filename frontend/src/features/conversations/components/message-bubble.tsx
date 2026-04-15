@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import type { Message, MessageReference } from '@/types';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Dialog,
   DialogContent,
@@ -628,7 +629,14 @@ export function ConversationMessageBubble({
             ) : message.status === 'delivered' ? (
               <CheckCheck className="size-3.5" />
             ) : message.status === 'failed' ? (
-              <span className="font-semibold text-red-200">!</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help font-semibold text-red-200">!</span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  {message.failureReason ?? 'Falha no envio'}
+                </TooltipContent>
+              </Tooltip>
             ) : (
               <Check className="size-3.5" />
             )

@@ -662,10 +662,14 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
         void syncReadState();
       }
     },
-    onMessageStatus: ({ conversationId, messageId, status }) => {
+    onMessageStatus: ({ conversationId, messageId, status, failureReason }) => {
       if (conversationId !== id) return;
       setMessages((current) =>
-        current.map((item) => (item.id === messageId ? { ...item, status: status as Message['status'] } : item)),
+        current.map((item) =>
+          item.id === messageId
+            ? { ...item, status: status as Message['status'], failureReason: (failureReason as string | null) ?? item.failureReason }
+            : item,
+        ),
       );
     },
     onMessageUpdated: ({ conversationId, message }) => {

@@ -116,6 +116,7 @@ export interface Message {
   interactiveType: string | null;
   interactivePayload: InteractivePayload | null;
   status: 'sent' | 'delivered' | 'read' | 'failed';
+  failureReason: string | null;
   externalId: string | null;
   deletedAt: string | null;
   deletedById: string | null;
