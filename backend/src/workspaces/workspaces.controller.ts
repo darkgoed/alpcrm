@@ -13,10 +13,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import {
-  RequireAnyPermissions,
-  RequirePermissions,
-} from '../common/decorators/permissions.decorator';
+import { RequireAnyPermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { WorkspacesService } from './workspaces.service';

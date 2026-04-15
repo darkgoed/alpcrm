@@ -16,6 +16,7 @@ import {
   updateFollowUpRule,
   deleteFollowUpRule,
 } from '@/hooks/useWorkspaceSettings';
+import { useAuth } from '@/contexts/AuthContext';
 import { SettingsShell } from './settings-shell';
 
 // ─── Auto-close Settings ─────────────────────────────────────────────────────
@@ -260,12 +261,23 @@ function FollowUpSection() {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export function SettingsPage() {
+  const { hasPermission } = useAuth();
+  const canManageWorkspaceSettings =
+    hasPermission('manage_workspace_settings') || hasPermission('manage_workspace');
+  const canManageFollowUps =
+    hasPermission('manage_follow_up_rules') || hasPermission('manage_workspace');
+
   return (
     <SettingsShell>
       <div className="space-y-6">
-        <AutoCloseSection />
-        <Separator />
-        <FollowUpSection />
+        {canManageWorkspaceSettings ? <AutoCloseSection /> : null}
+        {canManageWorkspaceSettings && canManageFollowUps ? <Separator /> : null}
+        {canManageFollowUps ? <FollowUpSection /> : null}
+        {!canManageWorkspaceSettings && !canManageFollowUps ? (
+          <div className="rounded-xl border border-border/70 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            Este usuário não possui acesso às automações e configurações gerais do workspace.
+          </div>
+        ) : null}
       </div>
     </SettingsShell>
   );

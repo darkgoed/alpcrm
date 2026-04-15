@@ -14,7 +14,6 @@ import { CreateQuickReplyDto } from './dto/create-quick-reply.dto';
 import { UpdateQuickReplyDto } from './dto/update-quick-reply.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { RequireAnyPermissions } from '../common/decorators/permissions.decorator';

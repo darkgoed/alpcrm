@@ -16,6 +16,9 @@ export interface Role {
   id: string;
   name: string;
   rolePermissions: RolePermission[];
+  _count?: {
+    userRoles: number;
+  };
 }
 
 const fetcher = (url: string) => api.get(url).then((r) => r.data);

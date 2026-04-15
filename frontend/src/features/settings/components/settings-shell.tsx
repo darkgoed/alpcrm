@@ -4,22 +4,83 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Bot, FileText, Settings2, Wifi, Users, Shield, UsersRound, MessageSquareQuote, Building2, ClipboardList, SquareMousePointer } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 const settingsNav = [
-  { href: '/settings/whatsapp',      label: 'WhatsApp',         icon: Wifi },
-  { href: '/settings/templates',     label: 'Templates HSM',    icon: FileText },
-  { href: '/settings/interactive-templates', label: 'Template Interativo', icon: SquareMousePointer },
-  { href: '/settings/agents',        label: 'Agentes',          icon: Users },
-  { href: '/settings/roles',         label: 'Roles',            icon: Shield },
-  { href: '/settings/teams',         label: 'Equipes',          icon: UsersRound },
-  { href: '/settings/quick-replies', label: 'Respostas rápidas',icon: MessageSquareQuote },
-  { href: '/settings/workspace',     label: 'Workspace',        icon: Building2 },
-  { href: '/settings/audit',         label: 'Auditoria',        icon: ClipboardList },
-  { href: '/settings',               label: 'Automações',       icon: Bot, exact: true },
+  {
+    href: '/settings/whatsapp',
+    label: 'WhatsApp',
+    icon: Wifi,
+    permissions: ['manage_whatsapp_accounts', 'manage_workspace'],
+  },
+  {
+    href: '/settings/templates',
+    label: 'Templates HSM',
+    icon: FileText,
+    permissions: ['manage_templates', 'manage_workspace'],
+  },
+  {
+    href: '/settings/interactive-templates',
+    label: 'Template Interativo',
+    icon: SquareMousePointer,
+    permissions: ['manage_interactive_templates', 'manage_workspace'],
+  },
+  {
+    href: '/settings/agents',
+    label: 'Agentes',
+    icon: Users,
+    permissions: ['manage_users'],
+  },
+  {
+    href: '/settings/roles',
+    label: 'Roles',
+    icon: Shield,
+    permissions: ['manage_roles'],
+  },
+  {
+    href: '/settings/teams',
+    label: 'Equipes',
+    icon: UsersRound,
+    permissions: ['manage_teams'],
+  },
+  {
+    href: '/settings/quick-replies',
+    label: 'Respostas rápidas',
+    icon: MessageSquareQuote,
+    permissions: ['manage_quick_replies', 'manage_workspace'],
+  },
+  {
+    href: '/settings/workspace',
+    label: 'Workspace',
+    icon: Building2,
+    permissions: ['manage_workspace_settings', 'manage_workspace'],
+  },
+  {
+    href: '/settings/audit',
+    label: 'Auditoria',
+    icon: ClipboardList,
+    permissions: ['view_audit_logs', 'manage_workspace'],
+  },
+  {
+    href: '/settings',
+    label: 'Automações',
+    icon: Bot,
+    exact: true,
+    permissions: [
+      'manage_follow_up_rules',
+      'manage_workspace_settings',
+      'manage_workspace',
+    ],
+  },
 ];
 
 export function SettingsShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { hasPermission } = useAuth();
+  const visibleNav = settingsNav.filter(
+    (item) =>
+      !item.permissions || item.permissions.some((permission) => hasPermission(permission)),
+  );
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -37,7 +98,7 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Nav lateral */}
         <nav className="hidden w-52 shrink-0 flex-col gap-1 border-r border-border/70 px-3 py-4 md:flex">
-          {settingsNav.map(({ href, label, icon: Icon, exact }) => {
+          {visibleNav.map(({ href, label, icon: Icon, exact }) => {
             const active = exact ? pathname === href : pathname.startsWith(href);
             return (
               <Link

@@ -131,7 +131,9 @@ export class RolesService {
     });
 
     if (foundPermissions.length !== uniqueIds.length) {
-      throw new BadRequestException('Uma ou mais permissões informadas são inválidas');
+      throw new BadRequestException(
+        'Uma ou mais permissões informadas são inválidas',
+      );
     }
 
     return uniqueIds;
