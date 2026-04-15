@@ -234,7 +234,8 @@ export class WhatsappService {
       },
     });
 
-    // 3. Buscar conversa aberta; se nao houver, reaproveitar a ultima fechada
+    // 3. Buscar conversa aberta; se nao houver, criar uma nova conversa
+    // reaproveitando o contexto da ultima fechada quando existir.
     const existingConversation = await this.prisma.conversation.findFirst({
       where: {
         workspaceId,
@@ -258,19 +259,35 @@ export class WhatsappService {
       });
 
       if (lastClosedConversation) {
-        conversation = await this.prisma.conversation.update({
-          where: { id: lastClosedConversation.id },
+        const createdConversation = await this.prisma.conversation.create({
           data: {
+            workspaceId,
+            contactId: contact.id,
+            whatsappAccountId: account.id,
             status: 'open',
             isBotActive: true,
+            teamId: lastClosedConversation.teamId,
+            assignedUserId: lastClosedConversation.assignedUserId,
           },
         });
+        conversation = createdConversation;
 
         onMessage({
           event: 'conversation_updated',
           workspaceId,
           conversationId: conversation.id,
-          conversation,
+          conversation: await this.prisma.conversation.findUniqueOrThrow({
+            where: { id: conversation.id },
+            include: {
+              contact: true,
+              assignedUser: { select: { id: true, name: true } },
+              team: { select: { id: true, name: true } },
+              messages: {
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+              },
+            },
+          }),
         });
       } else {
         // Round-robin: buscar equipe padrão do workspace e distribuir para membro com menor carga

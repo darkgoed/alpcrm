@@ -529,6 +529,7 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
     )
       .then((r) => {
         if (cancelled) return;
+        pendingScrollModeRef.current = 'bottom';
         setContactTimeline(r.data.conversations ?? []);
       })
       .catch(() => {
