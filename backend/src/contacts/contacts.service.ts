@@ -125,6 +125,7 @@ export class ContactsService {
                   id: true,
                   status: true,
                   createdAt: true,
+                  updatedAt: true,
                   lastMessageAt: true,
                   lastContactMessageAt: true,
                   assignedUser: { select: { id: true, name: true } },
@@ -164,6 +165,7 @@ export class ContactsService {
       id: string;
       status: string;
       createdAt: Date;
+      updatedAt: Date;
       lastMessageAt: Date | null;
       lastContactMessageAt: Date | null;
       assignedUser: { id: string; name: string } | null;

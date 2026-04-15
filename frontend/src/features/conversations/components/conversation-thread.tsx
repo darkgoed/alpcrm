@@ -95,6 +95,7 @@ interface ContactDetail {
     id: string;
     status: 'open' | 'closed' | 'pending';
     createdAt: string;
+    updatedAt: string;
     lastMessageAt: string | null;
     lastContactMessageAt: string | null;
     assignedUser: { id: string; name: string } | null;
@@ -964,6 +965,18 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
       (left, right) =>
         new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
     );
+  const previousConversation = (contactDetail?.conversations ?? [])
+    .filter(
+      (item) =>
+        item.id !== conversation.id &&
+        new Date(item.createdAt).getTime() < new Date(conversation.createdAt).getTime(),
+    )
+    .sort(
+      (left, right) =>
+        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+    )[0];
+  const previousConversationClosedAt =
+    previousConversation?.status === 'closed' ? previousConversation.updatedAt : null;
   const conversationTimeline = messages.map((message, index) => ({
     message,
     showDateDivider:
@@ -1134,6 +1147,18 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                       ) : null}
                       Ver mais
                     </Button>
+                  </div>
+                ) : null}
+                {previousConversationClosedAt ? (
+                  <div className="flex items-center gap-2 py-1">
+                    <Separator className="flex-1" />
+                    <span
+                      className="rounded-full border border-border/70 bg-background px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground"
+                      title={formatFullDateTime(previousConversationClosedAt)}
+                    >
+                      Conversa anterior encerrada as {formatTime(previousConversationClosedAt)}
+                    </span>
+                    <Separator className="flex-1" />
                   </div>
                 ) : null}
                 {loadingMessages ? (
@@ -1533,13 +1558,20 @@ export function ConversationThread({ params }: ConversationThreadPageProps) {
                             </Badge>
                             <span
                               className="text-[11px] text-muted-foreground"
-                              title={formatFullDateTime(item.createdAt)}
+                              title={formatFullDateTime(
+                                item.status === 'closed' ? item.updatedAt : item.createdAt,
+                              )}
                             >
-                              {formatDistanceToNow(item.createdAt)}
+                              {item.status === 'closed'
+                                ? `Encerrada ${formatDistanceToNow(item.updatedAt)}`
+                                : formatDistanceToNow(item.createdAt)}
                             </span>
                           </div>
                           <div className="mt-1.5 space-y-1 text-xs text-muted-foreground">
                             <p>{item.messageCount} mensagens</p>
+                            {item.status === 'closed' ? (
+                              <p>Encerrada em: {formatFullDateTime(item.updatedAt)}</p>
+                            ) : null}
                             <p>
                               Última atividade:{' '}
                               {item.lastMessageAt
