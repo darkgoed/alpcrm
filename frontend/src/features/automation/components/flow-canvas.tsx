@@ -56,6 +56,8 @@ interface FlowCanvasProps {
 const NODE_W = 280;
 const NODE_H = 108;
 const TRIGGER_H = 72;
+const MAX_INTERACTIVE_LIST_OUTPUTS = 10;
+const COMPONENT_GAP_X = 180;
 
 const TYPE_COLOR: Record<FlowNodeType | 'trigger', string> = {
   trigger: 'border-primary/40 bg-primary/5 text-primary',
@@ -174,7 +176,7 @@ function interactiveReplyHandles(node: FlowNodeData): Array<{ id: string; label:
         label: String(row.title ?? '').trim(),
       }))
       .filter((row) => row.label)
-      .slice(0, 6);
+      .slice(0, MAX_INTERACTIVE_LIST_OUTPUTS);
   }
 
   const buttons = (node.config.buttons as Array<{ title?: string; id?: string }>) ?? [];
@@ -184,7 +186,7 @@ function interactiveReplyHandles(node: FlowNodeData): Array<{ id: string; label:
       label: String(button.title ?? button.id ?? '').trim(),
     }))
     .filter((button) => button.label)
-    .slice(0, 6);
+    .slice(0, 3);
 }
 
 function FlowNode({ data, selected }: NodeProps & { data: FlowNodeData }) {
@@ -397,22 +399,135 @@ const edgeTypes = {
 // ─── Dagre layout ──────────────────────────────────────────────────────────────
 
 function getLayoutedElements(rfNodes: Node[], rfEdges: Edge[]) {
-  const g = new Dagre.graphlib.Graph();
-  g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 70 });
+  const nodeById = new Map(rfNodes.map((node) => [node.id, node]));
+  const adjacency = new Map<string, Set<string>>();
 
-  rfNodes.forEach((n) =>
-    g.setNode(n.id, { width: NODE_W, height: n.type === 'triggerNode' ? TRIGGER_H : NODE_H }),
-  );
-  rfEdges.forEach((e) => g.setEdge(e.source, e.target));
-
-  Dagre.layout(g);
-
-  return rfNodes.map((n) => {
-    const pos = g.node(n.id);
-    const h = n.type === 'triggerNode' ? TRIGGER_H : NODE_H;
-    return { ...n, position: { x: pos.x - NODE_W / 2, y: pos.y - h / 2 } };
+  rfNodes.forEach((node) => {
+    adjacency.set(node.id, new Set());
   });
+
+  rfEdges.forEach((edge) => {
+    adjacency.get(edge.source)?.add(edge.target);
+    adjacency.get(edge.target)?.add(edge.source);
+  });
+
+  const orderValue = (node: Node) =>
+    node.id === '__trigger__'
+      ? -1
+      : node.type === 'flowNode'
+        ? (node.data as FlowNodeData).order
+        : Number.MAX_SAFE_INTEGER;
+
+  const sortedNodeIds = [...nodeById.keys()].sort((leftId, rightId) => {
+    const left = nodeById.get(leftId);
+    const right = nodeById.get(rightId);
+    if (!left || !right) return leftId.localeCompare(rightId);
+
+    const orderDiff = orderValue(left) - orderValue(right);
+    if (orderDiff !== 0) return orderDiff;
+    return left.id.localeCompare(right.id);
+  });
+
+  const visited = new Set<string>();
+  const components: Node[][] = [];
+
+  sortedNodeIds.forEach((nodeId) => {
+    if (visited.has(nodeId)) return;
+
+    const stack = [nodeId];
+    const componentIds: string[] = [];
+    visited.add(nodeId);
+
+    while (stack.length > 0) {
+      const currentId = stack.pop();
+      if (!currentId) continue;
+
+      componentIds.push(currentId);
+
+      [...(adjacency.get(currentId) ?? [])]
+        .sort((leftId, rightId) => {
+          const left = nodeById.get(leftId);
+          const right = nodeById.get(rightId);
+          if (!left || !right) return leftId.localeCompare(rightId);
+
+          const orderDiff = orderValue(left) - orderValue(right);
+          if (orderDiff !== 0) return orderDiff;
+          return left.id.localeCompare(right.id);
+        })
+        .forEach((neighborId) => {
+          if (visited.has(neighborId)) return;
+          visited.add(neighborId);
+          stack.push(neighborId);
+        });
+    }
+
+    components.push(
+      componentIds
+        .map((componentId) => nodeById.get(componentId))
+        .filter((node): node is Node => Boolean(node))
+        .sort((left, right) => {
+          const orderDiff = orderValue(left) - orderValue(right);
+          if (orderDiff !== 0) return orderDiff;
+          return left.id.localeCompare(right.id);
+        }),
+    );
+  });
+
+  const positionedNodes = new Map<string, Node>();
+  let offsetX = 0;
+
+  components.forEach((componentNodes) => {
+    const componentNodeIds = new Set(componentNodes.map((node) => node.id));
+    const componentEdges = rfEdges.filter(
+      (edge) => componentNodeIds.has(edge.source) && componentNodeIds.has(edge.target),
+    );
+    const g = new Dagre.graphlib.Graph();
+    g.setDefaultEdgeLabel(() => ({}));
+    g.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 70 });
+
+    componentNodes.forEach((node) =>
+      g.setNode(node.id, {
+        width: NODE_W,
+        height: node.type === 'triggerNode' ? TRIGGER_H : NODE_H,
+      }),
+    );
+    componentEdges.forEach((edge) => g.setEdge(edge.source, edge.target));
+
+    Dagre.layout(g);
+
+    const layoutedComponent = componentNodes.map((node) => {
+      const rawPosition = g.node(node.id) ?? {
+        x: NODE_W / 2,
+        y: (node.type === 'triggerNode' ? TRIGGER_H : NODE_H) / 2,
+      };
+      const height = node.type === 'triggerNode' ? TRIGGER_H : NODE_H;
+
+      return {
+        ...node,
+        position: {
+          x: rawPosition.x - NODE_W / 2,
+          y: rawPosition.y - height / 2,
+        },
+      };
+    });
+
+    const minX = Math.min(...layoutedComponent.map((node) => node.position.x));
+    const maxX = Math.max(...layoutedComponent.map((node) => node.position.x + NODE_W));
+
+    layoutedComponent.forEach((node) => {
+      positionedNodes.set(node.id, {
+        ...node,
+        position: {
+          x: node.position.x - minX + offsetX,
+          y: node.position.y,
+        },
+      });
+    });
+
+    offsetX += maxX - minX + COMPONENT_GAP_X;
+  });
+
+  return rfNodes.map((node) => positionedNodes.get(node.id) ?? node);
 }
 
 function sortNodeDrafts(nodes: NodeDraft[]): NodeDraft[] {
