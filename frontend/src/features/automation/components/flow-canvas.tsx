@@ -742,10 +742,9 @@ function FlowCanvasInner({
   );
 
   const layouted = useMemo(() => {
-    const ln = getLayoutedElements(initialRFNodes, initialRFEdges);
+    const ln = hasPersistedPositions ? initialRFNodes : getLayoutedElements(initialRFNodes, initialRFEdges);
     return { nodes: ln, edges: initialRFEdges };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hasPersistedPositions, initialRFEdges, initialRFNodes]);
 
   const [rfNodes, setRFNodes, onRFNodesChange] = useNodesState(layouted.nodes);
   const [rfEdges, setRFEdges, onRFEdgesChange] = useEdgesState(layouted.edges);
