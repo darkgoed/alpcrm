@@ -334,20 +334,20 @@ function ConversationListItem({
   return (
     <div
       className={cn(
-        'flex w-full min-w-0 items-start gap-2 overflow-hidden rounded-xl border px-3 py-3 transition-colors hover:border-primary/30 hover:bg-accent/60',
+        'flex w-full min-w-0 max-w-full items-start gap-2 overflow-hidden rounded-xl border px-3 py-3 transition-colors hover:border-primary/30 hover:bg-accent/60',
         active ? 'border-primary/30 bg-primary/5' : 'border-transparent bg-background',
       )}
     >
       <button
         onClick={onOpen}
-        className="flex min-w-0 flex-1 items-start gap-3 text-left"
+        className="flex w-0 min-w-0 max-w-full flex-1 basis-0 items-start gap-3 overflow-hidden text-left"
       >
         <Avatar className="size-9 shrink-0 border border-border/70">
           <AvatarFallback className="bg-primary/10 text-primary text-xs">{getInitials(name)}</AvatarFallback>
         </Avatar>
-        <div className="min-w-0 flex-1 space-y-0.5">
-          <div className="flex items-center justify-between gap-1">
-            <p className="min-w-0 flex-1 overflow-hidden text-sm font-medium text-foreground break-words [overflow-wrap:anywhere]">
+        <div className="min-w-0 max-w-full flex-1 basis-0 space-y-0.5 overflow-hidden">
+          <div className="flex min-w-0 max-w-full items-center justify-between gap-1 overflow-hidden">
+            <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
               {name}
             </p>
             <div className="shrink-0 flex items-center gap-1.5">
@@ -369,7 +369,7 @@ function ConversationListItem({
               {conversation.status === 'open' ? 'Aberta' : 'Fechada'}
             </Badge>
             {conversation.assignedUser ? (
-              <span className="min-w-0 flex-1 text-[10px] text-muted-foreground break-words [overflow-wrap:anywhere]">
+              <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">
                 {conversation.assignedUser.name}
               </span>
             ) : null}
@@ -1276,8 +1276,8 @@ function InboxRail() {
 
       <Separator />
 
-      <ScrollArea className="min-h-0 flex-1 px-2 py-2">
-        <div className="space-y-1">
+      <ScrollArea className="min-h-0 flex-1 overflow-x-hidden px-2 py-2">
+        <div className="max-w-full space-y-1 overflow-x-hidden">
           {isLoading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <div key={`sk-${i}`} className="rounded-xl border border-border/70 p-3">
