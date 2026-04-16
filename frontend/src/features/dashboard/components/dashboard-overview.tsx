@@ -143,13 +143,13 @@ export function DashboardOverview({ conversations, flows }: DashboardOverviewPro
                   href={`/conversations/${conversation.id}`}
                   className="flex items-center justify-between rounded-2xl border border-border/70 bg-background px-4 py-3 transition-colors hover:border-primary/30 hover:bg-accent/60"
                 >
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-foreground">{name}</p>
-                    <p className="truncate text-xs text-muted-foreground">
+                    <p className="min-w-0 overflow-hidden text-xs text-muted-foreground break-words [overflow-wrap:anywhere] line-clamp-2">
                       {conversation.messages[0]?.content ?? 'Sem prévia disponível'}
                     </p>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
+                  <div className="shrink-0 flex flex-col items-end gap-1">
                     <Badge variant={conversation.status === 'open' ? 'success' : 'muted'}>
                       {conversation.status === 'open' ? 'Aberta' : 'Fechada'}
                     </Badge>

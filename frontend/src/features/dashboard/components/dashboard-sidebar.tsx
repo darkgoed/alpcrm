@@ -72,6 +72,12 @@ function getInitials(value: string) {
     .toUpperCase();
 }
 
+function truncatePreview(value: string, maxLength = 72) {
+  const normalizedValue = value.replace(/\s+/g, ' ').trim();
+  if (normalizedValue.length <= maxLength) return normalizedValue;
+  return `${normalizedValue.slice(0, maxLength - 3).trimEnd()}...`;
+}
+
 function getMessagePreview(conversation: Conversation) {
   const lastMessage = conversation.messages[0];
   if (!lastMessage) return 'Sem mensagens';
@@ -97,7 +103,7 @@ function getMessagePreview(conversation: Conversation) {
   if (lastMessage.type === 'document') return 'Documento compartilhado';
   if (lastMessage.type === 'location') return 'Localizacao compartilhada';
   if (lastMessage.type === 'contacts') return 'Contato compartilhado';
-  return lastMessage.content ?? 'Mídia compartilhada';
+  return truncatePreview(lastMessage.content ?? 'Midia compartilhada');
 }
 
 interface WorkspaceUserOption {
@@ -355,7 +361,7 @@ function ConversationListItem({
               ) : null}
             </div>
           </div>
-          <p className="max-w-full text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">
+          <p className="min-w-0 max-w-full truncate text-xs text-muted-foreground">
             {preview}
           </p>
           <div className="flex min-w-0 items-center gap-1.5 pt-0.5">
