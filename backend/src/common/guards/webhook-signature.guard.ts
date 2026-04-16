@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import type { Request } from 'express';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EncryptionService } from '../services/encryption.service';
 
 interface WebhookRequest extends Request {
   rawBody?: Buffer;
@@ -33,6 +34,7 @@ export class WebhookSignatureGuard implements CanActivate {
   constructor(
     private config: ConfigService,
     private prisma: PrismaService,
+    private encryption: EncryptionService,
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
@@ -154,7 +156,7 @@ export class WebhookSignatureGuard implements CanActivate {
       });
 
       if (account?.appSecret?.trim()) {
-        return account.appSecret;
+        return this.encryption.decrypt(account.appSecret);
       }
     }
 

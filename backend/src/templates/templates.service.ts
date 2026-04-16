@@ -13,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { TEMPLATE_POLL_QUEUE } from '../queues/queues.constants';
+import { EncryptionService } from '../common/services/encryption.service';
 
 const META_API = 'https://graph.facebook.com/v18.0';
 
@@ -90,6 +91,7 @@ export class TemplatesService implements OnModuleInit {
     private prisma: PrismaService,
     @InjectQueue(TEMPLATE_POLL_QUEUE) private pollQueue: Queue,
     private audit: AuditService,
+    private encryption: EncryptionService,
   ) {}
 
   // ─── Registra job de polling repetível ao iniciar ────────────────────────────
@@ -143,7 +145,7 @@ export class TemplatesService implements OnModuleInit {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${account.token}`,
+            Authorization: `Bearer ${this.encryption.decrypt(account.token)}`,
           },
           body: JSON.stringify({
             name: dto.name,
@@ -218,7 +220,7 @@ export class TemplatesService implements OnModuleInit {
           {
             method: 'DELETE',
             headers: {
-              Authorization: `Bearer ${template.whatsappAccount.token}`,
+              Authorization: `Bearer ${this.encryption.decrypt(template.whatsappAccount.token)}`,
             },
           },
         );
@@ -331,7 +333,7 @@ export class TemplatesService implements OnModuleInit {
 
     const metaTemplates = await this.fetchMetaTemplates(
       account.wabaId,
-      account.token,
+      this.encryption.decrypt(account.token),
     );
     if (metaTemplates.length === 0) return;
 

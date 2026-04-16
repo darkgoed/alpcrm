@@ -23,6 +23,7 @@ import { isWithinBusinessHours } from '../common/utils/business-hours.util';
 import { logMsg } from '../common/logger/app-logger.service';
 import { WhatsappMetaClient } from './whatsapp-meta-client.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { EncryptionService } from '../common/services/encryption.service';
 
 export type WebhookRealtimeEvent = {
   workspaceId: string;
@@ -82,6 +83,7 @@ export class WhatsappService {
     private scheduler: SchedulerService,
     private metaClient: WhatsappMetaClient,
     private metrics: MetricsService,
+    private encryption: EncryptionService,
   ) {}
 
   private getPublicUploadsUrl(fileName: string) {
@@ -403,7 +405,7 @@ export class WhatsappService {
 
     if (metaMediaId) {
       const downloaded = await this.downloadAndSaveMedia(
-        account.token,
+        this.encryption.decrypt(account.token),
         metaMediaId,
         inboundMime,
         msg.document?.filename,
@@ -709,12 +711,16 @@ export class WhatsappService {
     });
     if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
 
-    return this.metaClient.sendMessage(account.token, account.metaAccountId, {
-      to,
-      type: 'text',
-      text: { body: text },
-      ...(this.buildReplyContext(replyToExternalId) ?? {}),
-    });
+    return this.metaClient.sendMessage(
+      this.encryption.decrypt(account.token),
+      account.metaAccountId,
+      {
+        to,
+        type: 'text',
+        text: { body: text },
+        ...(this.buildReplyContext(replyToExternalId) ?? {}),
+      },
+    );
   }
 
   // ─── Enviar template HSM (outbound / janela de 24h) ─────────────────────────
@@ -731,15 +737,19 @@ export class WhatsappService {
     });
     if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
 
-    return this.metaClient.sendMessage(account.token, account.metaAccountId, {
-      to,
-      type: 'template',
-      template: {
-        name: templateName,
-        language: { code: language },
-        components,
+    return this.metaClient.sendMessage(
+      this.encryption.decrypt(account.token),
+      account.metaAccountId,
+      {
+        to,
+        type: 'template',
+        template: {
+          name: templateName,
+          language: { code: language },
+          components,
+        },
       },
-    });
+    );
   }
 
   // ─── Enviar mídia ─────────────────────────────────────────────────────────────
@@ -764,12 +774,16 @@ export class WhatsappService {
       mediaPayload.caption = caption;
     }
 
-    return this.metaClient.sendMessage(account.token, account.metaAccountId, {
-      to,
-      type: mediaType,
-      [mediaType]: mediaPayload,
-      ...(this.buildReplyContext(replyToExternalId) ?? {}),
-    });
+    return this.metaClient.sendMessage(
+      this.encryption.decrypt(account.token),
+      account.metaAccountId,
+      {
+        to,
+        type: mediaType,
+        [mediaType]: mediaPayload,
+        ...(this.buildReplyContext(replyToExternalId) ?? {}),
+      },
+    );
   }
 
   async sendInteractiveMessage(
@@ -785,12 +799,16 @@ export class WhatsappService {
     if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
 
     const interactive = this.buildInteractivePayload(interactiveType, payload);
-    return this.metaClient.sendMessage(account.token, account.metaAccountId, {
-      to,
-      type: 'interactive',
-      interactive,
-      ...(this.buildReplyContext(replyToExternalId) ?? {}),
-    });
+    return this.metaClient.sendMessage(
+      this.encryption.decrypt(account.token),
+      account.metaAccountId,
+      {
+        to,
+        type: 'interactive',
+        interactive,
+        ...(this.buildReplyContext(replyToExternalId) ?? {}),
+      },
+    );
   }
 
   // ─── Download de mídia inbound da Meta ───────────────────────────────────────

@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { EncryptionService } from '../common/services/encryption.service';
 import { UpdateWorkspaceSettingsDto } from './dto/workspace-settings.dto';
 import {
   CreateFollowUpRuleDto,
@@ -23,6 +24,7 @@ export class WorkspacesService {
   constructor(
     private prisma: PrismaService,
     private audit: AuditService,
+    private encryption: EncryptionService,
   ) {}
 
   private hasOwn(dto: object, key: string): boolean {
@@ -142,7 +144,12 @@ export class WorkspacesService {
       );
 
     return this.prisma.whatsappAccount.create({
-      data: { workspaceId, ...dto },
+      data: {
+        workspaceId,
+        ...dto,
+        token: this.encryption.encrypt(dto.token),
+        appSecret: dto.appSecret ? this.encryption.encrypt(dto.appSecret) : '',
+      },
       select: {
         id: true,
         name: true,
@@ -207,9 +214,17 @@ export class WorkspacesService {
     });
     if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
 
+    const encryptedData = {
+      ...dto,
+      ...(dto.token !== undefined ? { token: this.encryption.encrypt(dto.token) } : {}),
+      ...(dto.appSecret !== undefined
+        ? { appSecret: dto.appSecret ? this.encryption.encrypt(dto.appSecret) : '' }
+        : {}),
+    };
+
     return this.prisma.whatsappAccount.update({
       where: { id },
-      data: dto,
+      data: encryptedData,
       select: {
         id: true,
         name: true,

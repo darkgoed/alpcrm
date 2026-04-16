@@ -7,6 +7,7 @@ import {
   stringValue,
 } from './flow-variable.util';
 import { isWithinBusinessHours } from '../common/utils/business-hours.util';
+import { EncryptionService } from '../common/services/encryption.service';
 
 export interface NodeContext {
   nodeId: string;
@@ -29,6 +30,7 @@ export class FlowNodeRunnerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly scheduler: SchedulerService,
+    private readonly encryption: EncryptionService,
   ) {}
 
   async run(ctx: NodeContext): Promise<NodeResult> {
@@ -146,7 +148,7 @@ export class FlowNodeRunnerService {
       const res = await fetch(url, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${account.token}`,
+          Authorization: `Bearer ${this.encryption.decrypt(account.token)}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(
@@ -345,7 +347,7 @@ export class FlowNodeRunnerService {
       const res = await fetch(url, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${account.token}`,
+          Authorization: `Bearer ${this.encryption.decrypt(account.token)}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -565,7 +567,7 @@ export class FlowNodeRunnerService {
       const res = await fetch(url, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${account.token}`,
+          Authorization: `Bearer ${this.encryption.decrypt(account.token)}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
