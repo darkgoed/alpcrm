@@ -28,11 +28,26 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import Dagre from '@dagrejs/dagre';
-import { Bot, Clock3, GitBranch, MessageSquarePlus, Power, Tag, Webhook, Workflow, Send } from 'lucide-react';
+import { AlertTriangle, Bot, Check, Clock3, GhostIcon, GitBranch, MessageSquarePlus, Power, Tag, Webhook, Workflow, Send } from 'lucide-react';
 import { type FlowNodeType } from '@/hooks/useAutomation';
 import { type NodeDraft } from './flow-node-editor';
 import { FlowCanvasControls, MINIMAP_NODE_COLOR } from './flow-canvas-controls';
 import { cn } from '@/lib/utils';
+
+// ─── Test run types ────────────────────────────────────────────────────────────
+
+export type NodeRunStatus = 'idle' | 'pending' | 'running' | 'completed' | 'dead_end' | 'orphan';
+
+export interface FlowCanvasRunState {
+  active: boolean;
+  runningNodeId: string | null;
+  completedIds: string[];
+  deadEnds: string[];
+  orphans: string[];
+  stepIndex: number;
+  totalSteps: number;
+  status: 'running' | 'done';
+}
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -51,10 +66,20 @@ interface FlowCanvasProps {
   viewport?: Viewport;
   selectedClientId: string | null;
   nodeErrors?: Record<string, string>; // clientId → error message
+  runState?: FlowCanvasRunState;
   onNodeSelect: (clientId: string | null) => void;
   onNodesChange: (nodes: NodeDraft[]) => void;
   onEdgesChange: (edges: CanvasEdgeDraft[]) => void;
   onViewportChange?: (viewport: Viewport) => void;
+}
+
+function resolveRunStatus(clientId: string, runState?: FlowCanvasRunState): NodeRunStatus {
+  if (!runState?.active) return 'idle';
+  if (runState.runningNodeId === clientId) return 'running';
+  if (runState.completedIds.includes(clientId)) return 'completed';
+  if (runState.deadEnds.includes(clientId)) return 'dead_end';
+  if (runState.orphans.includes(clientId)) return 'orphan';
+  return 'pending';
 }
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -145,6 +170,8 @@ type FlowNodeData = NodeDraft & {
   selected: boolean;
   incomingLabels?: string[];
   errorMessage?: string;
+  runStatus?: NodeRunStatus;
+  runStepNumber?: number;
 } & Record<string, unknown>;
 
 type RemovableEdgeData = {
@@ -203,16 +230,42 @@ function FlowNode({ data, selected }: NodeProps & { data: FlowNodeData }) {
   const interactiveReplies = interactiveReplyPreview(data);
   const replyHandles = interactiveReplyHandles(data);
   const hasError = Boolean(data.errorMessage);
+  const runStatus = data.runStatus ?? 'idle';
 
   return (
     <div
       className={cn(
-        'flex w-[280px] cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 shadow-sm transition-all hover:shadow-md',
+        'relative flex w-[280px] cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 shadow-sm transition-all hover:shadow-md',
         colorClass,
         selected && 'ring-2 ring-primary ring-offset-2',
         hasError && 'ring-2 ring-destructive ring-offset-2',
+        runStatus === 'pending' && 'opacity-60',
+        runStatus === 'running' && 'ring-4 ring-primary/70 ring-offset-2 shadow-lg shadow-primary/30 animate-pulse',
+        runStatus === 'completed' && 'ring-2 ring-emerald-500 ring-offset-2',
+        runStatus === 'dead_end' && 'ring-2 ring-amber-500 ring-offset-2',
+        runStatus === 'orphan' && 'opacity-40 ring-2 ring-zinc-400 ring-offset-1 grayscale',
       )}
     >
+      {runStatus === 'running' && typeof data.runStepNumber === 'number' ? (
+        <span className="absolute -left-3 -top-3 flex size-7 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-white shadow">
+          {data.runStepNumber}
+        </span>
+      ) : null}
+      {runStatus === 'completed' ? (
+        <span className="absolute -left-3 -top-3 flex size-7 items-center justify-center rounded-full bg-emerald-500 text-white shadow">
+          <Check className="size-3.5" strokeWidth={3} />
+        </span>
+      ) : null}
+      {runStatus === 'dead_end' ? (
+        <span className="absolute -left-3 -top-3 flex size-7 items-center justify-center rounded-full bg-amber-500 text-white shadow">
+          <AlertTriangle className="size-3.5" strokeWidth={2.5} />
+        </span>
+      ) : null}
+      {runStatus === 'orphan' ? (
+        <span className="absolute -left-3 -top-3 flex size-7 items-center justify-center rounded-full bg-zinc-500 text-white shadow">
+          <GhostIcon className="size-3.5" strokeWidth={2.5} />
+        </span>
+      ) : null}
       <Handle
         type="target"
         position={Position.Top}
@@ -699,6 +752,7 @@ function FlowCanvasInner({
   viewport,
   selectedClientId,
   nodeErrors,
+  runState,
   onNodeSelect,
   onNodesChange,
   onEdgesChange,
@@ -817,6 +871,23 @@ function FlowCanvasInner({
       ),
     );
   }, [nodeErrors, setRFNodes]);
+
+  // Sync test-run status into rfNodes for visual highlighting
+  useEffect(() => {
+    setRFNodes((nds) =>
+      nds.map((n) => {
+        if (n.type !== 'flowNode') return n;
+        const status = resolveRunStatus(n.id, runState);
+        const stepNumber = runState?.runningNodeId === n.id
+          ? (runState.stepIndex ?? 0) + 1
+          : undefined;
+        return {
+          ...n,
+          data: { ...n.data, runStatus: status, runStepNumber: stepNumber } as FlowNodeData,
+        };
+      }),
+    );
+  }, [runState, setRFNodes]);
 
   useEffect(() => {
     const incomingLabelsByNode = new Map<string, string[]>();
@@ -1032,6 +1103,18 @@ function FlowCanvasInner({
     reactFlow.fitView({ padding: 0.3, duration: 400 });
   }, [reactFlow]);
 
+  useEffect(() => {
+    const runningId = runState?.runningNodeId;
+    if (!runningId) return;
+    const target = rfNodes.find((node) => node.id === runningId);
+    if (!target) return;
+    reactFlow.setCenter(
+      target.position.x + NODE_W / 2,
+      target.position.y + NODE_H / 2,
+      { zoom: 1, duration: 400 },
+    );
+  }, [reactFlow, rfNodes, runState?.runningNodeId]);
+
   const handleJumpToError = useCallback(() => {
     const firstErrorId = nodeErrors ? Object.keys(nodeErrors)[0] : undefined;
     if (!firstErrorId) return;
@@ -1093,6 +1176,35 @@ function FlowCanvasInner({
           onJumpToError={handleJumpToError}
         />
       </Panel>
+      {runState?.active ? (
+        <Panel position="top-left">
+          <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-background/95 px-3 py-2 text-xs shadow-sm backdrop-blur">
+            <span
+              className={cn(
+                'flex size-2 rounded-full',
+                runState.status === 'running' ? 'bg-primary animate-pulse' : 'bg-emerald-500',
+              )}
+            />
+            <span className="font-medium text-foreground">
+              {runState.status === 'running'
+                ? `Passo ${Math.min(runState.stepIndex + 1, runState.totalSteps)} / ${runState.totalSteps}`
+                : `Concluído · ${runState.totalSteps} nós`}
+            </span>
+            {runState.deadEnds.length > 0 ? (
+              <span className="flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-amber-700">
+                <AlertTriangle className="size-3" />
+                {runState.deadEnds.length} dead-end{runState.deadEnds.length > 1 ? 's' : ''}
+              </span>
+            ) : null}
+            {runState.orphans.length > 0 ? (
+              <span className="flex items-center gap-1 rounded-md bg-zinc-100 px-2 py-0.5 text-zinc-700">
+                <GhostIcon className="size-3" />
+                {runState.orphans.length} isolado{runState.orphans.length > 1 ? 's' : ''}
+              </span>
+            ) : null}
+          </div>
+        </Panel>
+      ) : null}
     </ReactFlow>
   );
 }

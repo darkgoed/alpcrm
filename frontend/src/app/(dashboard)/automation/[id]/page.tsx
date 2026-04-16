@@ -32,9 +32,9 @@ import { usePipelines, useTags } from '@/hooks/useContacts';
 import { useTeams } from '@/hooks/useTeams';
 import { useAgents } from '@/hooks/useAgents';
 import { FlowNodeEditor, type NodeDraft } from '@/features/automation/components/flow-node-editor';
-import { FlowCanvas, type CanvasEdgeDraft } from '@/features/automation/components/flow-canvas';
+import { FlowCanvas, type CanvasEdgeDraft, type FlowCanvasRunState } from '@/features/automation/components/flow-canvas';
 import { FlowJsonDialog } from '@/features/automation/components/flow-json-dialog';
-import { FlowTestRunDialog } from '@/features/automation/components/flow-test-run-dialog';
+import { planTestRun, type TestRunPlan } from '@/features/automation/components/flow-test-run';
 import { validateFlow } from '@/features/automation/components/flow-validation';
 import { TriggerControl } from '@/features/automation/components/trigger-control';
 import { Badge } from '@/components/ui/badge';
@@ -169,8 +169,12 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
   const [toggling, setToggling] = useState(false);
   const [savedFeedback, setSavedFeedback] = useState(false);
   const [nodeErrors, setNodeErrors] = useState<Record<string, string>>({});
-  const [isTestRunOpen, setIsTestRunOpen] = useState(false);
   const [isJsonOpen, setIsJsonOpen] = useState(false);
+  const [testRun, setTestRun] = useState<{
+    plan: TestRunPlan;
+    stepIndex: number;
+    status: 'running' | 'done';
+  } | null>(null);
 
   const pipelineStages = useMemo(
     () => pipelines.flatMap((p) => p.stages.map((s) => ({ id: s.id, name: s.name, pipelineName: p.name }))),
@@ -213,6 +217,54 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
     setCanvasSyncKey((current) => current + 1);
     setHydrated(true);
   }, [flow]);
+
+  useEffect(() => {
+    if (!testRun || testRun.status !== 'running') return;
+    if (testRun.stepIndex >= testRun.plan.steps.length - 1) {
+      const timer = setTimeout(() => {
+        setTestRun((cur) => (cur ? { ...cur, status: 'done' } : cur));
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+    const timer = setTimeout(() => {
+      setTestRun((cur) => (cur ? { ...cur, stepIndex: cur.stepIndex + 1 } : cur));
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [testRun]);
+
+  const canvasRunState = useMemo<FlowCanvasRunState | undefined>(() => {
+    if (!testRun) return undefined;
+    const { plan, stepIndex, status } = testRun;
+    const runningNodeId =
+      status === 'running' ? plan.steps[stepIndex] ?? null : null;
+    const completedIds =
+      status === 'running' ? plan.steps.slice(0, stepIndex) : plan.steps;
+    return {
+      active: true,
+      runningNodeId,
+      completedIds,
+      deadEnds: plan.deadEnds,
+      orphans: plan.orphans,
+      stepIndex,
+      totalSteps: plan.steps.length,
+      status,
+    };
+  }, [testRun]);
+
+  function handleToggleTestRun() {
+    if (testRun) {
+      setTestRun(null);
+      return;
+    }
+    const errors = validateFlow(nodes, canvasEdges);
+    setNodeErrors(errors);
+    const plan = planTestRun(nodes, canvasEdges);
+    if (plan.steps.length === 0) {
+      setTestRun({ plan, stepIndex: 0, status: 'done' });
+      return;
+    }
+    setTestRun({ plan, stepIndex: 0, status: 'running' });
+  }
 
   useEffect(() => {
     if (triggerType !== 'stage_changed') { setSelectedPipelineId(''); return; }
@@ -403,16 +455,13 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
               <span className="hidden md:inline">JSON</span>
             </Button>
             <Button
-              variant="ghost"
+              variant={testRun ? 'default' : 'ghost'}
               size="sm"
-              onClick={() => {
-                setNodeErrors(validationErrors);
-                setIsTestRunOpen(true);
-              }}
-              title="Test run"
+              onClick={handleToggleTestRun}
+              title={testRun ? 'Parar test run' : 'Rodar test run no canvas'}
             >
               <Workflow className="size-3.5" />
-              <span className="hidden md:inline">Test run</span>
+              <span className="hidden md:inline">{testRun ? 'Parar' : 'Test run'}</span>
             </Button>
             <Button variant="ghost" size="sm" onClick={() => void handleToggle()} disabled={toggling} title={flow.isActive ? 'Pausar flow' : 'Ativar flow'}>
               {toggling ? <LoaderCircle className="size-3.5 animate-spin" /> : <Power className="size-3.5" />}
@@ -444,6 +493,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
             viewport={canvasViewport}
             selectedClientId={selectedClientId}
             nodeErrors={nodeErrors}
+            runState={canvasRunState}
             onNodeSelect={setSelectedClientId}
             onNodesChange={setNodes}
             onEdgesChange={handleEdgesChange}
@@ -484,22 +534,6 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
         onApply={applyFlowJson}
       />
 
-      <FlowTestRunDialog
-        open={isTestRunOpen}
-        onOpenChange={setIsTestRunOpen}
-        flowName={name.trim()}
-        triggerType={triggerType}
-        triggerValue={
-          triggerType === 'tag_applied'
-            ? selectedTagId
-            : triggerType === 'stage_changed'
-              ? selectedStageId
-              : triggerValue
-        }
-        nodes={nodes}
-        edges={canvasEdges}
-        validationErrors={validationErrors}
-      />
     </div>
   );
 }
