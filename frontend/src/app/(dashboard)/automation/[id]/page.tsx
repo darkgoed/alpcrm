@@ -31,64 +31,14 @@ import { useTeams } from '@/hooks/useTeams';
 import { useAgents } from '@/hooks/useAgents';
 import { FlowNodeEditor, type NodeDraft } from '@/features/automation/components/flow-node-editor';
 import { FlowCanvas, type CanvasEdgeDraft } from '@/features/automation/components/flow-canvas';
+import { FlowTestRunDialog } from '@/features/automation/components/flow-test-run-dialog';
+import { validateFlow } from '@/features/automation/components/flow-validation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-
-// ─── Flow validation ─────────────────────────────────────────────────────────────
-
-function validateFlow(
-  nodes: NodeDraft[],
-  edges: { fromClientId: string; toClientId: string }[],
-): Record<string, string> {
-  const errors: Record<string, string> = {};
-  if (nodes.length === 0) return errors;
-
-  const connectedTargets = new Set(edges.map((e) => e.toClientId));
-
-  for (const node of nodes) {
-    const c = node.config ?? {};
-
-    // Verificar se o nó tem alguma conexão de entrada (exceto se só existe 1 nó)
-    if (nodes.length > 1 && !connectedTargets.has(node.clientId)) {
-      errors[node.clientId] = 'Nó sem conexão de entrada';
-      continue;
-    }
-
-    // Verificar campos obrigatórios por tipo
-    switch (node.type) {
-      case 'message':
-        if (!String(c.text ?? '').trim()) errors[node.clientId] = 'Texto da mensagem é obrigatório';
-        break;
-      case 'send_template':
-        if (!String(c.templateId ?? c.templateName ?? '').trim()) errors[node.clientId] = 'Template é obrigatório';
-        break;
-      case 'send_interactive':
-        if (!String(c.body ?? '').trim()) errors[node.clientId] = 'Corpo da mensagem é obrigatório';
-        break;
-      case 'condition':
-        if (!String(c.field ?? '').trim()) errors[node.clientId] = 'Campo de condição é obrigatório';
-        break;
-      case 'wait_for_reply':
-        if (!c.timeoutMinutes && !c.timeoutHours) errors[node.clientId] = 'Timeout é obrigatório';
-        break;
-      case 'assign_to':
-        if (!c.userId && !c.teamId) errors[node.clientId] = 'Usuário ou time é obrigatório';
-        break;
-      case 'tag_contact':
-        if (!c.tagId && !c.tagName) errors[node.clientId] = 'Tag é obrigatória';
-        break;
-      case 'webhook_call':
-        if (!String(c.url ?? '').trim()) errors[node.clientId] = 'URL do webhook é obrigatória';
-        break;
-    }
-  }
-
-  return errors;
-}
 
 // ─── Node type config ───────────────────────────────────────────────────────────
 
@@ -216,6 +166,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
   const [toggling, setToggling] = useState(false);
   const [savedFeedback, setSavedFeedback] = useState(false);
   const [nodeErrors, setNodeErrors] = useState<Record<string, string>>({});
+  const [isTestRunOpen, setIsTestRunOpen] = useState(false);
 
   const pipelineStages = useMemo(
     () => pipelines.flatMap((p) => p.stages.map((s) => ({ id: s.id, name: s.name, pipelineName: p.name }))),
@@ -223,6 +174,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
   );
   const workspaceUsers = useMemo(() => agents.map((a) => ({ id: a.id, name: a.name })), [agents]);
   const workspaceTeams = useMemo(() => teams.map((t) => ({ id: t.id, name: t.name })), [teams]);
+  const validationErrors = useMemo(() => validateFlow(nodes, canvasEdges), [canvasEdges, nodes]);
 
   // Hydrate from flow
   useEffect(() => {
@@ -412,6 +364,17 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
             {flow.isActive ? 'Ativo' : 'Pausado'}
           </Badge>
           <Separator orientation="vertical" className="h-5" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setNodeErrors(validationErrors);
+              setIsTestRunOpen(true);
+            }}
+          >
+            <Workflow className="size-3.5" />
+            Test run
+          </Button>
           <Button variant="outline" size="sm" onClick={() => void handleToggle()} disabled={toggling}>
             {toggling ? <LoaderCircle className="size-3.5 animate-spin" /> : <Power className="size-3.5" />}
             {flow.isActive ? 'Pausar' : 'Ativar'}
@@ -461,6 +424,23 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
           />
         )}
       </div>
+
+      <FlowTestRunDialog
+        open={isTestRunOpen}
+        onOpenChange={setIsTestRunOpen}
+        flowName={name.trim()}
+        triggerType={triggerType}
+        triggerValue={
+          triggerType === 'tag_applied'
+            ? selectedTagId
+            : triggerType === 'stage_changed'
+              ? selectedStageId
+              : triggerValue
+        }
+        nodes={nodes}
+        edges={canvasEdges}
+        validationErrors={validationErrors}
+      />
     </div>
   );
 }
