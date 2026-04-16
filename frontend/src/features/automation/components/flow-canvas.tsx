@@ -560,21 +560,35 @@ function sortCanvasEdges(edges: CanvasEdgeDraft[], nodes: NodeDraft[]): CanvasEd
 function resolveRootNode(nodes: NodeDraft[], edges: CanvasEdgeDraft[]): NodeDraft | null {
   if (nodes.length === 0) return null;
 
-  const incomingCount = new Map(nodes.map((node) => [node.clientId, 0]));
+  const sortFn = (left: NodeDraft, right: NodeDraft) => {
+    if (left.order !== right.order) return left.order - right.order;
+    return left.clientId.localeCompare(right.clientId);
+  };
 
+  // When edges exist, only nodes that participate in the graph are root candidates.
+  // This prevents a newly added (unconnected) node from stealing the trigger edge.
+  const connectedIds = new Set<string>();
   edges.forEach((edge) => {
-    incomingCount.set(edge.toClientId, (incomingCount.get(edge.toClientId) ?? 0) + 1);
+    connectedIds.add(edge.fromClientId);
+    connectedIds.add(edge.toClientId);
   });
 
-  return [...nodes]
+  const candidates = edges.length > 0
+    ? nodes.filter((node) => connectedIds.has(node.clientId))
+    : nodes;
+
+  const pool = candidates.length > 0 ? candidates : nodes;
+
+  const incomingCount = new Map(pool.map((node) => [node.clientId, 0]));
+  edges.forEach((edge) => {
+    if (incomingCount.has(edge.toClientId)) {
+      incomingCount.set(edge.toClientId, (incomingCount.get(edge.toClientId) ?? 0) + 1);
+    }
+  });
+
+  return [...pool]
     .filter((node) => (incomingCount.get(node.clientId) ?? 0) === 0)
-    .sort((left, right) => {
-      if (left.order !== right.order) return left.order - right.order;
-      return left.clientId.localeCompare(right.clientId);
-    })[0] ?? [...nodes].sort((left, right) => {
-      if (left.order !== right.order) return left.order - right.order;
-      return left.clientId.localeCompare(right.clientId);
-    })[0] ?? null;
+    .sort(sortFn)[0] ?? [...pool].sort(sortFn)[0] ?? null;
 }
 
 function withDefaultEdgeProps(
