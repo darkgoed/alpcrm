@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRolePermissionsDto } from './dto/update-role-permissions.dto';
 
@@ -17,7 +18,10 @@ const ROLE_INCLUDE = {
 
 @Injectable()
 export class RolesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private audit: AuditService,
+  ) {}
 
   // ─── Listar roles do workspace ───────────────────────────────────────────────
 
@@ -42,7 +46,7 @@ export class RolesService {
 
   // ─── Criar role ──────────────────────────────────────────────────────────────
 
-  async create(dto: CreateRoleDto, workspaceId: string) {
+  async create(dto: CreateRoleDto, workspaceId: string, actorId?: string) {
     const exists = await this.prisma.role.findFirst({
       where: { name: dto.name, workspaceId },
     });
@@ -50,7 +54,7 @@ export class RolesService {
 
     const permissionIds = await this.normalizePermissionIds(dto.permissionIds);
 
-    return this.prisma.role.create({
+    const role = await this.prisma.role.create({
       data: {
         workspaceId,
         name: dto.name,
@@ -66,6 +70,15 @@ export class RolesService {
       },
       include: ROLE_INCLUDE,
     });
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'create',
+      entity: 'role',
+      entityId: role.id,
+      metadata: { name: role.name },
+    });
+    return role;
   }
 
   // ─── Atualizar permissões da role (substitui todas) ──────────────────────────
@@ -74,6 +87,7 @@ export class RolesService {
     id: string,
     workspaceId: string,
     dto: UpdateRolePermissionsDto,
+    actorId?: string,
   ) {
     await this.assertExists(id, workspaceId);
     const permissionIds = await this.normalizePermissionIds(dto.permissionIds);
@@ -91,12 +105,21 @@ export class RolesService {
       });
     }
 
-    return this.findOne(id, workspaceId);
+    const result = await this.findOne(id, workspaceId);
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'update_permissions',
+      entity: 'role',
+      entityId: id,
+      metadata: { permissionIds },
+    });
+    return result;
   }
 
   // ─── Deletar role ────────────────────────────────────────────────────────────
 
-  async remove(id: string, workspaceId: string) {
+  async remove(id: string, workspaceId: string, actorId?: string) {
     const role = await this.assertExists(id, workspaceId);
 
     // Checar se ainda há usuários com essa role
@@ -108,6 +131,14 @@ export class RolesService {
     }
 
     await this.prisma.role.delete({ where: { id } });
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'delete',
+      entity: 'role',
+      entityId: id,
+      metadata: { name: role.name },
+    });
     return role;
   }
 

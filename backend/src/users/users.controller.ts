@@ -40,7 +40,7 @@ export class UsersController {
   @Post()
   @RequirePermissions('manage_users')
   invite(@Body() dto: InviteUserDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.usersService.invite(dto, user.workspaceId);
+    return this.usersService.invite(dto, user.workspaceId, user.userId);
   }
 
   @Patch(':id')
@@ -50,13 +50,13 @@ export class UsersController {
     @Body() dto: UpdateUserDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.usersService.update(id, user.workspaceId, dto);
+    return this.usersService.update(id, user.workspaceId, dto, user.userId);
   }
 
   @Patch(':id/deactivate')
   @RequirePermissions('manage_users')
   deactivate(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.usersService.deactivate(id, user.workspaceId);
+    return this.usersService.deactivate(id, user.workspaceId, user.userId);
   }
 
   @Patch(':id/reset-password')
@@ -75,7 +75,7 @@ export class UsersController {
     @Param('roleId') roleId: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.usersService.assignRole(id, roleId, user.workspaceId);
+    return this.usersService.assignRole(id, roleId, user.workspaceId, user.userId);
   }
 
   @Delete(':id/roles/:roleId')
@@ -85,6 +85,6 @@ export class UsersController {
     @Param('roleId') roleId: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.usersService.removeRole(id, roleId, user.workspaceId);
+    return this.usersService.removeRole(id, roleId, user.workspaceId, user.userId);
   }
 }

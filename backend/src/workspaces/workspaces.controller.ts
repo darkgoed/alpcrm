@@ -47,7 +47,7 @@ export class WorkspacesController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateWorkspaceSettingsDto,
   ) {
-    return this.workspacesService.updateSettings(user.workspaceId, dto);
+    return this.workspacesService.updateSettings(user.workspaceId, dto, user.userId);
   }
 
   // ─── Regras de follow-up ──────────────────────────────────────────────────────

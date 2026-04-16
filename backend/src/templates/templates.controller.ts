@@ -35,7 +35,7 @@ export class TemplatesController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateTemplateDto,
   ) {
-    return this.templatesService.create(user.workspaceId, dto);
+    return this.templatesService.create(user.workspaceId, dto, user.userId);
   }
 
   @Patch(':id/refresh')
@@ -53,6 +53,6 @@ export class TemplatesController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    await this.templatesService.delete(user.workspaceId, id);
+    await this.templatesService.delete(user.workspaceId, id, user.userId);
   }
 }

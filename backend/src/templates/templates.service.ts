@@ -10,6 +10,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { TEMPLATE_POLL_QUEUE } from '../queues/queues.constants';
 
@@ -88,6 +89,7 @@ export class TemplatesService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     @InjectQueue(TEMPLATE_POLL_QUEUE) private pollQueue: Queue,
+    private audit: AuditService,
   ) {}
 
   // ─── Registra job de polling repetível ao iniciar ────────────────────────────
@@ -116,7 +118,7 @@ export class TemplatesService implements OnModuleInit {
 
   // ─── Criar template e enviar para Meta ───────────────────────────────────────
 
-  async create(workspaceId: string, dto: CreateTemplateDto) {
+  async create(workspaceId: string, dto: CreateTemplateDto, actorId?: string) {
     const account = await this.prisma.whatsappAccount.findFirst({
       where: { id: dto.whatsappAccountId, workspaceId },
     });
@@ -165,7 +167,7 @@ export class TemplatesService implements OnModuleInit {
       );
     }
 
-    return this.prisma.messageTemplate.create({
+    const template = await this.prisma.messageTemplate.create({
       data: {
         workspaceId,
         whatsappAccountId: dto.whatsappAccountId,
@@ -189,11 +191,20 @@ export class TemplatesService implements OnModuleInit {
         status: initialStatus,
       },
     });
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'create',
+      entity: 'template',
+      entityId: template.id,
+      metadata: { name: dto.name, category: dto.category },
+    });
+    return template;
   }
 
   // ─── Excluir template ────────────────────────────────────────────────────────
 
-  async delete(workspaceId: string, id: string) {
+  async delete(workspaceId: string, id: string, actorId?: string) {
     const template = await this.prisma.messageTemplate.findFirst({
       where: { id, workspaceId },
       include: { whatsappAccount: true },
@@ -219,6 +230,14 @@ export class TemplatesService implements OnModuleInit {
     }
 
     await this.prisma.messageTemplate.delete({ where: { id } });
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'delete',
+      entity: 'template',
+      entityId: id,
+      metadata: { name: template.name },
+    });
   }
 
   // ─── Atualizar status de um template específico ──────────────────────────────

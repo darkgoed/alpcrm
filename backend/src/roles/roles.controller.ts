@@ -40,7 +40,7 @@ export class RolesController {
   @Post()
   @RequirePermissions('manage_roles')
   create(@Body() dto: CreateRoleDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.rolesService.create(dto, user.workspaceId);
+    return this.rolesService.create(dto, user.workspaceId, user.userId);
   }
 
   @Patch(':id/permissions')
@@ -50,12 +50,12 @@ export class RolesController {
     @Body() dto: UpdateRolePermissionsDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.rolesService.updatePermissions(id, user.workspaceId, dto);
+    return this.rolesService.updatePermissions(id, user.workspaceId, dto, user.userId);
   }
 
   @Delete(':id')
   @RequirePermissions('manage_roles')
   remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.rolesService.remove(id, user.workspaceId);
+    return this.rolesService.remove(id, user.workspaceId, user.userId);
   }
 }

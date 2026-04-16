@@ -4,6 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 
@@ -18,7 +19,10 @@ const TEAM_INCLUDE = {
 
 @Injectable()
 export class TeamsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private audit: AuditService,
+  ) {}
 
   // ─── Listar equipes ──────────────────────────────────────────────────────────
 
@@ -43,14 +47,14 @@ export class TeamsService {
 
   // ─── Criar equipe ────────────────────────────────────────────────────────────
 
-  async create(dto: CreateTeamDto, workspaceId: string) {
+  async create(dto: CreateTeamDto, workspaceId: string, actorId?: string) {
     const exists = await this.prisma.team.findFirst({
       where: { name: dto.name, workspaceId },
     });
     if (exists)
       throw new ConflictException('Já existe uma equipe com esse nome');
 
-    return this.prisma.team.create({
+    const team = await this.prisma.team.create({
       data: {
         workspaceId,
         name: dto.name,
@@ -60,30 +64,55 @@ export class TeamsService {
       },
       include: TEAM_INCLUDE,
     });
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'create',
+      entity: 'team',
+      entityId: team.id,
+      metadata: { name: team.name },
+    });
+    return team;
   }
 
   // ─── Atualizar nome da equipe ────────────────────────────────────────────────
 
-  async update(id: string, workspaceId: string, dto: UpdateTeamDto) {
+  async update(id: string, workspaceId: string, dto: UpdateTeamDto, actorId?: string) {
     await this.assertExists(id, workspaceId);
-    return this.prisma.team.update({
+    const result = await this.prisma.team.update({
       where: { id },
       data: dto,
       include: TEAM_INCLUDE,
     });
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'update',
+      entity: 'team',
+      entityId: id,
+      metadata: { fields: Object.keys(dto) },
+    });
+    return result;
   }
 
   // ─── Deletar equipe ──────────────────────────────────────────────────────────
 
-  async remove(id: string, workspaceId: string) {
+  async remove(id: string, workspaceId: string, actorId?: string) {
     await this.assertExists(id, workspaceId);
     await this.prisma.team.delete({ where: { id } });
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'delete',
+      entity: 'team',
+      entityId: id,
+    });
     return { message: 'Equipe removida' };
   }
 
   // ─── Adicionar membro ────────────────────────────────────────────────────────
 
-  async addMember(teamId: string, userId: string, workspaceId: string) {
+  async addMember(teamId: string, userId: string, workspaceId: string, actorId?: string) {
     await this.assertExists(teamId, workspaceId);
 
     const user = await this.prisma.user.findFirst({
@@ -98,14 +127,31 @@ export class TeamsService {
       create: { teamId, userId },
     });
 
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'add_member',
+      entity: 'team',
+      entityId: teamId,
+      metadata: { memberId: userId },
+    });
+
     return this.findOne(teamId, workspaceId);
   }
 
   // ─── Remover membro ──────────────────────────────────────────────────────────
 
-  async removeMember(teamId: string, userId: string, workspaceId: string) {
+  async removeMember(teamId: string, userId: string, workspaceId: string, actorId?: string) {
     await this.assertExists(teamId, workspaceId);
     await this.prisma.teamUser.deleteMany({ where: { teamId, userId } });
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'remove_member',
+      entity: 'team',
+      entityId: teamId,
+      metadata: { memberId: userId },
+    });
     return this.findOne(teamId, workspaceId);
   }
 

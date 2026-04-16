@@ -7,6 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
@@ -17,6 +18,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
+    private audit: AuditService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -106,6 +108,14 @@ export class AuthService {
         ),
       ),
     ];
+
+    this.audit.log({
+      workspaceId: authenticatedUser.workspaceId,
+      userId: authenticatedUser.id,
+      action: 'login',
+      entity: 'user',
+      entityId: authenticatedUser.id,
+    });
 
     return this.issueTokenPair(
       authenticatedUser.id,

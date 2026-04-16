@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { EventsGateway } from '../gateway/events.gateway';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { AssignConversationDto } from './dto/assign-conversation.dto';

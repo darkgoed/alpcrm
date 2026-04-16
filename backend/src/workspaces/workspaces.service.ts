@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { UpdateWorkspaceSettingsDto } from './dto/workspace-settings.dto';
 import {
   CreateFollowUpRuleDto,
@@ -19,7 +20,10 @@ import {
 
 @Injectable()
 export class WorkspacesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private audit: AuditService,
+  ) {}
 
   private hasOwn(dto: object, key: string): boolean {
     return Object.hasOwn(dto, key);
@@ -34,7 +38,7 @@ export class WorkspacesService {
     return settings ?? { workspaceId, autoCloseHours: null };
   }
 
-  async updateSettings(workspaceId: string, dto: UpdateWorkspaceSettingsDto) {
+  async updateSettings(workspaceId: string, dto: UpdateWorkspaceSettingsDto, actorId?: string) {
     const data = {
       ...(this.hasOwn(dto, 'autoCloseHours')
         ? { autoCloseHours: dto.autoCloseHours ?? null }
@@ -53,11 +57,20 @@ export class WorkspacesService {
         : {}),
     };
 
-    return this.prisma.workspaceSettings.upsert({
+    const result = await this.prisma.workspaceSettings.upsert({
       where: { workspaceId },
       create: { workspaceId, ...data },
       update: data,
     });
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'update_settings',
+      entity: 'workspace',
+      entityId: workspaceId,
+      metadata: { fields: Object.keys(dto) },
+    });
+    return result;
   }
 
   // ─── Regras de follow-up ─────────────────────────────────────────────────────

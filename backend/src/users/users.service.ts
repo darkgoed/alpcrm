@@ -6,6 +6,7 @@ import {
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { InviteUserDto } from './dto/invite-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -30,7 +31,10 @@ const USER_SELECT = {
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private audit: AuditService,
+  ) {}
 
   // ─── Listar usuários do workspace ────────────────────────────────────────────
 
@@ -55,7 +59,7 @@ export class UsersService {
 
   // ─── Convidar (criar) novo operador ─────────────────────────────────────────
 
-  async invite(dto: InviteUserDto, workspaceId: string) {
+  async invite(dto: InviteUserDto, workspaceId: string, actorId?: string) {
     const exists = await this.prisma.user.findFirst({
       where: { email: dto.email, workspaceId },
     });
@@ -80,6 +84,15 @@ export class UsersService {
       select: USER_SELECT,
     });
 
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'create',
+      entity: 'user',
+      entityId: user.id,
+      metadata: { email: user.email, name: user.name },
+    });
+
     // Retorna senha plain text apenas no momento da criação
     return { ...user, temporaryPassword: rawPassword };
   }
@@ -99,29 +112,46 @@ export class UsersService {
 
   // ─── Atualizar usuário ───────────────────────────────────────────────────────
 
-  async update(id: string, workspaceId: string, dto: UpdateUserDto) {
+  async update(id: string, workspaceId: string, dto: UpdateUserDto, actorId?: string) {
     await this.assertExists(id, workspaceId);
-    return this.prisma.user.update({
+    const result = await this.prisma.user.update({
       where: { id },
       data: dto,
       select: USER_SELECT,
     });
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'update',
+      entity: 'user',
+      entityId: id,
+      metadata: { fields: Object.keys(dto) },
+    });
+    return result;
   }
 
   // ─── Desativar usuário ───────────────────────────────────────────────────────
 
-  async deactivate(id: string, workspaceId: string) {
+  async deactivate(id: string, workspaceId: string, actorId?: string) {
     await this.assertExists(id, workspaceId);
-    return this.prisma.user.update({
+    const result = await this.prisma.user.update({
       where: { id },
       data: { isActive: false },
       select: USER_SELECT,
     });
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'deactivate',
+      entity: 'user',
+      entityId: id,
+    });
+    return result;
   }
 
   // ─── Atribuir role ao usuário ────────────────────────────────────────────────
 
-  async assignRole(userId: string, roleId: string, workspaceId: string) {
+  async assignRole(userId: string, roleId: string, workspaceId: string, actorId?: string) {
     await this.assertExists(userId, workspaceId);
 
     const role = await this.prisma.role.findFirst({
@@ -136,14 +166,31 @@ export class UsersService {
       create: { userId, roleId },
     });
 
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'assign_role',
+      entity: 'user',
+      entityId: userId,
+      metadata: { roleId },
+    });
+
     return this.findOne(userId, workspaceId);
   }
 
   // ─── Remover role do usuário ─────────────────────────────────────────────────
 
-  async removeRole(userId: string, roleId: string, workspaceId: string) {
+  async removeRole(userId: string, roleId: string, workspaceId: string, actorId?: string) {
     await this.assertExists(userId, workspaceId);
     await this.prisma.userRole.deleteMany({ where: { userId, roleId } });
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'remove_role',
+      entity: 'user',
+      entityId: userId,
+      metadata: { roleId },
+    });
     return this.findOne(userId, workspaceId);
   }
 

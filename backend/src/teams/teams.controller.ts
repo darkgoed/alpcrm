@@ -48,7 +48,7 @@ export class TeamsController {
   @Post()
   @RequirePermissions('manage_teams')
   create(@Body() dto: CreateTeamDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.teamsService.create(dto, user.workspaceId);
+    return this.teamsService.create(dto, user.workspaceId, user.userId);
   }
 
   @Patch(':id')
@@ -58,13 +58,13 @@ export class TeamsController {
     @Body() dto: UpdateTeamDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.teamsService.update(id, user.workspaceId, dto);
+    return this.teamsService.update(id, user.workspaceId, dto, user.userId);
   }
 
   @Delete(':id')
   @RequirePermissions('manage_teams')
   remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.teamsService.remove(id, user.workspaceId);
+    return this.teamsService.remove(id, user.workspaceId, user.userId);
   }
 
   @Post(':id/members/:userId')
@@ -74,7 +74,7 @@ export class TeamsController {
     @Param('userId') userId: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.teamsService.addMember(id, userId, user.workspaceId);
+    return this.teamsService.addMember(id, userId, user.workspaceId, user.userId);
   }
 
   @Delete(':id/members/:userId')
@@ -84,6 +84,6 @@ export class TeamsController {
     @Param('userId') userId: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.teamsService.removeMember(id, userId, user.workspaceId);
+    return this.teamsService.removeMember(id, userId, user.workspaceId, user.userId);
   }
 }
