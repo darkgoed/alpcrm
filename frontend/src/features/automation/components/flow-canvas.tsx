@@ -655,21 +655,6 @@ function toRFEdges(nodes: NodeDraft[], edges: CanvasEdgeDraft[], showTriggerEdge
     });
   }
 
-  // If no edges saved yet, create linear chain from order
-  if (sortedEdges.length === 0 && sortedNodes.length > 0) {
-    // node → node
-    for (let i = 0; i < sortedNodes.length - 1; i++) {
-      rfEdges.push({
-        id: `${sortedNodes[i].clientId}→${sortedNodes[i + 1].clientId}`,
-        source: sortedNodes[i].clientId,
-        target: sortedNodes[i + 1].clientId,
-        sourceHandle: 'out',
-        markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: '#6b7280', strokeDasharray: '5 3' },
-      });
-    }
-  }
-
   return rfEdges;
 }
 
