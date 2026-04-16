@@ -81,6 +81,8 @@ function toJsonString(value: FlowJsonDialogProps['value']) {
         type: node.type,
         config: node.config,
         order: node.order,
+        positionX: node.positionX,
+        positionY: node.positionY,
       })),
       edges: value.edges.map((edge) => ({
         fromClientId: edge.fromClientId,
@@ -149,6 +151,8 @@ function parseFlowJson(
       type: type as FlowNodeType,
       config,
       order: typeof entry.order === 'number' && Number.isFinite(entry.order) ? entry.order : index,
+      positionX: typeof entry.positionX === 'number' && Number.isFinite(entry.positionX) ? entry.positionX : undefined,
+      positionY: typeof entry.positionY === 'number' && Number.isFinite(entry.positionY) ? entry.positionY : undefined,
     } satisfies NodeDraft;
   });
 

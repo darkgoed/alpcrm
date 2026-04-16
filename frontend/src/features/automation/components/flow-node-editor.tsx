@@ -16,6 +16,8 @@ export interface NodeDraft {
   type: FlowNodeType;
   config: Record<string, unknown>;
   order: number;
+  positionX?: number;
+  positionY?: number;
 }
 
 const MAX_INTERACTIVE_LIST_ROWS = 10;

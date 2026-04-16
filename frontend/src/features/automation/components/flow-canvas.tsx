@@ -22,6 +22,8 @@ import {
   EdgeLabelRenderer,
   getBezierPath,
   type EdgeProps,
+  useReactFlow,
+  type Viewport,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import Dagre from '@dagrejs/dagre';
@@ -44,11 +46,13 @@ interface FlowCanvasProps {
   syncKey: number;
   triggerType: string;
   triggerValue: string;
+  viewport?: Viewport;
   selectedClientId: string | null;
   nodeErrors?: Record<string, string>; // clientId → error message
   onNodeSelect: (clientId: string | null) => void;
   onNodesChange: (nodes: NodeDraft[]) => void;
   onEdgesChange: (edges: CanvasEdgeDraft[]) => void;
+  onViewportChange?: (viewport: Viewport) => void;
 }
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -610,7 +614,7 @@ function toRFNodes(
   const flowNodes: Node[] = sortedNodes.map((n) => ({
     id: n.clientId,
     type: 'flowNode',
-    position: { x: 0, y: 0 },
+    position: { x: n.positionX ?? 0, y: n.positionY ?? 0 },
     data: {
       ...n,
       selected: n.clientId === selectedClientId,
@@ -688,6 +692,18 @@ function serializeEdgeSnapshot(edges: Array<Pick<Edge, 'source' | 'target' | 'so
   );
 }
 
+function hasSavedNodePositions(nodes: NodeDraft[]) {
+  return nodes.some((node) => Number.isFinite(node.positionX) && Number.isFinite(node.positionY));
+}
+
+function normalizeViewport(viewport?: Viewport): Viewport | undefined {
+  if (!viewport) return undefined;
+  if (!Number.isFinite(viewport.x) || !Number.isFinite(viewport.y) || !Number.isFinite(viewport.zoom)) {
+    return undefined;
+  }
+  return viewport;
+}
+
 // ─── Main canvas ───────────────────────────────────────────────────────────────
 
 function FlowCanvasInner({
@@ -696,15 +712,23 @@ function FlowCanvasInner({
   syncKey,
   triggerType,
   triggerValue,
+  viewport,
   selectedClientId,
   nodeErrors,
   onNodeSelect,
   onNodesChange,
   onEdgesChange,
+  onViewportChange,
 }: FlowCanvasProps) {
+  const reactFlow = useReactFlow();
   const initialized = useRef(false);
   const removeEdgeRef = useRef<(edgeId: string) => void>(() => {});
   const [isTriggerEdgeVisible, setIsTriggerEdgeVisible] = useState(true);
+  const hasPersistedPositions = useMemo(() => hasSavedNodePositions(nodeDrafts), [nodeDrafts]);
+  const initialViewport = useMemo(
+    () => normalizeViewport(viewport) ?? { x: 0, y: 0, zoom: 1 },
+    [viewport],
+  );
 
   const initialRFNodes = useMemo(
     () => toRFNodes(nodeDrafts, savedEdges, triggerType, triggerValue, selectedClientId),
@@ -779,16 +803,19 @@ function FlowCanvasInner({
             {
               id: n.clientId,
               type: 'flowNode',
-              position: { x: 100, y: lastY + 120 },
+              position: {
+                x: n.positionX ?? 100,
+                y: n.positionY ?? lastY + 120,
+              },
               data: { ...n, selected: false } as FlowNodeData,
               selected: false,
             },
           ];
         });
-      return applyAutoLayout(next, rfEdges);
+      return hasPersistedPositions ? next : applyAutoLayout(next, rfEdges);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodeDrafts, selectedClientId, applyAutoLayout, rfEdges]);
+  }, [nodeDrafts, selectedClientId, applyAutoLayout, rfEdges, hasPersistedPositions]);
 
   // Sync selected state into rfNodes
   useEffect(() => {
@@ -853,12 +880,18 @@ function FlowCanvasInner({
 
     lastSyncedEdgesRef.current = nextSnapshot;
     setRFEdges(nextEdges);
-    setRFNodes((currentNodes) => applyAutoLayout(currentNodes, nextEdges));
-  }, [nodeDrafts, savedEdges, setRFEdges, setRFNodes, syncKey, applyAutoLayout, isTriggerEdgeVisible]);
+    setRFNodes((currentNodes) => (hasPersistedPositions ? currentNodes : applyAutoLayout(currentNodes, nextEdges)));
+  }, [nodeDrafts, savedEdges, setRFEdges, setRFNodes, syncKey, applyAutoLayout, isTriggerEdgeVisible, hasPersistedPositions]);
 
   useEffect(() => {
     setIsTriggerEdgeVisible(true);
   }, [syncKey]);
+
+  useEffect(() => {
+    const nextViewport = normalizeViewport(viewport);
+    if (!nextViewport) return;
+    reactFlow.setViewport(nextViewport, { duration: 0 });
+  }, [reactFlow, syncKey, viewport]);
 
   // Emit edges to parent whenever they change (skip trigger-to-first edge)
   useEffect(() => {
@@ -876,6 +909,26 @@ function FlowCanvasInner({
     onEdgesChange(drafts);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rfEdges]);
+
+  const syncNodePositions = useCallback((nextNodes: Node[]) => {
+    const positions = new Map(
+      nextNodes
+        .filter((node): node is Node<FlowNodeData> => node.type === 'flowNode')
+        .map((node) => [node.id, node.position]),
+    );
+
+    onNodesChange(
+      sortNodeDrafts(nodeDrafts).map((node) => ({
+        ...node,
+        positionX: positions.get(node.clientId)?.x ?? node.positionX,
+        positionY: positions.get(node.clientId)?.y ?? node.positionY,
+      })),
+    );
+  }, [nodeDrafts, onNodesChange]);
+
+  const syncViewport = useCallback(() => {
+    onViewportChange?.(reactFlow.getViewport());
+  }, [onViewportChange, reactFlow]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -967,9 +1020,12 @@ function FlowCanvasInner({
       onEdgeDoubleClick={onEdgeDoubleClick}
       onNodeClick={onNodeClick}
       onPaneClick={onPaneClick}
+      onNodeDragStop={(_, node, nodes) => syncNodePositions(nodes)}
+      onMoveEnd={syncViewport}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
-      fitView
+      fitView={!normalizeViewport(viewport)}
+      defaultViewport={initialViewport}
       fitViewOptions={{ padding: 0.3 }}
       deleteKeyCode={null}
       className="bg-[radial-gradient(circle,_#e2e8f0_1px,_transparent_1px)] bg-[length:24px_24px]"

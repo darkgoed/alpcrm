@@ -2,6 +2,7 @@
 
 import { use, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import type { Viewport } from '@xyflow/react';
 import {
   ArrowLeft,
   Bot,
@@ -161,6 +162,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
   const [selectedStageId, setSelectedStageId] = useState('');
   const [nodes, setNodes] = useState<NodeDraft[]>([]);
   const [canvasEdges, setCanvasEdges] = useState<CanvasEdgeDraft[]>([]);
+  const [canvasViewport, setCanvasViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
   const [canvasSyncKey, setCanvasSyncKey] = useState(0);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -193,6 +195,8 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
         type: n.type,
         config: n.config,
         order: n.order ?? i,
+        positionX: n.positionX ?? undefined,
+        positionY: n.positionY ?? undefined,
       })),
     );
     setCanvasEdges(
@@ -202,6 +206,11 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
         label: e.label ?? undefined,
       })),
     );
+    setCanvasViewport({
+      x: flow.viewportX ?? 0,
+      y: flow.viewportY ?? 0,
+      zoom: flow.viewportZoom ?? 1,
+    });
     setCanvasSyncKey((current) => current + 1);
     setHydrated(true);
   }, [flow]);
@@ -236,6 +245,10 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
 
   const handleEdgesChange = useCallback((edges: CanvasEdgeDraft[]) => {
     setCanvasEdges(edges);
+  }, []);
+
+  const handleViewportChange = useCallback((viewport: Viewport) => {
+    setCanvasViewport(viewport);
   }, []);
 
   function applyFlowJson(next: {
@@ -277,7 +290,17 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
         name: name.trim(),
         triggerType,
         triggerValue: triggerVal,
-        nodes: nodes.map((n) => ({ clientId: n.clientId, type: n.type, config: n.config, order: n.order })),
+        viewportX: canvasViewport.x,
+        viewportY: canvasViewport.y,
+        viewportZoom: canvasViewport.zoom,
+        nodes: nodes.map((n) => ({
+          clientId: n.clientId,
+          type: n.type,
+          config: n.config,
+          order: n.order,
+          positionX: n.positionX,
+          positionY: n.positionY,
+        })),
         edges: canvasEdges,
       });
       await mutate();
@@ -433,11 +456,13 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
             syncKey={canvasSyncKey}
             triggerType={triggerType}
             triggerValue={triggerValue}
+            viewport={canvasViewport}
             selectedClientId={selectedClientId}
             nodeErrors={nodeErrors}
             onNodeSelect={setSelectedClientId}
             onNodesChange={setNodes}
             onEdgesChange={handleEdgesChange}
+            onViewportChange={handleViewportChange}
           />
         </div>
 

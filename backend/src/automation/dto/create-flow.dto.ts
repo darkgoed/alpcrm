@@ -34,6 +34,14 @@ export class CreateFlowNodeDto {
   order: number;
 
   @IsOptional()
+  @IsNumber()
+  positionX?: number;
+
+  @IsOptional()
+  @IsNumber()
+  positionY?: number;
+
+  @IsOptional()
   @IsString()
   clientId?: string; // id temporário do cliente para referência nos edges
 }
@@ -65,6 +73,18 @@ export class CreateFlowDto {
   @IsOptional()
   @IsString()
   triggerValue?: string;
+
+  @IsOptional()
+  @IsNumber()
+  viewportX?: number;
+
+  @IsOptional()
+  @IsNumber()
+  viewportY?: number;
+
+  @IsOptional()
+  @IsNumber()
+  viewportZoom?: number;
 
   @IsOptional()
   @IsArray()

@@ -22,6 +22,8 @@ export interface FlowNode {
   config: Record<string, unknown>;
   order: number;
   nextId: string | null;
+  positionX?: number | null;
+  positionY?: number | null;
 }
 
 export interface FlowEdge {
@@ -45,6 +47,9 @@ export interface Flow {
     | 'stage_changed'
     | 'button_reply';
   triggerValue: string | null;
+  viewportX?: number | null;
+  viewportY?: number | null;
+  viewportZoom?: number | null;
   nodes: FlowNode[];
   edges: FlowEdge[];
 }
@@ -54,6 +59,8 @@ export interface FlowNodeDraft {
   type: FlowNodeType;
   config: Record<string, unknown>;
   order: number;
+  positionX?: number;
+  positionY?: number;
 }
 
 export interface FlowEdgeDraft {
@@ -66,11 +73,16 @@ export interface FlowPayload {
   name: string;
   triggerType: Flow['triggerType'];
   triggerValue?: string;
+  viewportX?: number;
+  viewportY?: number;
+  viewportZoom?: number;
   nodes: Array<{
     clientId?: string;
     type: FlowNodeType;
     config: Record<string, unknown>;
     order: number;
+    positionX?: number;
+    positionY?: number;
   }>;
   edges?: FlowEdgeDraft[];
 }

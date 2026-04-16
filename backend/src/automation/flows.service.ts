@@ -120,6 +120,8 @@ export class FlowsService {
           type: n.type,
           config: n.config as Prisma.InputJsonValue,
           order: n.order,
+          positionX: n.positionX,
+          positionY: n.positionY,
         },
       });
       // usa clientId fornecido ou índice de ordem como chave

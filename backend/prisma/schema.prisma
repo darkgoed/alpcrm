@@ -446,6 +446,9 @@ model Flow {
   isActive     Boolean         @default(false) @map("is_active")
   triggerType  FlowTriggerType @default(new_conversation) @map("trigger_type")
   triggerValue String?         @map("trigger_value")
+  viewportX    Float?          @map("viewport_x")
+  viewportY    Float?          @map("viewport_y")
+  viewportZoom Float?          @map("viewport_zoom")
   version      Int             @default(1)
   publishedAt  DateTime?       @map("published_at")
 
@@ -466,6 +469,8 @@ model FlowNode {
   // nextId kept for backwards-compat with legacy linear flows; edges are authoritative for new flows
   nextId String?      @map("next_id")
   order  Int          @default(0)
+  positionX Float?    @map("position_x")
+  positionY Float?    @map("position_y")
 
   flow        Flow               @relation(fields: [flowId], references: [id], onDelete: Cascade)
   flowStates  ContactFlowState[]
