@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bot, LoaderCircle, Plus, Sparkles } from 'lucide-react';
+import { ArrowDownAZ, Bot, Filter, LoaderCircle, Plus, Search, Sparkles, X } from 'lucide-react';
 import { createFlow, type Flow, useFlows } from '@/hooks/useAutomation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FlowCard } from '@/features/automation/components/flow-card';
+import { FLOW_TRIGGER_LABELS } from '@/features/automation/components/flow-node-summary';
 
 // ─── Create flow dialog (name + trigger only) ──────────────────────────────────
 
@@ -100,11 +101,61 @@ function CreateFlowDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
   );
 }
 
+// ─── Filters + sort ────────────────────────────────────────────────────────────
+
+type StatusFilter = 'all' | 'active' | 'paused';
+type TriggerFilter = 'all' | Flow['triggerType'];
+type SortKey = 'name' | 'name_desc' | 'steps_desc' | 'steps_asc';
+
+const SORT_LABEL: Record<SortKey, string> = {
+  name: 'Nome (A→Z)',
+  name_desc: 'Nome (Z→A)',
+  steps_desc: 'Mais etapas',
+  steps_asc: 'Menos etapas',
+};
+
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AutomationPage() {
   const { flows, mutate, isLoading } = useFlows();
   const [createOpen, setCreateOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState<StatusFilter>('all');
+  const [trigger, setTrigger] = useState<TriggerFilter>('all');
+  const [sort, setSort] = useState<SortKey>('name');
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = flows.filter((f) => {
+      if (status === 'active' && !f.isActive) return false;
+      if (status === 'paused' && f.isActive) return false;
+      if (trigger !== 'all' && f.triggerType !== trigger) return false;
+      if (q) {
+        const haystack = `${f.name} ${f.triggerValue ?? ''}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+
+    return list.sort((a, b) => {
+      switch (sort) {
+        case 'name':        return a.name.localeCompare(b.name);
+        case 'name_desc':   return b.name.localeCompare(a.name);
+        case 'steps_desc':  return b.nodes.length - a.nodes.length;
+        case 'steps_asc':   return a.nodes.length - b.nodes.length;
+      }
+    });
+  }, [flows, query, sort, status, trigger]);
+
+  const hasAnyFilter = query.trim().length > 0 || status !== 'all' || trigger !== 'all';
+  const activeCount = flows.filter((f) => f.isActive).length;
+  const totalSteps = flows.reduce((t, f) => t + f.nodes.length, 0);
+
+  function resetFilters() {
+    setQuery('');
+    setStatus('all');
+    setTrigger('all');
+  }
 
   return (
     <div className="mx-auto flex h-full w-full max-w-7xl flex-col gap-6 px-4 py-6 lg:px-8">
@@ -144,15 +195,79 @@ export default function AutomationPage() {
             </div>
             <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Ativos</p>
-              <p className="mt-2 text-3xl font-semibold text-foreground">{flows.filter((f) => f.isActive).length}</p>
+              <p className="mt-2 text-3xl font-semibold text-foreground">{activeCount}</p>
             </div>
             <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Etapas totais</p>
-              <p className="mt-2 text-3xl font-semibold text-foreground">{flows.reduce((t, f) => t + f.nodes.length, 0)}</p>
+              <p className="mt-2 text-3xl font-semibold text-foreground">{totalSteps}</p>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* ─── Filter bar ──────────────────────────────────────────────────── */}
+      {flows.length > 0 && (
+        <Card className="border-border/70 bg-white/70">
+          <CardContent className="flex flex-wrap items-center gap-3 py-3">
+            <div className="relative min-w-[220px] flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar por nome ou palavra-chave"
+                className="pl-9"
+              />
+            </div>
+
+            <Select value={status} onValueChange={(v) => setStatus(v as StatusFilter)}>
+              <SelectTrigger className="h-10 w-40 gap-2">
+                <Filter className="size-3.5 opacity-60" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="active">Apenas ativos</SelectItem>
+                <SelectItem value="paused">Apenas pausados</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={trigger} onValueChange={(v) => setTrigger(v as TriggerFilter)}>
+              <SelectTrigger className="h-10 w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os gatilhos</SelectItem>
+                {(Object.keys(FLOW_TRIGGER_LABELS) as Flow['triggerType'][]).map((t) => (
+                  <SelectItem key={t} value={t}>{FLOW_TRIGGER_LABELS[t]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+              <SelectTrigger className="h-10 w-44 gap-2">
+                <ArrowDownAZ className="size-3.5 opacity-60" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => (
+                  <SelectItem key={k} value={k}>{SORT_LABEL[k]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {hasAnyFilter && (
+              <Button variant="ghost" size="sm" onClick={resetFilters}>
+                <X className="size-3.5" />
+                Limpar
+              </Button>
+            )}
+
+            <span className="ml-auto text-xs text-muted-foreground">
+              {filtered.length} de {flows.length}
+            </span>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex-1">
         {isLoading ? (
@@ -175,12 +290,25 @@ export default function AutomationPage() {
               </Card>
             ))}
           </div>
-        ) : flows.length > 0 ? (
+        ) : filtered.length > 0 ? (
           <div className="grid gap-4">
-            {flows.map((flow) => (
+            {filtered.map((flow) => (
               <FlowCard key={flow.id} flow={flow} onRefresh={mutate} />
             ))}
           </div>
+        ) : flows.length > 0 ? (
+          <Card className="border-border/70 bg-white/70">
+            <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+              <Filter className="size-8 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                Nenhum flow corresponde aos filtros aplicados.
+              </p>
+              <Button variant="outline" size="sm" onClick={resetFilters}>
+                <X className="size-3.5" />
+                Limpar filtros
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <Card className="border-border/70 bg-white/70">
             <CardContent className="flex flex-col items-center justify-center gap-4 py-20 text-center">

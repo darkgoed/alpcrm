@@ -36,10 +36,9 @@ import { FlowCanvas, type CanvasEdgeDraft } from '@/features/automation/componen
 import { FlowJsonDialog } from '@/features/automation/components/flow-json-dialog';
 import { FlowTestRunDialog } from '@/features/automation/components/flow-test-run-dialog';
 import { validateFlow } from '@/features/automation/components/flow-validation';
+import { TriggerControl } from '@/features/automation/components/trigger-control';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
@@ -223,8 +222,6 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
     if (ownerPipeline) setSelectedPipelineId(ownerPipeline.id);
   }, [flow?.triggerType, flow?.triggerValue, pipelines, selectedStageId, triggerType]);
 
-  const selectedPipeline = pipelines.find((p) => p.id === selectedPipelineId) ?? null;
-
   function addNode(type: FlowNodeType) {
     const clientId = `draft-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     setNodes((cur) => {
@@ -370,96 +367,61 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
           placeholder="Nome do flow"
         />
 
-        <Select value={triggerType} onValueChange={(v) => setTriggerType(v as Flow['triggerType'])}>
-          <SelectTrigger className="h-8 w-44 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="new_conversation">Nova conversa</SelectItem>
-            <SelectItem value="keyword">Palavra-chave</SelectItem>
-            <SelectItem value="button_reply">Button reply</SelectItem>
-            <SelectItem value="always">Toda mensagem</SelectItem>
-            <SelectItem value="tag_applied">Tag aplicada</SelectItem>
-            <SelectItem value="stage_changed">Mudança de stage</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {(triggerType === 'keyword' || triggerType === 'button_reply') && (
-          <Input
-            value={triggerValue}
-            onChange={(e) => setTriggerValue(e.target.value)}
-            placeholder={triggerType === 'keyword' ? 'Ex: oi, suporte' : 'Payload do botão'}
-            className="h-8 w-36 text-xs"
-          />
-        )}
-        {triggerType === 'tag_applied' && (
-          <select
-            value={selectedTagId}
-            onChange={(e) => setSelectedTagId(e.target.value)}
-            className="h-8 w-40 rounded-md border border-input bg-background px-3 text-xs"
-          >
-            <option value="">Selecione a tag</option>
-            {tags.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-        )}
-        {triggerType === 'stage_changed' && (
-          <>
-            <select
-              value={selectedPipelineId}
-              onChange={(e) => { setSelectedPipelineId(e.target.value); setSelectedStageId(''); }}
-              className="h-8 w-36 rounded-md border border-input bg-background px-3 text-xs"
-            >
-              <option value="">Pipeline</option>
-              {pipelines.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-            <select
-              value={selectedStageId}
-              onChange={(e) => setSelectedStageId(e.target.value)}
-              className="h-8 w-36 rounded-md border border-input bg-background px-3 text-xs"
-              disabled={!selectedPipeline}
-            >
-              <option value="">Stage</option>
-              {selectedPipeline?.stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </>
-        )}
+        <TriggerControl
+          triggerType={triggerType}
+          triggerValue={triggerValue}
+          selectedTagId={selectedTagId}
+          selectedPipelineId={selectedPipelineId}
+          selectedStageId={selectedStageId}
+          tags={tags}
+          pipelines={pipelines}
+          onTriggerTypeChange={setTriggerType}
+          onTriggerValueChange={setTriggerValue}
+          onTagChange={setSelectedTagId}
+          onPipelineChange={setSelectedPipelineId}
+          onStageChange={setSelectedStageId}
+        />
 
         <Separator orientation="vertical" className="h-5" />
         <AddNodeMenu onAdd={addNode} />
 
         <div className="ml-auto flex items-center gap-2">
+          {Object.keys(nodeErrors).length > 0 && (
+            <span className="rounded-md bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+              {Object.keys(nodeErrors).length} erro{Object.keys(nodeErrors).length > 1 ? 's' : ''}
+            </span>
+          )}
           <Badge variant={flow.isActive ? 'success' : 'muted'} className="hidden sm:flex">
             {flow.isActive ? 'Ativo' : 'Pausado'}
           </Badge>
+
           <Separator orientation="vertical" className="h-5" />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsJsonOpen(true)}
-          >
-            <PencilLine className="size-3.5" />
-            JSON
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setNodeErrors(validationErrors);
-              setIsTestRunOpen(true);
-            }}
-          >
-            <Workflow className="size-3.5" />
-            Test run
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => void handleToggle()} disabled={toggling}>
-            {toggling ? <LoaderCircle className="size-3.5 animate-spin" /> : <Power className="size-3.5" />}
-            {flow.isActive ? 'Pausar' : 'Ativar'}
-          </Button>
-          {Object.keys(nodeErrors).length > 0 && (
-            <span className="text-xs font-medium text-destructive">
-              {Object.keys(nodeErrors).length} erro{Object.keys(nodeErrors).length > 1 ? 's' : ''} no flow
-            </span>
-          )}
+
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={() => setIsJsonOpen(true)} title="Editar JSON">
+              <PencilLine className="size-3.5" />
+              <span className="hidden md:inline">JSON</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setNodeErrors(validationErrors);
+                setIsTestRunOpen(true);
+              }}
+              title="Test run"
+            >
+              <Workflow className="size-3.5" />
+              <span className="hidden md:inline">Test run</span>
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => void handleToggle()} disabled={toggling} title={flow.isActive ? 'Pausar flow' : 'Ativar flow'}>
+              {toggling ? <LoaderCircle className="size-3.5 animate-spin" /> : <Power className="size-3.5" />}
+              <span className="hidden md:inline">{flow.isActive ? 'Pausar' : 'Ativar'}</span>
+            </Button>
+          </div>
+
+          <Separator orientation="vertical" className="h-5" />
+
           <Button size="sm" onClick={() => void handleSave()} disabled={saving || !name.trim()}>
             {saving ? <LoaderCircle className="size-3.5 animate-spin" />
               : savedFeedback ? <Check className="size-3.5" />
