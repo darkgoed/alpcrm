@@ -560,3 +560,108 @@ O sistema só deve ser considerado com uma base mínima operacional quando todos
 - webhooks para clientes
 - auditoria real
 - segurança corporativa
+
+### Sprint 8
+
+- rotação planejada de segredo JWT
+- rotação de credenciais de conta WhatsApp
+- estratégia de deploy com rollback
+- fechar lacunas da base mínima operacional
+
+### Sprint 9
+
+- política de senha
+- recuperação de senha
+- sessões ativas por usuário
+- 2FA opcional
+
+### Sprint 10
+
+- API keys por workspace em produção
+- webhooks outbound assinados
+- retry e replay de eventos
+- integração inicial com n8n
+
+### Sprint 11
+
+- separar workers por tipo de fila
+- storage externo para mídia
+- rate limit por tenant
+- preparação para escala separada de websocket
+
+### Sprint 12
+
+- dashboards operacionais
+- métricas de SLA
+- relatórios de entrega e produtividade
+- campanhas com segmentação e agendamento
+
+### Sprint 13
+
+- sugestão de resposta
+- resumo automático de conversa
+- classificação de intenção
+- priorização de atendimento
+- transcrição de áudio
+
+---
+
+## Ordem recomendada dos itens ainda abertos
+
+Se a execução continuar a partir do estado atual, a ordem mais segura é:
+
+1. concluir os itens críticos ainda pendentes das Fases 4, 6 e 7
+2. fechar a definição de base mínima operacional
+3. entrar em segurança corporativa e integrações externas
+4. só depois investir em escala avançada, analytics e inteligência assistiva
+
+Traduzindo os abertos mais importantes em ordem prática:
+
+1. rotação planejada de segredo JWT
+2. rotação de credenciais da conta WhatsApp
+3. estratégia de deploy com rollback
+4. política de senha, recuperação de senha e sessões ativas
+5. API keys, webhooks outbound e replay de eventos
+6. storage externo de mídia e separação de workers
+7. dashboards, campanhas e assistência inteligente
+
+---
+
+## Critério de priorização contínua
+
+Ao adicionar novos itens ao roadmap, usar esta ordem de prioridade:
+
+1. risco de segurança ou vazamento entre tenants
+2. risco de perda, duplicidade ou atraso de mensagem
+3. bloqueio operacional para atendimento diário
+4. conformidade com WhatsApp Cloud API
+5. capacidade de suporte, observação e rollback
+6. expansão comercial, integrações e diferenciação
+
+Se um item novo competir com outro de prioridade mais alta, ele não deve entrar antes.
+
+---
+
+## Definição de pronto por item
+
+Cada item só deve ser marcado como concluído quando atender todos os critérios abaixo:
+
+- código implementado no backend e frontend quando aplicável
+- isolamento por `workspaceId` preservado
+- logs e erros operacionais legíveis para suporte
+- impacto em fila, socket e automação revisado quando houver acoplamento
+- build do backend ou frontend executado conforme a área tocada
+- `ROADMAP.md` atualizado no mesmo merge
+
+---
+
+## Marco recomendado de produção
+
+O produto pode ser tratado como apto para uma operação inicial controlada somente quando:
+
+- todos os itens da definição de base mínima operacional estiverem marcados
+- os pendentes críticos de segurança estiverem fechados
+- houver rollback de deploy documentado e testável
+- credenciais sensíveis puderem ser rotacionadas sem intervenção manual arriscada
+
+Antes disso, o sistema pode operar, mas ainda com risco relevante de sustentação.
