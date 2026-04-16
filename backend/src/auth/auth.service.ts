@@ -6,10 +6,12 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { readJwtSecretRotationConfig } from './jwt-secret.util';
 
 const REFRESH_TOKEN_TTL_DAYS = 7;
 
@@ -19,6 +21,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private audit: AuditService,
+    private config: ConfigService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -190,7 +193,12 @@ export class AuthService {
     permissions: string[] = [],
   ) {
     const payload = { sub: userId, email, workspaceId, permissions };
-    const access_token = this.jwt.sign(payload);
+    const jwtRotation = readJwtSecretRotationConfig(this.config);
+    const access_token = this.jwt.sign(payload, {
+      secret: jwtRotation.currentSecret,
+      expiresIn: this.config.get('JWT_EXPIRES_IN', '7d'),
+      header: { alg: 'HS256', kid: jwtRotation.currentKid },
+    });
 
     const rawToken = crypto.randomBytes(48).toString('hex');
     const expiresAt = new Date();

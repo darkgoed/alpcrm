@@ -241,7 +241,7 @@ Meta: corrigir riscos de acesso indevido, configuração insegura e entrada fals
 - [x] Falhar boot se variáveis críticas não existirem
 - [x] Adicionar validação central de configuração de ambiente
 - [x] Definir perfis explícitos `development`, `staging`, `production`
-- [ ] Adicionar rotação planejada de segredo JWT
+- [x] Adicionar rotação planejada de segredo JWT
 - [x] Implementar refresh token
 - [x] Implementar revogação de sessão
 
