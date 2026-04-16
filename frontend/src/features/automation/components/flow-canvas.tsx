@@ -15,6 +15,7 @@ import {
   type Connection,
   type Edge,
   type Node,
+  type NodeChange,
   type NodeProps,
   MarkerType,
   Panel,
@@ -936,6 +937,31 @@ function FlowCanvasInner({
     );
   }, [nodeDrafts, onNodesChange]);
 
+  const handleRFNodesChange = useCallback((changes: NodeChange<Node>[]) => {
+    onRFNodesChange(changes);
+
+    const positionChanges = new Map<string, { x: number; y: number }>();
+
+    changes.forEach((change) => {
+      if (change.type !== 'position' || !change.position) return;
+      positionChanges.set(change.id, change.position);
+    });
+
+    if (positionChanges.size === 0) return;
+
+    onNodesChange(
+      sortNodeDrafts(nodeDrafts).map((node) => {
+        const nextPosition = positionChanges.get(node.clientId);
+        if (!nextPosition) return node;
+        return {
+          ...node,
+          positionX: nextPosition.x,
+          positionY: nextPosition.y,
+        };
+      }),
+    );
+  }, [nodeDrafts, onNodesChange, onRFNodesChange]);
+
   const syncViewport = useCallback(() => {
     onViewportChange?.(reactFlow.getViewport());
   }, [onViewportChange, reactFlow]);
@@ -1024,7 +1050,7 @@ function FlowCanvasInner({
     <ReactFlow
       nodes={rfNodes}
       edges={displayEdges}
-      onNodesChange={onRFNodesChange}
+      onNodesChange={handleRFNodesChange}
       onEdgesChange={onRFEdgesChange}
       onConnect={onConnect}
       onEdgeDoubleClick={onEdgeDoubleClick}
@@ -1037,6 +1063,7 @@ function FlowCanvasInner({
       fitView={!normalizeViewport(viewport)}
       defaultViewport={initialViewport}
       fitViewOptions={{ padding: 0.3 }}
+      nodesDraggable
       deleteKeyCode={null}
       className="bg-[radial-gradient(circle,_#e2e8f0_1px,_transparent_1px)] bg-[length:24px_24px]"
     >
