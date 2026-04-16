@@ -725,7 +725,7 @@ function FlowCanvasInner({
   const reactFlow = useReactFlow();
   const initialized = useRef(false);
   const removeEdgeRef = useRef<(edgeId: string) => void>(() => {});
-  const [isTriggerEdgeVisible, setIsTriggerEdgeVisible] = useState(true);
+  const [isTriggerEdgeVisible, setIsTriggerEdgeVisible] = useState(() => savedEdges.length > 0);
   const hasPersistedPositions = useMemo(() => hasSavedNodePositions(nodeDrafts), [nodeDrafts]);
   const initialViewport = useMemo(
     () => normalizeViewport(viewport) ?? { x: 0, y: 0, zoom: 1 },
@@ -884,8 +884,8 @@ function FlowCanvasInner({
   }, [nodeDrafts, savedEdges, setRFEdges, setRFNodes, isTriggerEdgeVisible]);
 
   useEffect(() => {
-    setIsTriggerEdgeVisible(true);
-  }, [syncKey]);
+    setIsTriggerEdgeVisible(savedEdges.length > 0);
+  }, [savedEdges.length, syncKey]);
 
   useEffect(() => {
     const nextViewport = normalizeViewport(viewport);
