@@ -1,6 +1,8 @@
 import type { CanvasEdgeDraft } from './flow-canvas';
 import type { NodeDraft } from './flow-node-editor';
 
+const MAX_INTERACTIVE_LIST_ROWS = 10;
+
 export function validateFlow(
   nodes: NodeDraft[],
   edges: CanvasEdgeDraft[],
@@ -43,6 +45,20 @@ export function validateFlow(
       case 'send_interactive':
         if (!String(config.body ?? '').trim()) {
           errors[node.clientId] = 'Corpo da mensagem é obrigatório';
+          break;
+        }
+
+        if (String(config.interactiveType ?? 'button') === 'list') {
+          const sections = (config.sections as Array<{ rows?: Array<unknown> }>) ?? [];
+          const totalRows = sections.reduce(
+            (sum, section) => sum + (section.rows?.length ?? 0),
+            0,
+          );
+
+          if (totalRows > MAX_INTERACTIVE_LIST_ROWS) {
+            errors[node.clientId] =
+              `Lista interativa excede o limite de ${MAX_INTERACTIVE_LIST_ROWS} opções`;
+          }
         }
         break;
       case 'condition':

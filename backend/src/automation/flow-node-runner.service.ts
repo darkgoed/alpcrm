@@ -9,6 +9,16 @@ import {
 import { isWithinBusinessHours } from '../common/utils/business-hours.util';
 import { EncryptionService } from '../common/services/encryption.service';
 
+const MAX_INTERACTIVE_LIST_ROWS = 10;
+
+type WhatsAppSendResponse = {
+  error?: {
+    message?: string;
+    error_user_msg?: string;
+  };
+  messages?: Array<{ id?: string }>;
+};
+
 export interface NodeContext {
   nodeId: string;
   conversationId: string;
@@ -170,8 +180,7 @@ export class FlowNodeRunnerService {
               },
         ),
       });
-      const data = (await res.json()) as { messages?: Array<{ id: string }> };
-      const externalId = data.messages?.[0]?.id ?? '';
+      const externalId = await this.extractExternalMessageId(res);
 
       await this.prisma.message.create({
         data: {
@@ -310,12 +319,20 @@ export class FlowNodeRunnerService {
     let action: Record<string, unknown>;
 
     if (interactiveType === 'list') {
+      const sections = Array.isArray(config.sections) ? config.sections : [];
+      const totalRows = this.countInteractiveListRows(sections);
+      if (totalRows > MAX_INTERACTIVE_LIST_ROWS) {
+        throw new Error(
+          `Lista interativa excede o limite de ${MAX_INTERACTIVE_LIST_ROWS} opções (recebido: ${totalRows})`,
+        );
+      }
+
       action = {
         button: interpolate(
           stringValue(config.buttonText, 'Ver opções'),
           ctx.variables,
         ),
-        sections: config.sections ?? [],
+        sections,
       };
     } else {
       const buttons = (
@@ -357,8 +374,7 @@ export class FlowNodeRunnerService {
           interactive,
         }),
       });
-      const data = (await res.json()) as { messages?: Array<{ id: string }> };
-      const externalId = data.messages?.[0]?.id ?? '';
+      const externalId = await this.extractExternalMessageId(res);
 
       await this.prisma.message.create({
         data: {
@@ -581,8 +597,7 @@ export class FlowNodeRunnerService {
           },
         }),
       });
-      const data = (await res.json()) as { messages?: Array<{ id: string }> };
-      const externalId = data.messages?.[0]?.id ?? '';
+      const externalId = await this.extractExternalMessageId(res);
 
       await this.prisma.message.create({
         data: {
@@ -688,5 +703,49 @@ export class FlowNodeRunnerService {
   private optionalString(value: unknown): string | null {
     const normalized = stringValue(value);
     return normalized ? normalized : null;
+  }
+
+  private countInteractiveListRows(sections: unknown[]): number {
+    return sections.reduce<number>((total, section) => {
+      if (
+        !section ||
+        typeof section !== 'object' ||
+        !Array.isArray((section as { rows?: unknown[] }).rows)
+      ) {
+        return total;
+      }
+
+      return total + (section as { rows: unknown[] }).rows.length;
+    }, 0);
+  }
+
+  private async extractExternalMessageId(res: Response): Promise<string> {
+    let payload: WhatsAppSendResponse | null = null;
+
+    try {
+      payload = (await res.json()) as WhatsAppSendResponse;
+    } catch {
+      throw new Error(`Resposta inválida da Meta (HTTP ${res.status})`);
+    }
+
+    const metaError =
+      payload.error?.error_user_msg?.trim() ||
+      payload.error?.message?.trim() ||
+      '';
+
+    if (!res.ok) {
+      throw new Error(
+        metaError || `Falha ao enviar mensagem para a Meta (HTTP ${res.status})`,
+      );
+    }
+
+    const externalId = payload.messages?.[0]?.id?.trim() ?? '';
+    if (!externalId) {
+      throw new Error(
+        metaError || 'Meta não retornou o ID externo da mensagem enviada',
+      );
+    }
+
+    return externalId;
   }
 }

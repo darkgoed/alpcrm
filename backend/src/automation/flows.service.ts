@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -7,6 +7,8 @@ import {
   CreateFlowNodeDto,
   UpdateFlowDto,
 } from './dto/create-flow.dto';
+
+const MAX_INTERACTIVE_LIST_ROWS = 10;
 
 @Injectable()
 export class FlowsService {
@@ -31,6 +33,7 @@ export class FlowsService {
 
   async create(dto: CreateFlowDto, workspaceId: string) {
     const { nodes = [], edges = [], ...flowData } = dto;
+    this.validateNodes(nodes);
 
     const flow = await this.prisma.flow.create({
       data: { ...flowData, workspaceId },
@@ -56,6 +59,10 @@ export class FlowsService {
   async update(id: string, dto: UpdateFlowDto, workspaceId: string) {
     await this.findOne(id, workspaceId);
     const { nodes, edges = [], ...flowData } = dto;
+
+    if (nodes !== undefined) {
+      this.validateNodes(nodes);
+    }
 
     await this.prisma.flow.update({ where: { id }, data: flowData });
 
@@ -136,6 +143,41 @@ export class FlowsService {
       await this.prisma.flowEdge.create({
         data: { flowId, fromNodeId, toNodeId, label: e.label ?? null },
       });
+    }
+  }
+
+  private validateNodes(nodes: CreateFlowNodeDto[]) {
+    for (const node of nodes) {
+      if (node.type !== 'send_interactive') continue;
+
+      const config =
+        node.config && typeof node.config === 'object' ? node.config : {};
+      const interactiveType =
+        typeof config.interactiveType === 'string'
+          ? config.interactiveType
+          : 'button';
+
+      if (interactiveType !== 'list') continue;
+
+      const sections = Array.isArray(config.sections) ? config.sections : [];
+      const totalRows = sections.reduce((total, section) => {
+        if (
+          !section ||
+          typeof section !== 'object' ||
+          !Array.isArray((section as { rows?: unknown[] }).rows)
+        ) {
+          return total;
+        }
+
+        return total + (section as { rows: unknown[] }).rows.length;
+      }, 0);
+
+      if (totalRows > MAX_INTERACTIVE_LIST_ROWS) {
+        const nodeRef = node.clientId ?? String(node.order);
+        throw new BadRequestException(
+          `O nó ${nodeRef} excede o limite de ${MAX_INTERACTIVE_LIST_ROWS} opções em listas interativas`,
+        );
+      }
     }
   }
 }

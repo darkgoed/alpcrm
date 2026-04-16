@@ -18,6 +18,8 @@ export interface NodeDraft {
   order: number;
 }
 
+const MAX_INTERACTIVE_LIST_ROWS = 10;
+
 const TYPE_LABELS: Record<FlowNodeType, string> = {
   message: 'Mensagem',
   finalize: 'Finalizar',
@@ -75,6 +77,7 @@ function SendInteractiveEditor({
   const sections = (c.sections as Array<{ title: string; rows: Array<{ id: string; title: string }> }>) ?? [
     { title: '', rows: [{ id: 'opt_1', title: '' }] },
   ];
+  const totalRows = sections.reduce((sum, section) => sum + section.rows.length, 0);
 
   function updateButton(i: number, field: 'id' | 'title', value: string) {
     const next = [...buttons];
@@ -99,6 +102,7 @@ function SendInteractiveEditor({
   }
 
   function addRow(si: number) {
+    if (totalRows >= MAX_INTERACTIVE_LIST_ROWS) return;
     const next = sections.map((s, sIdx) =>
       sIdx !== si ? s : { ...s, rows: [...s.rows, { id: `opt_${Date.now()}`, title: '' }] },
     );
@@ -185,6 +189,9 @@ function SendInteractiveEditor({
               placeholder="Ver opções"
             />
           </div>
+          <p className="text-[11px] text-muted-foreground">
+            {totalRows}/{MAX_INTERACTIVE_LIST_ROWS} opções usadas.
+          </p>
           {sections.map((section, si) => (
             <div key={si} className="space-y-2 rounded-lg border border-border/60 p-3">
               <Input
@@ -212,11 +219,20 @@ function SendInteractiveEditor({
                   />
                 </div>
               ))}
-              <button onClick={() => addRow(si)} className="text-xs text-primary hover:underline">
+              <button
+                onClick={() => addRow(si)}
+                className="text-xs text-primary hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground"
+                disabled={totalRows >= MAX_INTERACTIVE_LIST_ROWS}
+              >
                 + Adicionar opção
               </button>
             </div>
           ))}
+          {totalRows >= MAX_INTERACTIVE_LIST_ROWS && (
+            <p className="text-[11px] text-destructive">
+              Listas interativas aceitam no máximo {MAX_INTERACTIVE_LIST_ROWS} opções.
+            </p>
+          )}
         </div>
       )}
     </div>
