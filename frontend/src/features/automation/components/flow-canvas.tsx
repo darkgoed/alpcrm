@@ -784,12 +784,15 @@ function FlowCanvasInner({
         node.type === 'flowNode'
           ? (() => {
               const draftNode = nodeDraftMap.get(node.id);
+              const hasDraftPosition =
+                draftNode &&
+                Number.isFinite(draftNode.positionX) &&
+                Number.isFinite(draftNode.positionY);
               return {
                 ...node,
-                position:
-                  draftNode && Number.isFinite(draftNode.positionX) && Number.isFinite(draftNode.positionY)
-                    ? { x: draftNode.positionX, y: draftNode.positionY }
-                    : node.position,
+                position: hasDraftPosition
+                  ? { x: draftNode.positionX as number, y: draftNode.positionY as number }
+                  : node.position,
                 data: {
                   ...(draftNode ?? node.data),
                   selected: node.id === selectedClientId,
