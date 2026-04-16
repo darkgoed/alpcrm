@@ -11,6 +11,7 @@ import {
   GitBranch,
   LoaderCircle,
   MessageSquarePlus,
+  PencilLine,
   Plus,
   Power,
   Save,
@@ -31,6 +32,7 @@ import { useTeams } from '@/hooks/useTeams';
 import { useAgents } from '@/hooks/useAgents';
 import { FlowNodeEditor, type NodeDraft } from '@/features/automation/components/flow-node-editor';
 import { FlowCanvas, type CanvasEdgeDraft } from '@/features/automation/components/flow-canvas';
+import { FlowJsonDialog } from '@/features/automation/components/flow-json-dialog';
 import { FlowTestRunDialog } from '@/features/automation/components/flow-test-run-dialog';
 import { validateFlow } from '@/features/automation/components/flow-validation';
 import { Badge } from '@/components/ui/badge';
@@ -167,6 +169,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
   const [savedFeedback, setSavedFeedback] = useState(false);
   const [nodeErrors, setNodeErrors] = useState<Record<string, string>>({});
   const [isTestRunOpen, setIsTestRunOpen] = useState(false);
+  const [isJsonOpen, setIsJsonOpen] = useState(false);
 
   const pipelineStages = useMemo(
     () => pipelines.flatMap((p) => p.stages.map((s) => ({ id: s.id, name: s.name, pipelineName: p.name }))),
@@ -235,6 +238,25 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
     setCanvasEdges(edges);
   }, []);
 
+  function applyFlowJson(next: {
+    name: string;
+    triggerType: Flow['triggerType'];
+    triggerValue: string;
+    nodes: NodeDraft[];
+    edges: CanvasEdgeDraft[];
+  }) {
+    setName(next.name);
+    setTriggerType(next.triggerType);
+    setTriggerValue(next.triggerValue);
+    setSelectedTagId(next.triggerType === 'tag_applied' ? next.triggerValue : '');
+    setSelectedStageId(next.triggerType === 'stage_changed' ? next.triggerValue : '');
+    setNodes(next.nodes);
+    setCanvasEdges(next.edges);
+    setSelectedClientId(null);
+    setNodeErrors(validateFlow(next.nodes, next.edges));
+    setCanvasSyncKey((current) => current + 1);
+  }
+
   async function handleSave() {
     if (!name.trim() || saving) return;
 
@@ -246,6 +268,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
     try {
       const triggerVal =
         triggerType === 'keyword' ? triggerValue.trim()
+          : triggerType === 'button_reply' ? triggerValue.trim()
           : triggerType === 'tag_applied' ? selectedTagId || undefined
           : triggerType === 'stage_changed' ? selectedStageId || undefined
           : undefined;
@@ -367,6 +390,14 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
           <Button
             variant="outline"
             size="sm"
+            onClick={() => setIsJsonOpen(true)}
+          >
+            <PencilLine className="size-3.5" />
+            JSON
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => {
               setNodeErrors(validationErrors);
               setIsTestRunOpen(true);
@@ -424,6 +455,24 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
           />
         )}
       </div>
+
+      <FlowJsonDialog
+        open={isJsonOpen}
+        onOpenChange={setIsJsonOpen}
+        value={{
+          name,
+          triggerType,
+          triggerValue:
+            triggerType === 'tag_applied'
+              ? selectedTagId
+              : triggerType === 'stage_changed'
+                ? selectedStageId
+                : triggerValue,
+          nodes,
+          edges: canvasEdges,
+        }}
+        onApply={applyFlowJson}
+      />
 
       <FlowTestRunDialog
         open={isTestRunOpen}
