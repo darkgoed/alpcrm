@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -507,7 +507,7 @@ function toRFNodes(
   return [trigger, ...flowNodes];
 }
 
-function toRFEdges(nodes: NodeDraft[], edges: CanvasEdgeDraft[]): Edge[] {
+function toRFEdges(nodes: NodeDraft[], edges: CanvasEdgeDraft[], showTriggerEdge = true): Edge[] {
   const sortedNodes = sortNodeDrafts(nodes);
   const sortedEdges = sortCanvasEdges(edges, sortedNodes);
   const nodeMap = new Map(sortedNodes.map((node) => [node.clientId, node]));
@@ -524,7 +524,7 @@ function toRFEdges(nodes: NodeDraft[], edges: CanvasEdgeDraft[]): Edge[] {
     labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
   }));
 
-  if (rootNode) {
+  if (rootNode && showTriggerEdge) {
     rfEdges.push({
       id: `__trigger__→${rootNode.clientId}`,
       source: '__trigger__',
@@ -589,6 +589,7 @@ function FlowCanvasInner({
 }: FlowCanvasProps) {
   const initialized = useRef(false);
   const removeEdgeRef = useRef<(edgeId: string) => void>(() => {});
+  const [isTriggerEdgeVisible, setIsTriggerEdgeVisible] = useState(true);
 
   const initialRFNodes = useMemo(
     () => toRFNodes(nodeDrafts, savedEdges, triggerType, triggerValue, selectedClientId),
@@ -596,7 +597,7 @@ function FlowCanvasInner({
     [],
   );
   const initialRFEdges = useMemo(
-    () => toRFEdges(nodeDrafts, savedEdges),
+    () => toRFEdges(nodeDrafts, savedEdges, isTriggerEdgeVisible),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -624,6 +625,9 @@ function FlowCanvasInner({
   }, []);
 
   const removeEdgeById = useCallback((edgeId: string) => {
+    if (edgeId.startsWith('__trigger__→')) {
+      setIsTriggerEdgeVisible(false);
+    }
     setRFEdges((eds) => eds.filter((edge) => edge.id !== edgeId));
   }, [setRFEdges]);
 
@@ -728,14 +732,18 @@ function FlowCanvasInner({
   }, [rfEdges, setRFNodes]);
 
   useEffect(() => {
-    const nextEdges = toRFEdges(nodeDrafts, savedEdges);
+    const nextEdges = toRFEdges(nodeDrafts, savedEdges, isTriggerEdgeVisible);
     const nextSnapshot = serializeEdgeSnapshot(nextEdges);
     if (nextSnapshot === lastSyncedEdgesRef.current) return;
 
     lastSyncedEdgesRef.current = nextSnapshot;
     setRFEdges(nextEdges);
     setRFNodes((currentNodes) => applyAutoLayout(currentNodes, nextEdges));
-  }, [nodeDrafts, savedEdges, setRFEdges, setRFNodes, syncKey, applyAutoLayout]);
+  }, [nodeDrafts, savedEdges, setRFEdges, setRFNodes, syncKey, applyAutoLayout, isTriggerEdgeVisible]);
+
+  useEffect(() => {
+    setIsTriggerEdgeVisible(true);
+  }, [syncKey]);
 
   // Emit edges to parent whenever they change (skip trigger-to-first edge)
   useEffect(() => {
@@ -757,6 +765,7 @@ function FlowCanvasInner({
   const onConnect = useCallback(
     (params: Connection) => {
       if (params.source === '__trigger__' && params.target) {
+        setIsTriggerEdgeVisible(true);
         const rootTargetId = params.target;
         onNodesChange(
           sortNodeDrafts(nodeDrafts)
