@@ -8,12 +8,23 @@ export function validateFlow(
   const errors: Record<string, string> = {};
   if (nodes.length === 0) return errors;
 
-  const connectedTargets = new Set(edges.map((edge) => edge.toClientId));
+  const incomingCount = new Map(nodes.map((node) => [node.clientId, 0]));
+
+  edges.forEach((edge) => {
+    incomingCount.set(edge.toClientId, (incomingCount.get(edge.toClientId) ?? 0) + 1);
+  });
+
+  const rootNode = [...nodes]
+    .filter((node) => (incomingCount.get(node.clientId) ?? 0) === 0)
+    .sort((left, right) => left.order - right.order)[0] ?? null;
 
   for (const node of nodes) {
     const config = node.config ?? {};
 
-    if (nodes.length > 1 && !connectedTargets.has(node.clientId)) {
+    const hasIncoming = (incomingCount.get(node.clientId) ?? 0) > 0;
+    const isTriggerRoot = rootNode?.clientId === node.clientId;
+
+    if (nodes.length > 1 && !hasIncoming && !isTriggerRoot) {
       errors[node.clientId] = 'Nó sem conexão de entrada';
       continue;
     }

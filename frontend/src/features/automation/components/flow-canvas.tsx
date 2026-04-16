@@ -525,20 +525,6 @@ function toRFEdges(nodes: NodeDraft[], edges: CanvasEdgeDraft[]): Edge[] {
         style: { stroke: '#6b7280', strokeDasharray: '5 3' },
       });
     }
-  } else if (rfEdges.length > 0 && sortedNodes.length > 0) {
-    // Always ensure trigger connects to the first node that has no incoming edge
-    const hasIncoming = new Set(rfEdges.map((e) => e.target));
-    const firstWithoutIncoming = sortedNodes.find((n) => !hasIncoming.has(n.clientId));
-    if (firstWithoutIncoming) {
-      rfEdges.unshift({
-        id: `__trigger__→${firstWithoutIncoming.clientId}`,
-        source: '__trigger__',
-        target: firstWithoutIncoming.clientId,
-        sourceHandle: 'out',
-        markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: '#6b7280', strokeDasharray: '5 3' },
-      });
-    }
   }
 
   return rfEdges;
