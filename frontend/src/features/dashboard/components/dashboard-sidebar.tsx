@@ -1,6 +1,6 @@
 'use client';
 
-import { useDeferredValue, useEffect, useState } from 'react';
+import { useDeferredValue, useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -232,6 +232,21 @@ const navItems: NavItem[] = [
   { href: '/settings', label: 'Configurações', icon: Settings },
 ];
 
+function shouldForceSidebarReload(pathname: string, href: string) {
+  const isFlowEditorRoute = /^\/automation\/[^/]+/.test(pathname);
+  return isFlowEditorRoute && href !== '/automation';
+}
+
+function handleSidebarNavigation(
+  event: ReactMouseEvent<HTMLAnchorElement>,
+  pathname: string,
+  href: string,
+) {
+  if (!shouldForceSidebarReload(pathname, href)) return;
+  event.preventDefault();
+  window.location.assign(href);
+}
+
 export function NavRail() {
   const pathname = usePathname();
   const { logout } = useAuth();
@@ -254,6 +269,8 @@ export function NavRail() {
               <TooltipTrigger asChild>
                 <Link
                   href={href}
+                  prefetch={false}
+                  onClick={(event) => handleSidebarNavigation(event, pathname, href)}
                   className={cn(
                     'flex size-10 items-center justify-center rounded-xl transition-colors',
                     active
