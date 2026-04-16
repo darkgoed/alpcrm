@@ -261,7 +261,7 @@ Meta: corrigir riscos de acesso indevido, configuração insegura e entrada fals
 - [x] Exigir permissão explícita para iniciar conversa outbound
 - [x] Exigir permissão explícita para notas internas
 - [x] Exigir permissão explícita para ler usuários, roles e times
-- [ ] Revalidar autorização no service layer, não só no controller <!-- parcial: conversas sensíveis e envio já revalidam permissão no service; falta expandir para leitura e demais superfícies -->
+- [x] Revalidar autorização no service layer, não só no controller
 
 ### 4.4 — Segurança de websocket
 
@@ -400,12 +400,12 @@ Meta: preparar o produto para operação maior, integrações e diferenciação 
 
 ### 7.1 — Auditoria real
 
-- [ ] Implementar gravação de audit logs
-- [ ] Auditar login
-- [ ] Auditar alterações de usuários/roles/times
-- [ ] Auditar configurações
-- [ ] Auditar templates
-- [ ] Auditar mudança de conversa
+- [x] Implementar gravação de audit logs
+- [x] Auditar login
+- [x] Auditar alterações de usuários/roles/times
+- [x] Auditar configurações
+- [x] Auditar templates
+- [x] Auditar mudança de conversa
 
 ### 7.2 — Segurança corporativa
 

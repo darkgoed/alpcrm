@@ -22,6 +22,7 @@ export class ConversationsService {
     private eventsGateway: EventsGateway,
     @Inject(forwardRef(() => WhatsappService))
     private whatsappService: WhatsappService,
+    private audit: AuditService,
   ) {}
 
   // ─── Listar conversas do workspace ──────────────────────────────────────────
@@ -97,25 +98,35 @@ export class ConversationsService {
     workspaceId: string,
     dto: AssignConversationDto,
     permissions: string[] = [],
+    actorId?: string,
   ) {
     this.assertPermission(['assign_conversation'], permissions);
     await this.assertExists(id, workspaceId);
-    return this.prisma.conversation.update({
+    const result = await this.prisma.conversation.update({
       where: { id },
       data: {
         assignedUserId: dto.userId ?? null,
         teamId: dto.teamId ?? null,
       },
     });
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'assign',
+      entity: 'conversation',
+      entityId: id,
+      metadata: { assignedUserId: dto.userId ?? null, teamId: dto.teamId ?? null },
+    });
+    return result;
   }
 
   // ─── Fechar conversa ────────────────────────────────────────────────────────
 
-  async close(id: string, workspaceId: string, permissions: string[] = []) {
+  async close(id: string, workspaceId: string, permissions: string[] = [], actorId?: string) {
     this.assertPermission(['close_conversation'], permissions);
     const conversation = await this.assertExists(id, workspaceId);
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const closedConversation = await tx.conversation.update({
         where: { id },
         data: { status: 'closed', isBotActive: false },
@@ -132,17 +143,35 @@ export class ConversationsService {
 
       return closedConversation;
     });
+
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'close',
+      entity: 'conversation',
+      entityId: id,
+    });
+
+    return result;
   }
 
   // ─── Reabrir conversa ───────────────────────────────────────────────────────
 
-  async reopen(id: string, workspaceId: string, permissions: string[] = []) {
+  async reopen(id: string, workspaceId: string, permissions: string[] = [], actorId?: string) {
     this.assertPermission(['close_conversation'], permissions);
     await this.assertExists(id, workspaceId);
-    return this.prisma.conversation.update({
+    const result = await this.prisma.conversation.update({
       where: { id },
       data: { status: 'open', isBotActive: true },
     });
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'reopen',
+      entity: 'conversation',
+      entityId: id,
+    });
+    return result;
   }
 
   async remove(id: string, workspaceId: string, permissions: string[] = []) {

@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface AuditLogInput {
@@ -25,7 +26,7 @@ export class AuditService {
           action: input.action,
           entity: input.entity,
           entityId: input.entityId,
-          metadata: input.metadata ?? {},
+          metadata: (input.metadata ?? {}) as Prisma.InputJsonValue,
         },
       })
       .catch((err: unknown) => {

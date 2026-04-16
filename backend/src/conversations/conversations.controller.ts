@@ -61,6 +61,7 @@ export class ConversationsController {
       user.workspaceId,
       dto,
       user.permissions,
+      user.userId,
     );
   }
 
@@ -71,6 +72,7 @@ export class ConversationsController {
       id,
       user.workspaceId,
       user.permissions,
+      user.userId,
     );
   }
 
@@ -81,6 +83,7 @@ export class ConversationsController {
       id,
       user.workspaceId,
       user.permissions,
+      user.userId,
     );
   }
 

@@ -17,6 +17,8 @@ import {
 import type { Express } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { ContactsService } from './contacts.service';
@@ -30,7 +32,7 @@ import {
   SetOptInDto,
 } from './dto/contact.dto';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('contacts')
 export class ContactsController {
   constructor(private contactsService: ContactsService) {}
@@ -70,6 +72,7 @@ export class ContactsController {
   }
 
   @Post()
+  @RequirePermissions('manage_contacts')
   create(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateContactDto,
@@ -78,6 +81,7 @@ export class ContactsController {
   }
 
   @Patch(':id')
+  @RequirePermissions('manage_contacts')
   update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
@@ -88,11 +92,13 @@ export class ContactsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermissions('manage_contacts')
   remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.contactsService.remove(user.workspaceId, id);
   }
 
   @Post(':id/merge')
+  @RequirePermissions('manage_contacts')
   merge(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
@@ -108,6 +114,7 @@ export class ContactsController {
   // ─── Importação CSV ───────────────────────────────────────────────────────────
 
   @Post('import/preview')
+  @RequirePermissions('manage_contacts')
   @UseInterceptors(FileInterceptor('file'))
   async importPreview(
     @CurrentUser() user: AuthenticatedUser,
@@ -118,6 +125,7 @@ export class ContactsController {
   }
 
   @Post('import/confirm')
+  @RequirePermissions('manage_contacts')
   async importConfirm(
     @CurrentUser() user: AuthenticatedUser,
     @Body()
@@ -155,6 +163,7 @@ export class ContactsController {
   }
 
   @Post('/tags/create')
+  @RequirePermissions('manage_contacts')
   createTag(
     @CurrentUser() user: AuthenticatedUser,
     @Body('name') name: string,
@@ -165,6 +174,7 @@ export class ContactsController {
 
   @Delete('/tags/:tagId/delete')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermissions('manage_contacts')
   deleteTag(
     @CurrentUser() user: AuthenticatedUser,
     @Param('tagId') tagId: string,
@@ -195,6 +205,7 @@ export class ContactsController {
   }
 
   @Post('/bulk/actions')
+  @RequirePermissions('manage_contacts')
   bulkActions(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: BulkContactActionDto,
@@ -224,6 +235,7 @@ export class ContactsController {
   }
 
   @Patch(':id/opt-in')
+  @RequirePermissions('manage_contacts')
   setOptIn(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
