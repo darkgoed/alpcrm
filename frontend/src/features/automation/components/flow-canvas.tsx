@@ -20,7 +20,8 @@ import {
   MarkerType,
   Panel,
   BaseEdge,
-  getBezierPath,
+  EdgeLabelRenderer,
+  getSmoothStepPath,
   type EdgeProps,
   useReactFlow,
   type Viewport,
@@ -30,6 +31,7 @@ import Dagre from '@dagrejs/dagre';
 import { Bot, Clock3, GitBranch, MessageSquarePlus, Power, Tag, Webhook, Workflow, Send } from 'lucide-react';
 import { type FlowNodeType } from '@/hooks/useAutomation';
 import { type NodeDraft } from './flow-node-editor';
+import { FlowCanvasControls, MINIMAP_NODE_COLOR } from './flow-canvas-controls';
 import { cn } from '@/lib/utils';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -349,25 +351,40 @@ function RemovableEdge({
   markerEnd,
   style,
   label,
-  labelStyle,
 }: EdgeProps<Edge<RemovableEdgeData>>) {
-  const [edgePath] = getBezierPath({
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
     targetX,
     targetY,
     sourcePosition,
     targetPosition,
+    borderRadius: 12,
   });
 
+  const labelText = typeof label === 'string' && label ? label : null;
+  const isYes = labelText === 'yes';
+  const isNo = labelText === 'no';
+
   return (
-    <BaseEdge
-      path={edgePath}
-      markerEnd={markerEnd}
-      style={style}
-      label={typeof label === 'string' ? label : undefined}
-      labelStyle={labelStyle}
-    />
+    <>
+      <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
+      {labelText && (
+        <EdgeLabelRenderer>
+          <div
+            style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
+            className={cn(
+              'pointer-events-none absolute rounded-full border px-2 py-0.5 text-[10px] font-medium shadow-sm',
+              isYes && 'border-emerald-300 bg-emerald-50 text-emerald-700',
+              isNo && 'border-rose-300 bg-rose-50 text-rose-700',
+              !isYes && !isNo && 'border-border bg-white text-muted-foreground',
+            )}
+          >
+            {isYes ? 'Sim' : isNo ? 'Não' : labelText}
+          </div>
+        </EdgeLabelRenderer>
+      )}
+    </>
   );
 }
 
@@ -1002,6 +1019,40 @@ function FlowCanvasInner({
     onNodeSelect(null);
   }, [onNodeSelect]);
 
+  const handleAutoOrganize = useCallback(() => {
+    const layouted = getLayoutedElements(rfNodes, rfEdges);
+    setRFNodes(layouted);
+    syncNodePositions(layouted);
+    requestAnimationFrame(() => {
+      reactFlow.fitView({ padding: 0.3, duration: 400 });
+    });
+  }, [rfEdges, rfNodes, reactFlow, setRFNodes, syncNodePositions]);
+
+  const handleCenter = useCallback(() => {
+    reactFlow.fitView({ padding: 0.3, duration: 400 });
+  }, [reactFlow]);
+
+  const handleJumpToError = useCallback(() => {
+    const firstErrorId = nodeErrors ? Object.keys(nodeErrors)[0] : undefined;
+    if (!firstErrorId) return;
+    const target = rfNodes.find((node) => node.id === firstErrorId);
+    if (!target) return;
+    reactFlow.setCenter(
+      target.position.x + NODE_W / 2,
+      target.position.y + NODE_H / 2,
+      { zoom: 1.1, duration: 400 },
+    );
+    onNodeSelect(firstErrorId);
+  }, [nodeErrors, onNodeSelect, reactFlow, rfNodes]);
+
+  const minimapNodeColor = useCallback((node: Node) => {
+    if (node.type === 'triggerNode') return '#3b82f6';
+    const data = node.data as FlowNodeData;
+    return MINIMAP_NODE_COLOR[data.type] ?? '#94a3b8';
+  }, []);
+
+  const errorCount = nodeErrors ? Object.keys(nodeErrors).length : 0;
+
   return (
     <ReactFlow
       nodes={rfNodes}
@@ -1025,12 +1076,22 @@ function FlowCanvasInner({
       className="bg-[radial-gradient(circle,_#e2e8f0_1px,_transparent_1px)] bg-[length:24px_24px]"
     >
       <Background gap={24} size={1} color="#e2e8f0" />
-      <Controls />
-      <MiniMap nodeStrokeWidth={3} zoomable pannable />
-      <Panel position="bottom-center">
-        <p className="rounded-full border border-border/50 bg-white/80 px-3 py-1 text-[10px] text-muted-foreground backdrop-blur">
-          Clique num nó para editar · Arraste handles para conectar · Duplo clique na conexão para remover
-        </p>
+      <Controls showInteractive={false} />
+      <MiniMap
+        nodeStrokeWidth={3}
+        nodeColor={minimapNodeColor}
+        nodeBorderRadius={6}
+        maskColor="rgba(15, 23, 42, 0.06)"
+        zoomable
+        pannable
+      />
+      <Panel position="top-right">
+        <FlowCanvasControls
+          errorCount={errorCount}
+          onAutoOrganize={handleAutoOrganize}
+          onCenter={handleCenter}
+          onJumpToError={handleJumpToError}
+        />
       </Panel>
     </ReactFlow>
   );

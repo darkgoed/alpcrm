@@ -8,5 +8,9 @@ export default function DashboardHome() {
   const { conversations } = useConversations();
   const { flows } = useFlows();
 
-  return <DashboardOverview conversations={conversations} flows={flows} />;
+  return (
+    <div className="h-full overflow-y-auto">
+      <DashboardOverview conversations={conversations} flows={flows} />
+    </div>
+  );
 }

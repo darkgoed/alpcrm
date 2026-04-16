@@ -158,7 +158,8 @@ export default function AutomationPage() {
   }
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-7xl flex-col gap-6 px-4 py-6 lg:px-8">
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 lg:px-8">
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <Card className="border-none bg-[linear-gradient(135deg,#0f172a_0%,#0f766e_60%,#22c55e_100%)] text-white shadow-[0_24px_70px_-32px_rgba(15,118,110,0.45)]">
           <CardHeader className="space-y-4">
@@ -328,7 +329,8 @@ export default function AutomationPage() {
         )}
       </div>
 
-      <CreateFlowDialog open={createOpen} onOpenChange={setCreateOpen} />
+        <CreateFlowDialog open={createOpen} onOpenChange={setCreateOpen} />
+      </div>
     </div>
   );
 }
