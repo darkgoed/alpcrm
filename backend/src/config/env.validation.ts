@@ -20,6 +20,10 @@ export function validateEnv(
     );
   }
 
+  if (nodeEnv === 'production' && !config['CRYPTO_KEY']) {
+    throw new Error('CRYPTO_KEY is required in production');
+  }
+
   return config;
 }
 

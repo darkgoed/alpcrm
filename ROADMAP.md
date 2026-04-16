@@ -274,7 +274,7 @@ Meta: corrigir riscos de acesso indevido, configuração insegura e entrada fals
 
 - [x] Nunca expor token da Meta no frontend
 - [x] Mover "testar conexão WhatsApp" para endpoint backend
-- [ ] Definir política de criptografia para tokens armazenados
+- [x] Definir política de criptografia para tokens armazenados
 - [ ] Adicionar rotação de credenciais de conta WhatsApp
 
 Critério de saída da fase:
