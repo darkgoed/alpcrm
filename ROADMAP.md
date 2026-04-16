@@ -373,9 +373,9 @@ Meta: operar incidentes e evoluir o produto com segurança.
 - [x] Unit tests para `ConversationsService`
 - [x] Unit tests para `FlowExecutorService`
 - [x] Tests de permissão e isolamento de workspace
-- [ ] E2E de webhook
-- [ ] E2E de outbound text/template/media
-- [ ] E2E de follow-up/auto-close
+- [x] E2E de webhook
+- [x] E2E de outbound text/template/media
+- [x] E2E de follow-up/auto-close
 
 ### 6.5 — CI/CD
 
