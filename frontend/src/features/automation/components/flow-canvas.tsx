@@ -437,6 +437,26 @@ function sortCanvasEdges(edges: CanvasEdgeDraft[], nodes: NodeDraft[]): CanvasEd
   });
 }
 
+function resolveRootNode(nodes: NodeDraft[], edges: CanvasEdgeDraft[]): NodeDraft | null {
+  if (nodes.length === 0) return null;
+
+  const incomingCount = new Map(nodes.map((node) => [node.clientId, 0]));
+
+  edges.forEach((edge) => {
+    incomingCount.set(edge.toClientId, (incomingCount.get(edge.toClientId) ?? 0) + 1);
+  });
+
+  return [...nodes]
+    .filter((node) => (incomingCount.get(node.clientId) ?? 0) === 0)
+    .sort((left, right) => {
+      if (left.order !== right.order) return left.order - right.order;
+      return left.clientId.localeCompare(right.clientId);
+    })[0] ?? [...nodes].sort((left, right) => {
+      if (left.order !== right.order) return left.order - right.order;
+      return left.clientId.localeCompare(right.clientId);
+    })[0] ?? null;
+}
+
 function withDefaultEdgeProps(
   edge: Edge,
   onRemove: (edgeId: string) => void,
@@ -491,6 +511,7 @@ function toRFEdges(nodes: NodeDraft[], edges: CanvasEdgeDraft[]): Edge[] {
   const sortedNodes = sortNodeDrafts(nodes);
   const sortedEdges = sortCanvasEdges(edges, sortedNodes);
   const nodeMap = new Map(sortedNodes.map((node) => [node.clientId, node]));
+  const rootNode = resolveRootNode(sortedNodes, sortedEdges);
   const rfEdges: Edge[] = sortedEdges.map((e) => ({
     id: `${e.fromClientId}→${e.toClientId}→${e.label ?? 'out'}`,
     source: e.fromClientId,
@@ -503,17 +524,19 @@ function toRFEdges(nodes: NodeDraft[], edges: CanvasEdgeDraft[]): Edge[] {
     labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
   }));
 
-  // If no edges saved yet, create linear chain from order
-  if (rfEdges.length === 0 && sortedNodes.length > 0) {
-    // trigger → first node
+  if (rootNode) {
     rfEdges.push({
-        id: `__trigger__→${sortedNodes[0].clientId}`,
-        source: '__trigger__',
-        target: sortedNodes[0].clientId,
+      id: `__trigger__→${rootNode.clientId}`,
+      source: '__trigger__',
+      target: rootNode.clientId,
       sourceHandle: 'out',
       markerEnd: { type: MarkerType.ArrowClosed },
       style: { stroke: '#6b7280', strokeDasharray: '5 3' },
     });
+  }
+
+  // If no edges saved yet, create linear chain from order
+  if (sortedEdges.length === 0 && sortedNodes.length > 0) {
     // node → node
     for (let i = 0; i < sortedNodes.length - 1; i++) {
       rfEdges.push({
@@ -733,6 +756,23 @@ function FlowCanvasInner({
 
   const onConnect = useCallback(
     (params: Connection) => {
+      if (params.source === '__trigger__' && params.target) {
+        const rootTargetId = params.target;
+        onNodesChange(
+          sortNodeDrafts(nodeDrafts)
+            .sort((left, right) => {
+              if (left.clientId === rootTargetId) return -1;
+              if (right.clientId === rootTargetId) return 1;
+              return 0;
+            })
+            .map((node, index) => ({
+              ...node,
+              order: index,
+            })),
+        );
+        return;
+      }
+
       let label =
         params.sourceHandle === 'yes' ? 'yes'
           : params.sourceHandle === 'no' ? 'no'
@@ -765,7 +805,7 @@ function FlowCanvasInner({
         );
       });
     },
-    [rfNodes, setRFEdges],
+    [nodeDrafts, onNodesChange, rfNodes, setRFEdges],
   );
 
   const onEdgeDoubleClick = useCallback(
