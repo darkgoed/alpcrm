@@ -3,3 +3,7 @@ fazer o contato no pipelines crm kanban ser possivel "arrastar" podendo transita
 
 Dashboard/Visão geral:
 Aprimorar visualização e permitir scroll, tem itens saindo da tela/viewport
+
+Equipe/Time:
+
+Botão de criação de equipes funcionar

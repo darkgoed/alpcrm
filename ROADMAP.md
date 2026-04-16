@@ -411,19 +411,23 @@ Meta: preparar o produto para operação maior, integrações e diferenciação 
 
 - [ ] Política de senha
 - [ ] Forçar troca de senha no primeiro login de verdade
-- [ ] Recuperação de senha
+- [ ] Recuperação de senha por SMPT 
 - [ ] Sessões ativas por usuário
 - [ ] Revogação de sessões
 - [ ] 2FA opcional
+  
+### 7.2.1 — SMTP Email
+
+- [ ] Cadastrar SMTP para workspace
+- [ ] 
+ 
 
 ### 7.3 — API e integrações
 
 - [ ] API keys por workspace
-- [ ] Webhooks outbound para clientes
 - [ ] Event delivery com retry
 - [ ] Assinatura de webhook do cliente
 - [ ] Histórico/replay de eventos
-- [ ] Integração com Zapier/n8n
 
 ### 7.4 — Escala técnica
 
