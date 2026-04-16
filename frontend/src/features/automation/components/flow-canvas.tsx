@@ -20,7 +20,6 @@ import {
   MarkerType,
   Panel,
   BaseEdge,
-  EdgeLabelRenderer,
   getBezierPath,
   type EdgeProps,
   useReactFlow,
@@ -341,7 +340,6 @@ const nodeTypes = {
 };
 
 function RemovableEdge({
-  id,
   sourceX,
   sourceY,
   targetX,
@@ -352,9 +350,8 @@ function RemovableEdge({
   style,
   label,
   labelStyle,
-  data,
 }: EdgeProps<Edge<RemovableEdgeData>>) {
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const [edgePath] = getBezierPath({
     sourceX,
     sourceY,
     targetX,
@@ -363,37 +360,14 @@ function RemovableEdge({
     targetPosition,
   });
 
-  const removeEdge = (event: MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    data?.onRemove?.(id);
-  };
-
   return (
-    <>
-      <BaseEdge
-        path={edgePath}
-        markerEnd={markerEnd}
-        style={style}
-        label={typeof label === 'string' ? label : undefined}
-        labelStyle={labelStyle}
-      />
-      <EdgeLabelRenderer>
-        <button
-          type="button"
-          onClick={removeEdge}
-          className="absolute flex size-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-red-200 bg-red-500 text-[10px] font-bold text-white shadow-sm transition hover:bg-red-600"
-          style={{
-            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-            pointerEvents: 'all',
-          }}
-          aria-label="Remover conexão"
-          title="Remover conexão"
-        >
-          ×
-        </button>
-      </EdgeLabelRenderer>
-    </>
+    <BaseEdge
+      path={edgePath}
+      markerEnd={markerEnd}
+      style={style}
+      label={typeof label === 'string' ? label : undefined}
+      labelStyle={labelStyle}
+    />
   );
 }
 
@@ -697,14 +671,6 @@ function hasSavedNodePositions(nodes: NodeDraft[]) {
   return nodes.every((node) => Number.isFinite(node.positionX) && Number.isFinite(node.positionY));
 }
 
-function normalizeViewport(viewport?: Viewport): Viewport | undefined {
-  if (!viewport) return undefined;
-  if (!Number.isFinite(viewport.x) || !Number.isFinite(viewport.y) || !Number.isFinite(viewport.zoom)) {
-    return undefined;
-  }
-  return viewport;
-}
-
 // ─── Main canvas ───────────────────────────────────────────────────────────────
 
 function FlowCanvasInner({
@@ -726,10 +692,6 @@ function FlowCanvasInner({
   const removeEdgeRef = useRef<(edgeId: string) => void>(() => {});
   const [isTriggerEdgeVisible, setIsTriggerEdgeVisible] = useState(() => savedEdges.length > 0);
   const hasPersistedPositions = useMemo(() => hasSavedNodePositions(nodeDrafts), [nodeDrafts]);
-  const initialViewport = useMemo(
-    () => normalizeViewport(viewport) ?? { x: 0, y: 0, zoom: 1 },
-    [viewport],
-  );
 
   const initialRFNodes = useMemo(
     () => toRFNodes(nodeDrafts, savedEdges, triggerType, triggerValue, selectedClientId),
@@ -885,12 +847,6 @@ function FlowCanvasInner({
   useEffect(() => {
     setIsTriggerEdgeVisible(savedEdges.length > 0);
   }, [savedEdges.length, syncKey]);
-
-  useEffect(() => {
-    const nextViewport = normalizeViewport(viewport);
-    if (!nextViewport) return;
-    reactFlow.setViewport(nextViewport, { duration: 0 });
-  }, [reactFlow, syncKey, viewport]);
 
   // Emit edges to parent whenever they change (skip trigger-to-first edge)
   useEffect(() => {
@@ -1060,9 +1016,10 @@ function FlowCanvasInner({
       onMoveEnd={syncViewport}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
-      fitView={!normalizeViewport(viewport)}
-      defaultViewport={initialViewport}
+      fitView
       fitViewOptions={{ padding: 0.3 }}
+      snapToGrid
+      snapGrid={[20, 20]}
       nodesDraggable
       deleteKeyCode={null}
       className="bg-[radial-gradient(circle,_#e2e8f0_1px,_transparent_1px)] bg-[length:24px_24px]"
@@ -1072,7 +1029,7 @@ function FlowCanvasInner({
       <MiniMap nodeStrokeWidth={3} zoomable pannable />
       <Panel position="bottom-center">
         <p className="rounded-full border border-border/50 bg-white/80 px-3 py-1 text-[10px] text-muted-foreground backdrop-blur">
-          Clique num nó para editar · Arraste handles para conectar · Duplo clique ou X vermelho para remover ligação
+          Clique num nó para editar · Arraste handles para conectar · Duplo clique na conexão para remover
         </p>
       </Panel>
     </ReactFlow>
