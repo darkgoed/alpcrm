@@ -693,7 +693,8 @@ function serializeEdgeSnapshot(edges: Array<Pick<Edge, 'source' | 'target' | 'so
 }
 
 function hasSavedNodePositions(nodes: NodeDraft[]) {
-  return nodes.some((node) => Number.isFinite(node.positionX) && Number.isFinite(node.positionY));
+  if (nodes.length === 0) return false;
+  return nodes.every((node) => Number.isFinite(node.positionX) && Number.isFinite(node.positionY));
 }
 
 function normalizeViewport(viewport?: Viewport): Viewport | undefined {
@@ -781,15 +782,22 @@ function FlowCanvasInner({
       let next = cur.filter((n) => n.type !== 'flowNode' || draftIds.has(n.id));
       next = next.map((node) =>
         node.type === 'flowNode'
-          ? {
-              ...node,
-              data: {
-                ...(nodeDraftMap.get(node.id) ?? node.data),
+          ? (() => {
+              const draftNode = nodeDraftMap.get(node.id);
+              return {
+                ...node,
+                position:
+                  draftNode && Number.isFinite(draftNode.positionX) && Number.isFinite(draftNode.positionY)
+                    ? { x: draftNode.positionX, y: draftNode.positionY }
+                    : node.position,
+                data: {
+                  ...(draftNode ?? node.data),
+                  selected: node.id === selectedClientId,
+                  incomingLabels: (node.data as FlowNodeData).incomingLabels ?? [],
+                } as FlowNodeData,
                 selected: node.id === selectedClientId,
-                incomingLabels: (node.data as FlowNodeData).incomingLabels ?? [],
-              } as FlowNodeData,
-              selected: node.id === selectedClientId,
-            }
+              };
+            })()
           : node,
       );
       // Add new
