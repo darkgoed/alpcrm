@@ -24,11 +24,13 @@ import { TemplatesModule } from './templates/templates.module';
 import { QuickRepliesModule } from './quick-replies/quick-replies.module';
 import { InteractiveTemplatesModule } from './interactive-templates/interactive-templates.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     PrismaModule,
+    AuditModule,
     AuthModule,
     UsersModule,
     RolesModule,
