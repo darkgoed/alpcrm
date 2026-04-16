@@ -227,7 +227,29 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
 
   function addNode(type: FlowNodeType) {
     const clientId = `draft-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    setNodes((cur) => [...cur, { clientId, type, config: defaultConfig(type), order: cur.length }]);
+    setNodes((cur) => {
+      const positionedNodes = cur.filter(
+        (node) => Number.isFinite(node.positionX) && Number.isFinite(node.positionY),
+      );
+      const referenceX = positionedNodes.length > 0
+        ? Math.min(...positionedNodes.map((node) => node.positionX as number))
+        : 100;
+      const nextY = positionedNodes.length > 0
+        ? Math.max(...positionedNodes.map((node) => node.positionY as number)) + 140
+        : 120;
+
+      return [
+        ...cur,
+        {
+          clientId,
+          type,
+          config: defaultConfig(type),
+          order: cur.length,
+          positionX: referenceX,
+          positionY: nextY,
+        },
+      ];
+    });
   }
 
   function removeNode(clientId: string) {
@@ -451,6 +473,7 @@ export default function AutomationCanvasPage({ params }: { params: Promise<{ id:
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="min-h-0 flex-1">
           <FlowCanvas
+            key={canvasSyncKey}
             nodes={nodes}
             edges={canvasEdges}
             syncKey={canvasSyncKey}

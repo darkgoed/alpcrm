@@ -751,18 +751,7 @@ function FlowCanvasInner({
   const [rfNodes, setRFNodes, onRFNodesChange] = useNodesState(layouted.nodes);
   const [rfEdges, setRFEdges, onRFEdgesChange] = useEdgesState(layouted.edges);
   const lastSyncedEdgesRef = useRef(serializeEdgeSnapshot(layouted.edges));
-
-  const applyAutoLayout = useCallback((nextNodes: Node[], nextEdges: Edge[]) => {
-    const sortedNodes = [...nextNodes].sort((a, b) => {
-      if (a.id === '__trigger__') return -1;
-      if (b.id === '__trigger__') return 1;
-      const aOrder = a.type === 'flowNode' ? (a.data as FlowNodeData).order : -1;
-      const bOrder = b.type === 'flowNode' ? (b.data as FlowNodeData).order : -1;
-      if (aOrder !== bOrder) return aOrder - bOrder;
-      return a.id.localeCompare(b.id);
-    });
-    return getLayoutedElements(sortedNodes, nextEdges);
-  }, []);
+  const initialLayoutSyncRef = useRef<number | null>(null);
 
   const removeEdgeById = useCallback((edgeId: string) => {
     if (edgeId.startsWith('__trigger__→')) {
@@ -823,10 +812,10 @@ function FlowCanvasInner({
             },
           ];
         });
-      return hasPersistedPositions ? next : applyAutoLayout(next, rfEdges);
+      return next;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodeDrafts, selectedClientId, applyAutoLayout, rfEdges, hasPersistedPositions]);
+  }, [nodeDrafts, selectedClientId]);
 
   // Sync selected state into rfNodes
   useEffect(() => {
@@ -891,8 +880,8 @@ function FlowCanvasInner({
 
     lastSyncedEdgesRef.current = nextSnapshot;
     setRFEdges(nextEdges);
-    setRFNodes((currentNodes) => (hasPersistedPositions ? currentNodes : applyAutoLayout(currentNodes, nextEdges)));
-  }, [nodeDrafts, savedEdges, setRFEdges, setRFNodes, syncKey, applyAutoLayout, isTriggerEdgeVisible, hasPersistedPositions]);
+    setRFNodes((currentNodes) => currentNodes);
+  }, [nodeDrafts, savedEdges, setRFEdges, setRFNodes, isTriggerEdgeVisible]);
 
   useEffect(() => {
     setIsTriggerEdgeVisible(true);
@@ -936,6 +925,18 @@ function FlowCanvasInner({
       })),
     );
   }, [nodeDrafts, onNodesChange]);
+
+  useEffect(() => {
+    initialLayoutSyncRef.current = null;
+  }, [syncKey]);
+
+  useEffect(() => {
+    if (hasPersistedPositions) return;
+    if (initialLayoutSyncRef.current === syncKey) return;
+
+    initialLayoutSyncRef.current = syncKey;
+    syncNodePositions(rfNodes);
+  }, [hasPersistedPositions, rfNodes, syncKey, syncNodePositions]);
 
   const handleRFNodesChange = useCallback((changes: NodeChange<Node>[]) => {
     onRFNodesChange(changes);
