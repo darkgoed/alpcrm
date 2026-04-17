@@ -1,11 +1,14 @@
 Pipelines(kanban):
 fazer o contato no pipelines crm kanban ser possivel "arrastar" podendo transitar stage<->stage
 somente quem tem "role" permitida, pode adicionar stage e pipeline
+ter como excluir e editar stage e pipeline
 
 Dashboard/Visão geral:
-Aprimorar visualização e permitir scroll, tem itens saindo da tela/viewport
+Somente quem tem "role" permitida, pode visualizar o visão geral
+Deve ter mais graficos, mais dados, pois visão geral é para administração e analisadores
+Ideias se possivel: (ter uma visualização de quanto foi gasto pela API)
+Não ter nada sobre "abrir/ver inbox"
 
-Contatos:
 
 Config/(Equipe/Time):
 Botão de criação de equipes funcionar
