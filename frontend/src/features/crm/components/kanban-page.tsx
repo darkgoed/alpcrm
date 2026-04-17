@@ -502,15 +502,41 @@ export function KanbanPage() {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
-      <div className="border-b border-border/70 px-6 py-4 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Layers className="size-5 text-primary" />
-          <div>
-            <h1 className="text-base font-semibold text-foreground">Pipelines CRM</h1>
-            <p className="text-xs text-muted-foreground">Arraste cards entre colunas ou use o menu de movimento.</p>
+      <div className="border-b border-border/70 px-6 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <Layers className="mt-0.5 size-5 text-primary" />
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-base font-semibold text-foreground">Pipelines CRM</h1>
+                <Badge variant={canManagePipelines ? 'success' : 'secondary'} className="text-[11px]">
+                  {canManagePipelines ? 'Governanca ativa' : 'Estrutura protegida'}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {canManagePipelines
+                  ? 'Arraste cards entre colunas e mantenha a estrutura comercial sob controle.'
+                  : 'Acompanhe o funil e mova contatos; a estrutura de pipelines e stages fica protegida.'}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            {activePipeline ? (
+              <>
+                <Badge variant="secondary" className="text-[11px]">
+                  {activePipeline.name}
+                </Badge>
+                <Badge variant="secondary" className="text-[11px]">
+                  {kanban?.stages.length ?? activePipeline.stages.length} stages
+                </Badge>
+                <Badge variant="secondary" className="text-[11px]">
+                  {totalContacts} contatos
+                </Badge>
+              </>
+            ) : null}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           {pipelines.map((p) => (
             <button
               key={p.id}
@@ -521,20 +547,25 @@ export function KanbanPage() {
             </button>
           ))}
           {canManagePipelines ? (
-            <Button size="sm" variant="outline" onClick={() => setShowNewPipeline((v) => !v)}>
-              <Plus className="size-4" /> Pipeline
-            </Button>
-          ) : null}
-          {canManagePipelines && activePipelineId ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-destructive hover:text-destructive"
-              onClick={() => void handleDeletePipeline()}
-              disabled={deletingPipelineId === activePipelineId}
-            >
-              <Trash2 className="size-4" /> Excluir pipeline
-            </Button>
+            <div className="ml-auto flex flex-wrap items-center gap-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
+              <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                Gestao
+              </span>
+              <Button size="sm" variant="outline" onClick={() => setShowNewPipeline((v) => !v)}>
+                <Plus className="size-4" /> Pipeline
+              </Button>
+              {activePipelineId ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => void handleDeletePipeline()}
+                  disabled={deletingPipelineId === activePipelineId}
+                >
+                  <Trash2 className="size-4" /> Excluir pipeline
+                </Button>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </div>
@@ -558,6 +589,17 @@ export function KanbanPage() {
 
       {/* Kanban board */}
       <div className="flex-1 overflow-x-auto px-6 py-4">
+        <Alert className="mb-4">
+          <Shield className="size-4" />
+          <AlertTitle>
+            {canManagePipelines ? 'Governanca liberada para este perfil' : 'Governanca visual aplicada ao modulo'}
+          </AlertTitle>
+          <AlertDescription>
+            {canManagePipelines
+              ? 'Criacao, edicao, exclusao e reorganizacao da estrutura do pipeline ficam concentradas neste painel.'
+              : 'Seu perfil opera o funil sem expor controles estruturais. Para alterar pipelines e stages, use uma role com manage_pipelines.'}
+          </AlertDescription>
+        </Alert>
         {errorMessage ? (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="size-4" />
@@ -579,11 +621,17 @@ export function KanbanPage() {
             <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-10 text-center max-w-sm">
               <Layers className="mx-auto mb-3 size-10 text-muted-foreground opacity-40" />
               <p className="text-sm font-medium text-foreground">
-                {pipelines.length === 0 ? 'Nenhum pipeline criado' : 'Selecione um pipeline'}
+                {pipelines.length === 0
+                  ? canManagePipelines
+                    ? 'Nenhum pipeline criado'
+                    : 'Nenhum pipeline disponivel'
+                  : 'Selecione um pipeline'}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {pipelines.length === 0
-                  ? 'Crie um pipeline para organizar seus contatos em stages.'
+                  ? canManagePipelines
+                    ? 'Crie um pipeline para organizar seus contatos em stages.'
+                    : 'Um gestor do workspace precisa publicar a estrutura comercial antes desta tela ficar operacional.'
                   : 'Escolha um pipeline no menu acima.'}
               </p>
             </div>

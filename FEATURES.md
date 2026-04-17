@@ -18,7 +18,7 @@ Ele existe separado de `ROADMAP.md` porque o `ROADMAP.md` cobre evolucao tecnica
 
 ## Fase 1 - Pipelines e Kanban Comercial
 
-Status: `[~]`
+Status: `[x]`
 Prioridade: `Alta`
 
 Objetivo: deixar o CRM visual mais operacional para equipes comerciais e de acompanhamento.
