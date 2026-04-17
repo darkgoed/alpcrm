@@ -1,18 +1,20 @@
 'use client';
 
 import { useState, type DragEvent } from 'react';
-import { Plus, Phone, Layers, MoreHorizontal } from 'lucide-react';
+import { AlertCircle, Check, Pencil, Plus, Phone, Layers, MoreHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   usePipelines,
   useKanban,
   createPipeline,
   createStage,
   moveContact,
+  updateStage,
   type KanbanStage,
   type Contact,
 } from '@/hooks/useContacts';
@@ -152,7 +154,11 @@ function StageColumn({
   stage,
   allStages,
   pipelineId,
+  canManagePipelines,
   onMoved,
+  onEditStage,
+  onCancelEditStage,
+  onSaveStage,
   draggingContact,
   dropStageId,
   onDragOverStage,
@@ -161,11 +167,21 @@ function StageColumn({
   onDragEndContact,
   isMovingContact,
   movingContactId,
+  editingStageId,
+  editingStageName,
+  editingStageColor,
+  onEditingStageNameChange,
+  onEditingStageColorChange,
+  isSavingStage,
 }: {
   stage: KanbanStage;
   allStages: KanbanStage[];
   pipelineId: string;
+  canManagePipelines: boolean;
   onMoved: () => void;
+  onEditStage: (stage: KanbanStage) => void;
+  onCancelEditStage: () => void;
+  onSaveStage: (stageId: string) => void;
   draggingContact: DraggingContact | null;
   dropStageId: string | null;
   onDragOverStage: (stageId: string) => void;
@@ -174,9 +190,17 @@ function StageColumn({
   onDragEndContact: () => void;
   isMovingContact: boolean;
   movingContactId: string | null;
+  editingStageId: string | null;
+  editingStageName: string;
+  editingStageColor: string;
+  onEditingStageNameChange: (value: string) => void;
+  onEditingStageColorChange: (value: string) => void;
+  isSavingStage: boolean;
 }) {
   const canDropHere = Boolean(draggingContact && draggingContact.stageId !== stage.id);
   const isDropTarget = canDropHere && dropStageId === stage.id;
+  const isEditing = editingStageId === stage.id;
+  const STAGE_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899'];
 
   function handleStageDragOver(event: DragEvent<HTMLDivElement>) {
     if (!canDropHere || isMovingContact) return;
@@ -203,10 +227,61 @@ function StageColumn({
         className="flex items-center justify-between rounded-t-2xl border-b border-border/70 px-3 py-3"
         style={{ borderTop: `3px solid ${stage.color}` }}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-foreground">{stage.name}</span>
-          <Badge variant="secondary" className="text-[11px]">{stage.contactPipelines.length}</Badge>
-        </div>
+        {isEditing ? (
+          <div className="w-full space-y-2">
+            <Input
+              value={editingStageName}
+              onChange={(event) => onEditingStageNameChange(event.target.value)}
+              className="h-8"
+              placeholder="Nome do stage"
+              autoFocus
+            />
+            <div className="flex flex-wrap gap-1">
+              {STAGE_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => onEditingStageColorChange(color)}
+                  className="size-5 rounded-full border-2 transition-transform hover:scale-110"
+                  style={{ background: color, borderColor: editingStageColor === color ? '#000' : 'transparent' }}
+                />
+              ))}
+            </div>
+            <div className="flex justify-end gap-1">
+              <Button type="button" size="icon" variant="ghost" className="size-7" onClick={onCancelEditStage}>
+                <X className="size-3.5" />
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                className="size-7"
+                onClick={() => onSaveStage(stage.id)}
+                disabled={isSavingStage || !editingStageName.trim()}
+              >
+                <Check className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-foreground">{stage.name}</span>
+              <Badge variant="secondary" className="text-[11px]">{stage.contactPipelines.length}</Badge>
+            </div>
+            {canManagePipelines ? (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="size-7"
+                onClick={() => onEditStage(stage)}
+                title="Editar stage"
+              >
+                <Pencil className="size-3.5" />
+              </Button>
+            ) : null}
+          </>
+        )}
       </div>
 
       <div className="flex-1 space-y-2 overflow-y-auto p-2">
@@ -258,6 +333,11 @@ export function KanbanPage() {
   const [draggingContact, setDraggingContact] = useState<DraggingContact | null>(null);
   const [dropStageId, setDropStageId] = useState<string | null>(null);
   const [movingContactId, setMovingContactId] = useState<string | null>(null);
+  const [editingStageId, setEditingStageId] = useState<string | null>(null);
+  const [editingStageName, setEditingStageName] = useState('');
+  const [editingStageColor, setEditingStageColor] = useState('#6366f1');
+  const [savingStage, setSavingStage] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899'];
 
   function resetDragState() {
@@ -265,9 +345,24 @@ export function KanbanPage() {
     setDropStageId(null);
   }
 
+  function startEditingStage(stage: KanbanStage) {
+    setErrorMessage(null);
+    setEditingStageId(stage.id);
+    setEditingStageName(stage.name);
+    setEditingStageColor(stage.color);
+  }
+
+  function stopEditingStage() {
+    setEditingStageId(null);
+    setEditingStageName('');
+    setEditingStageColor('#6366f1');
+    setSavingStage(false);
+  }
+
   async function handleCreatePipeline(e: React.FormEvent) {
     e.preventDefault();
     if (!canManagePipelines || !newPipelineName) return;
+    setErrorMessage(null);
     const pipeline = await createPipeline(newPipelineName);
     await mutatePipelines();
     setSelectedPipelineId(pipeline.id);
@@ -278,10 +373,29 @@ export function KanbanPage() {
   async function handleCreateStage(e: React.FormEvent) {
     e.preventDefault();
     if (!canManagePipelines || !newStageName || !activePipelineId) return;
+    setErrorMessage(null);
     await createStage(activePipelineId, { name: newStageName, color: newStageColor });
     await mutateKanban();
     setNewStageName('');
     setShowNewStage(false);
+  }
+
+  async function handleSaveStage(stageId: string) {
+    if (!canManagePipelines || !activePipelineId || !editingStageName.trim()) return;
+
+    setErrorMessage(null);
+    setSavingStage(true);
+    try {
+      await updateStage(activePipelineId, stageId, {
+        name: editingStageName.trim(),
+        color: editingStageColor,
+      });
+      await mutateKanban();
+      stopEditingStage();
+    } catch (error: any) {
+      setErrorMessage(error?.response?.data?.message ?? 'Nao foi possivel atualizar o stage.');
+      setSavingStage(false);
+    }
   }
 
   function handleDragStart(contactId: string, stageId: string) {
@@ -358,6 +472,12 @@ export function KanbanPage() {
 
       {/* Kanban board */}
       <div className="flex-1 overflow-x-auto px-6 py-4">
+        {errorMessage ? (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="size-4" />
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        ) : null}
         {loadingPipelines || loadingKanban ? (
           <div className="flex gap-4">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -390,7 +510,11 @@ export function KanbanPage() {
                 stage={stage}
                 allStages={kanban.stages}
                 pipelineId={kanban.id}
+                canManagePipelines={canManagePipelines}
                 onMoved={() => void mutateKanban()}
+                onEditStage={startEditingStage}
+                onCancelEditStage={stopEditingStage}
+                onSaveStage={(stageId) => void handleSaveStage(stageId)}
                 draggingContact={draggingContact}
                 dropStageId={dropStageId}
                 onDragOverStage={setDropStageId}
@@ -399,6 +523,12 @@ export function KanbanPage() {
                 onDragEndContact={handleDragEnd}
                 isMovingContact={movingContactId !== null}
                 movingContactId={movingContactId}
+                editingStageId={editingStageId}
+                editingStageName={editingStageName}
+                editingStageColor={editingStageColor}
+                onEditingStageNameChange={setEditingStageName}
+                onEditingStageColorChange={setEditingStageColor}
+                isSavingStage={savingStage}
               />
             ))}
 

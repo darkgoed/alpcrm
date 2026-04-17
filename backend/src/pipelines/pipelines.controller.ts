@@ -84,6 +84,7 @@ export class PipelinesController {
   }
 
   @Patch(':id/stages/:stageId')
+  @RequirePermissions('manage_pipelines')
   updateStage(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') pipelineId: string,

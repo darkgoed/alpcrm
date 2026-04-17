@@ -27,7 +27,7 @@ Objetivo: deixar o CRM visual mais operacional para equipes comerciais e de acom
 - `[x]` Permitir transicao bidirecional entre colunas
 - `[x]` Restringir criacao de pipeline por role/permissao
 - `[x]` Restringir criacao de stage por role/permissao
-- `[ ]` Editar stage com nome e cor
+- `[x]` Editar stage com nome e cor
 - `[ ]` Excluir stage
 - `[ ]` Excluir pipeline completo
 - `[ ]` Refinar governanca visual do modulo de pipeline

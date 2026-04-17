@@ -244,6 +244,15 @@ export async function createStage(pipelineId: string, dto: { name: string; color
   return r.data as Stage;
 }
 
+export async function updateStage(
+  pipelineId: string,
+  stageId: string,
+  dto: { name?: string; color?: string },
+) {
+  const r = await api.patch(`/pipelines/${pipelineId}/stages/${stageId}`, dto);
+  return r.data as Stage;
+}
+
 export async function moveContact(pipelineId: string, contactId: string, stageId: string) {
   const r = await api.patch(`/pipelines/${pipelineId}/move`, { contactId, stageId });
   return r.data;
