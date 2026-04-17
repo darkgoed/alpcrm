@@ -1,85 +1,155 @@
-# 🚀 Roadmap de Desenvolvimento: AlpCRM
+# FEATURES.md - Roadmap de Features
 
-Este artefato detalha a reestruturação das funcionalidades, correções críticas e o planejamento de novas capacidades para a plataforma.
+Este arquivo e o roadmap funcional do produto.
+Ele existe separado de `ROADMAP.md` porque o `ROADMAP.md` cobre evolucao tecnica, hardening, operacao e prontidao de producao, enquanto este documento cobre features, UX e capacidade de negocio.
 
-OBS: Variaveis ou uso de `` citadas nos modulos, são exemplos, utilize oq for melhor para o nosso projeto!
+## Como usar este arquivo
 
----
+- Use `FEATURES.md` para futuras funcionalidades, melhorias de UX e expansoes de produto
+- Use `ROADMAP.md` para infraestrutura, confiabilidade, compliance tecnico, seguranca e qualidade operacional
+- Ao concluir uma feature daqui, atualizar o status neste arquivo
 
-## 1. Módulo: Pipelines (Kanban)
-*Melhoria na interatividade e controle de governança.*
+## Legenda
 
-* **Interatividade Stage-to-Stage:**
-    * Implementar funcionalidade de **Drag-and-Drop** (arrastar e soltar) para os cards de contato.
-    * Permitir transição bidirecional entre colunas ($Stage \leftrightarrow Stage$).
-* **Gestão de Estrutura:**
-    * **Permissão por Role:** Apenas usuários com `role` específica podem visualizar os botões de "Adicionar Stage" ou "Criar Pipeline".
-    * **CRUD de Stages:** Implementar opções de **Editar** (nome/cor) e **Excluir** estágios e pipelines completos.
+- `[ ]` Nao iniciado
+- `[~]` Em andamento ou parcialmente definido
+- `[x]` Entregue
+- `Prioridade`: `Alta`, `Media`, `Baixa`
 
-## 2. Módulo: Dashboard & Visão Geral
-*Foco em BI (Business Intelligence) e monitoramento administrativo.*
+## Fase 1 - Pipelines e Kanban Comercial
 
-* **Controle de Acesso:** Visualização restrita a `roles` de administração/análise.
-* **Privacidade Operacional:** Remoção de qualquer funcionalidade de "Abrir/Ver Inbox" para manter o foco em dados, não em atendimento.
-* **Novos Indicadores & Gráficos:**
-    * **Consumo Financeiro:** Visualização de gastos com API (monitoramento de custos).
-    * **Contadores Globais:** Total de atendimentos, proporção Bot vs. Humano e fila de espera em tempo real.
-* **Monitoramento Real-time (Três Pilares):**
-    1.  **AGENTES:** Cards individuais com Status (online/offline), sessões ativas, filas/tags, TMA (Tempo Médio de Atendimento) e alertas de inatividade.
-    2.  **EQUIPES:** Agrupamento por setor (Comercial, Suporte, etc.) com volume de atendimentos e distribuição de carga entre membros.
-    3.  **FASES:** Visualização do fluxo operacional (Navegando $\rightarrow$ Espera $\rightarrow$ Atendimento) com identificação de gargalos e tempo de permanência em cada etapa.
+Status: `[ ]`
+Prioridade: `Alta`
 
-## 3. Módulo: Configurações de Segurança & Agentes
-*Padronização de acessos e correção de fluxos de criação.*
+Objetivo: deixar o CRM visual mais operacional para equipes comerciais e de acompanhamento.
 
-* **Criação de Agentes & Equipes:**
-    * **Bug Fix:** Corrigir erro de submissão no botão "Criar Equipe" e "Criar Agente".
-    * **Senha Padrão:** Agentes criados com campo de senha vazio recebem automaticamente o padrão `nome@crm`.
-    * **First Login Policy:** Todo agente (com senha padrão ou manual) **deve** ser redirecionado para alteração de senha no primeiro acesso.
-* **Segurança (2FA & Senhas):**
-    * **UI de Troca:** No menu de configurações, a tela de alteração de senha deve incluir um botão **"Voltar"** e possuir layout de formulário interno (diferente da tela de recuperação externa).
-    * **Branding 2FA:** Configurar o `Issuer Name` no QR Code para que apareça automaticamente como **"AlpCRM"** nos aplicativos de autenticação.
+- `[ ]` Implementar drag-and-drop de cards entre stages
+- `[ ]` Permitir transicao bidirecional entre colunas
+- `[ ]` Restringir criacao de pipeline por role/permissao
+- `[ ]` Restringir criacao de stage por role/permissao
+- `[ ]` Editar stage com nome e cor
+- `[ ]` Excluir stage
+- `[ ]` Excluir pipeline completo
+- `[ ]` Refinar governanca visual do modulo de pipeline
 
-## 4. Módulo: Configurações de Workspace & SMTP
-*Infraestrutura e usabilidade técnica.*
+## Fase 2 - Dashboard e Visao Gerencial
 
-* **Correção SMTP:**
-    * **Bug Fix:** Resolver erro `500 (Internal Server Error)` no endpoint `POST /api/workspaces/settings/test-smtp`.
-    * **UX:** Atualizar o placeholder do campo "Usuário" para o formato `email@dominio.com.br`.
+Status: `[ ]`
+Prioridade: `Alta`
 
-## 5. Novo Módulo: Config/Chat
-*Centralização de regras de negócio e limpeza da interface de contatos.*
+Objetivo: transformar o dashboard em uma visao de operacao e BI, sem virar uma inbox paralela.
 
-* **Regras de Atendimento:**
-    * **Assinatura:** Checkbox para ativar/desativar assinatura do operador em cada mensagem enviada.
-    * **Mensagem de Boas-Vindas:** Input para configurar a mensagem automática de atribuição (ex: *"Olá {{contact_name}}, me chamo {{agent_name}} e vou te atender"*).
-* **Migração de Funções (Cleanup):**
-    * Remover "Nova Tag" e "Importar CSV" do menu lateral de **Contacts**.
-    * Centralizar essas funções dentro de **Config/Chat**. O menu de contatos passa a ser apenas para consulta e gestão simples.
+- `[ ]` Restringir acesso do dashboard a roles administrativas/analiticas
+- `[ ]` Remover qualquer CTA de abrir/ver inbox dentro do dashboard
+- `[ ]` Exibir consumo financeiro de API
+- `[ ]` Exibir total de atendimentos
+- `[ ]` Exibir proporcao bot vs humano
+- `[ ]` Exibir fila de espera em tempo real
+- `[ ]` Criar cards de agentes com status online/offline
+- `[ ]` Exibir sessoes ativas por agente
+- `[ ]` Exibir filas ou tags associadas ao agente
+- `[ ]` Exibir TMA por agente
+- `[ ]` Exibir alertas de inatividade operacional
+- `[ ]` Criar agrupamento por equipes/setores
+- `[ ]` Exibir distribuicao de carga entre membros da equipe
+- `[ ]` Criar visao de fases operacionais com gargalos
+- `[ ]` Exibir tempo medio por etapa do fluxo
 
-## 6. UX: Gestão de Roles & Respostas Rápidas
-*Organização visual e suporte ao usuário.*
+## Fase 3 - Seguranca Operacional e Gestao de Agentes
 
-* **Hierarquia de Roles:** Implementar visualização em **Accordion** (recolhível). As permissões de cada Role só aparecem ao clicar na seta de expansão.
-* **Dicionário de Variáveis:** Adicionar legenda técnica em **Respostas Rápidas** e **Config/Chat** listando todas as variáveis disponíveis (ex: `{{contact_name}}`, `{{protocol}}`).
+Status: `[ ]`
+Prioridade: `Alta`
 
-### FASE 7 e 8 DEVE ME PERGUNTAR SE PODE EXECUTAR, ANTES DE FAZER ALGO SOBRE ESSAS FASES!
+Objetivo: padronizar o ciclo de criacao de usuarios operacionais e reduzir friccao em seguranca.
 
-## 7. Relatórios & Auditoria
-*Extração de dados para gestão estratégica.*
+- `[ ]` Corrigir erro de submissao em "Criar Equipe"
+- `[ ]` Corrigir erro de submissao em "Criar Agente"
+- `[ ]` Aplicar senha padrao automatica quando agente for criado sem senha
+- `[ ]` Definir padrao `nome@crm` como fallback de senha inicial
+- `[ ]` Forcar troca de senha no primeiro login
+- `[ ]` Diferenciar claramente tela interna de troca de senha da tela externa de recuperacao
+- `[ ]` Adicionar botao "Voltar" na tela interna de troca de senha
+- `[ ]` Ajustar issuer do 2FA para exibir `AlpCRM`
 
-* **Relatório Geral:** Ferramenta de extração (CSV/PDF) baseada nos dados de auditoria.
-* **Métricas de Conversa:** Dados de volume, fluxo origem/destino e interações entre agentes para análise de produtividade.
+## Fase 4 - Workspace, SMTP e Ajustes Operacionais
 
-## 8. Visão de Futuro (SaaS & Escalabilidade)
-*Novas frentes de monetização e gestão de recursos.*
+Status: `[ ]`
+Prioridade: `Media`
 
-* **Franquia de Mensagens:**
-    * Implementação de limites por Workspace (ex: 30k/mês).
-    * Sistema de alertas visuais para o administrador quando o limite for atingido (foco em métricas internas, sem gateway de pagamento nativo).
-* **Config/Storage (Gestão de Armazenamento):**
-    * Painel centralizador de arquivos (Imagens, Vídeos, Áudios, Documentos).
-    * **Filtros Avançados:** Busca por tipo de arquivo, contato ou data.
-    * **Políticas de Retenção:** Checkbox para "Apagar arquivos antigos" com seletor de meses para automação da limpeza.
+Objetivo: corrigir pontos de configuracao do workspace que bloqueiam operacao ou geram suporte desnecessario.
 
----
+- `[ ]` Corrigir erro `500` em `POST /api/workspaces/settings/test-smtp`
+- `[ ]` Ajustar placeholder do campo "Usuario" para `email@dominio.com.br`
+- `[ ]` Revisar feedback visual de sucesso/erro no teste SMTP
+
+## Fase 5 - Config/Chat e Centralizacao de Regras
+
+Status: `[ ]`
+Prioridade: `Alta`
+
+Objetivo: consolidar regras do atendimento em um modulo unico e limpar o menu de contatos.
+
+- `[ ]` Criar modulo de configuracao de chat
+- `[ ]` Adicionar checkbox para ativar/desativar assinatura do operador
+- `[ ]` Permitir configurar mensagem automatica de atribuicao
+- `[ ]` Suportar variaveis como `{{contact_name}}` e `{{agent_name}}` na mensagem de boas-vindas
+- `[ ]` Remover "Nova Tag" do menu lateral de Contacts
+- `[ ]` Remover "Importar CSV" do menu lateral de Contacts
+- `[ ]` Centralizar criacao de tags em `Config/Chat`
+- `[ ]` Centralizar importacao CSV em `Config/Chat`
+- `[ ]` Manter Contacts focado em consulta e gestao simples
+
+## Fase 6 - UX de Roles e Dicionario de Variaveis
+
+Status: `[ ]`
+Prioridade: `Media`
+
+Objetivo: melhorar legibilidade administrativa e reduzir erro humano no uso de placeholders.
+
+- `[ ]` Exibir roles em formato accordion
+- `[ ]` Mostrar permissoes apenas quando a role for expandida
+- `[ ]` Adicionar dicionario de variaveis em Respostas Rapidas
+- `[ ]` Adicionar dicionario de variaveis em Config/Chat
+- `[ ]` Documentar placeholders disponiveis, como `{{contact_name}}` e `{{protocol}}`
+
+## Fase 7 - Relatorios e Auditoria
+
+Status: `[ ]`
+Prioridade: `Media`
+
+Objetivo: extrair informacao gerencial a partir da operacao e da trilha de auditoria.
+
+- `[ ]` Criar relatorio geral com exportacao CSV
+- `[ ]` Criar relatorio geral com exportacao PDF
+- `[ ]` Permitir filtros baseados em dados de auditoria
+- `[ ]` Exibir metricas de volume de conversa
+- `[ ]` Exibir fluxo origem/destino
+- `[ ]` Exibir interacoes entre agentes para analise de produtividade
+
+## Fase 8 - SaaS, Franquia e Storage
+
+Status: `[ ]`
+Prioridade: `Baixa`
+
+Objetivo: preparar o produto para controle de consumo e governanca de armazenamento por workspace.
+
+- `[ ]` Implementar limite mensal de mensagens por workspace
+- `[ ]` Exibir alerta visual quando o limite for atingido
+- `[ ]` Exibir metricas internas de consumo por workspace
+- `[ ]` Criar modulo `Config/Storage`
+- `[ ]` Centralizar imagens, videos, audios e documentos em um painel unico
+- `[ ]` Filtrar arquivos por tipo
+- `[ ]` Filtrar arquivos por contato
+- `[ ]` Filtrar arquivos por data
+- `[ ]` Adicionar politica de retencao com checkbox para apagar arquivos antigos
+- `[ ]` Permitir definir quantidade de meses para limpeza automatica
+
+## Regras Especiais
+
+Antes de executar qualquer item da Fase 7 ou da Fase 8, confirmar explicitamente com o usuario.
+
+## Observacoes
+
+- Este documento pode conter features ainda nao validadas tecnicamente
+- Quando uma feature daqui exigir base tecnica nova, alinhar a execucao com o `ROADMAP.md`
+- Se uma feature mudar arquitetura, refletir a dependencia cruzada entre `FEATURES.md` e `ROADMAP.md`
