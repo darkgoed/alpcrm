@@ -23,6 +23,9 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { ContactsService } from './contacts.service';
 import { ContactImportService } from './contact-import.service';
+import { ContactBulkService } from './contact-bulk.service';
+import { ContactNotesService } from './contact-notes.service';
+import { ContactTagsService } from './contact-tags.service';
 import {
   CreateContactDto,
   UpdateContactDto,
@@ -39,6 +42,9 @@ export class ContactsController {
   constructor(
     private contactsService: ContactsService,
     private contactImportService: ContactImportService,
+    private contactBulkService: ContactBulkService,
+    private contactNotesService: ContactNotesService,
+    private contactTagsService: ContactTagsService,
   ) {}
 
   // ─── Contatos ─────────────────────────────────────────────────────────────────
@@ -220,14 +226,14 @@ export class ContactsController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: BulkContactActionDto,
   ) {
-    return this.contactsService.applyBulkActions(user.workspaceId, dto);
+    return this.contactBulkService.applyBulkActions(user.workspaceId, dto);
   }
 
   // ─── Notas internas ───────────────────────────────────────────────────────────
 
   @Get(':id/notes')
   listNotes(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.contactsService.listNotes(user.workspaceId, id);
+    return this.contactNotesService.listNotes(user.workspaceId, id);
   }
 
   @Post(':id/notes')
@@ -236,7 +242,7 @@ export class ContactsController {
     @Param('id') id: string,
     @Body('content') content: string,
   ) {
-    return this.contactsService.createNote(
+    return this.contactNotesService.createNote(
       user.workspaceId,
       id,
       user.userId,
@@ -251,7 +257,7 @@ export class ContactsController {
     @Param('id') id: string,
     @Body() dto: SetOptInDto,
   ) {
-    return this.contactsService.setOptIn(user.workspaceId, id, dto);
+    return this.contactNotesService.setOptIn(user.workspaceId, id, dto);
   }
 
   @Delete(':id/notes/:noteId')
@@ -261,7 +267,7 @@ export class ContactsController {
     @Param('id') id: string,
     @Param('noteId') noteId: string,
   ) {
-    return this.contactsService.deleteNote(user.workspaceId, id, noteId);
+    return this.contactNotesService.deleteNote(user.workspaceId, id, noteId);
   }
 
   private parseListQuery(value?: string | string[]) {
