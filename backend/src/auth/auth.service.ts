@@ -11,10 +11,17 @@ import * as crypto from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { EncryptionService } from '../common/services/encryption.service';
+import { MailService } from '../common/services/mail.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { readJwtSecretRotationConfig } from './jwt-secret.util';
 import { assertPasswordPolicy } from '../common/utils/password-policy.util';
+import {
+  buildTotpOtpauthUrl,
+  generateTotpSecret,
+  verifyTotpCode,
+} from './totp.util';
 
 const REFRESH_TOKEN_TTL_DAYS = 7;
 
@@ -25,6 +32,8 @@ export class AuthService {
     private jwt: JwtService,
     private audit: AuditService,
     private config: ConfigService,
+    private encryption: EncryptionService,
+    private mail: MailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -108,6 +117,26 @@ export class AuthService {
     if (!authenticatedUser)
       throw new UnauthorizedException('Credenciais inválidas');
 
+    if (authenticatedUser.twoFactorEnabled) {
+      const secret = authenticatedUser.twoFactorSecret
+        ? this.encryption.decrypt(authenticatedUser.twoFactorSecret)
+        : null;
+
+      if (!dto.twoFactorCode) {
+        throw new UnauthorizedException({
+          message: 'Código do autenticador é obrigatório',
+          code: 'TWO_FACTOR_REQUIRED',
+        });
+      }
+
+      if (!secret || !verifyTotpCode(secret, dto.twoFactorCode)) {
+        throw new UnauthorizedException({
+          message: 'Código 2FA inválido',
+          code: 'TWO_FACTOR_INVALID',
+        });
+      }
+    }
+
     const permissions = [
       ...new Set(
         authenticatedUser.userRoles.flatMap((ur) =>
@@ -171,6 +200,234 @@ export class AuthService {
       workspaceId: user.workspaceId,
       userId,
       action: 'change_password',
+      entity: 'user',
+      entityId: userId,
+    });
+
+    return { success: true };
+  }
+
+  async forgotPassword(email: string) {
+    const users = await this.prisma.user.findMany({
+      where: { email, isActive: true },
+      include: {
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    const appUrl =
+      this.config.get<string>('APP_URL')?.trim() || 'http://localhost:3001';
+
+    await Promise.all(
+      users.map(async (user) => {
+        const token = crypto.randomBytes(32).toString('hex');
+        const tokenHash = this.hashToken(token);
+        const expiresAt = new Date(Date.now() + 1000 * 60 * 60);
+
+        await this.prisma.passwordResetToken.updateMany({
+          where: { userId: user.id, usedAt: null },
+          data: { usedAt: new Date() },
+        });
+
+        await this.prisma.passwordResetToken.create({
+          data: {
+            userId: user.id,
+            tokenHash,
+            expiresAt,
+          },
+        });
+
+        const resetUrl = `${appUrl.replace(/\/+$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
+        const subject = `Recuperação de senha - ${user.workspace.name}`;
+        const text = [
+          `Olá, ${user.name}.`,
+          '',
+          `Recebemos uma solicitação para redefinir sua senha no workspace ${user.workspace.name}.`,
+          'Acesse o link abaixo para criar uma nova senha:',
+          resetUrl,
+          '',
+          'Se você não solicitou esta alteração, ignore este e-mail.',
+          'Este link expira em 1 hora.',
+        ].join('\n');
+        const html = `<p>Olá, ${escapeHtml(user.name)}.</p><p>Recebemos uma solicitação para redefinir sua senha no workspace <strong>${escapeHtml(user.workspace.name)}</strong>.</p><p><a href="${resetUrl}">Clique aqui para criar uma nova senha</a></p><p>Se você não solicitou esta alteração, ignore este e-mail.</p><p>Este link expira em 1 hora.</p>`;
+
+        try {
+          await this.mail.sendWorkspaceEmail(user.workspaceId, {
+            to: user.email,
+            subject,
+            text,
+            html,
+          });
+        } catch {
+          await this.prisma.passwordResetToken.updateMany({
+            where: { tokenHash, usedAt: null },
+            data: { usedAt: new Date() },
+          });
+        }
+      }),
+    );
+
+    return {
+      success: true,
+      message:
+        'Se o e-mail existir e o workspace tiver SMTP configurado, enviaremos um link de recuperação.',
+    };
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    assertPasswordPolicy(newPassword);
+
+    const resetToken = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash: this.hashToken(token) },
+      include: { user: true },
+    });
+
+    if (
+      !resetToken ||
+      resetToken.usedAt !== null ||
+      resetToken.expiresAt < new Date() ||
+      !resetToken.user.isActive
+    ) {
+      throw new BadRequestException('Token de recuperação inválido ou expirado');
+    }
+
+    const samePassword = await bcrypt.compare(newPassword, resetToken.user.password);
+    if (samePassword) {
+      throw new BadRequestException(
+        'A nova senha deve ser diferente da senha atual',
+      );
+    }
+
+    const password = await bcrypt.hash(newPassword, 10);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: resetToken.userId },
+        data: { password, mustChangePassword: false },
+      }),
+      this.prisma.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId: resetToken.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+
+    this.audit.log({
+      workspaceId: resetToken.user.workspaceId,
+      userId: resetToken.userId,
+      action: 'reset_password',
+      entity: 'user',
+      entityId: resetToken.userId,
+    });
+
+    return { success: true };
+  }
+
+  async getTwoFactorStatus(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        twoFactorEnabled: true,
+        twoFactorPendingSecret: true,
+      },
+    });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+
+    return {
+      enabled: user.twoFactorEnabled,
+      pendingSetup: Boolean(user.twoFactorPendingSecret),
+    };
+  }
+
+  async setupTwoFactor(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        email: true,
+        workspace: { select: { name: true } },
+      },
+    });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+
+    const secret = generateTotpSecret();
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        twoFactorPendingSecret: this.encryption.encrypt(secret),
+      },
+    });
+
+    return {
+      secret,
+      otpauthUrl: buildTotpOtpauthUrl({
+        secret,
+        email: user.email,
+        workspaceName: user.workspace.name,
+      }),
+    };
+  }
+
+  async enableTwoFactor(userId: string, code: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+
+    const pendingSecret = user.twoFactorPendingSecret
+      ? this.encryption.decrypt(user.twoFactorPendingSecret)
+      : null;
+    if (!pendingSecret) {
+      throw new BadRequestException('Nenhuma configuração 2FA pendente');
+    }
+    if (!verifyTotpCode(pendingSecret, code)) {
+      throw new BadRequestException('Código do autenticador inválido');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        twoFactorEnabled: true,
+        twoFactorSecret: this.encryption.encrypt(pendingSecret),
+        twoFactorPendingSecret: null,
+      },
+    });
+
+    this.audit.log({
+      workspaceId: user.workspaceId,
+      userId,
+      action: 'enable_2fa',
+      entity: 'user',
+      entityId: userId,
+    });
+
+    return { success: true };
+  }
+
+  async disableTwoFactor(userId: string, currentPassword: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+
+    const valid = await bcrypt.compare(currentPassword, user.password);
+    if (!valid) throw new UnauthorizedException('Senha atual incorreta');
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        twoFactorEnabled: false,
+        twoFactorSecret: null,
+        twoFactorPendingSecret: null,
+      },
+    });
+
+    this.audit.log({
+      workspaceId: user.workspaceId,
+      userId,
+      action: 'disable_2fa',
       entity: 'user',
       entityId: userId,
     });
@@ -335,4 +592,17 @@ export class AuthService {
 
     return { access_token, refresh_token: rawToken, workspaceId, permissions };
   }
+
+  private hashToken(token: string) {
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }

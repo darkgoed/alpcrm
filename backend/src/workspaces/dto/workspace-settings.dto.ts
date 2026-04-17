@@ -1,4 +1,13 @@
-import { IsInt, IsOptional, IsString, Min, IsObject } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class UpdateWorkspaceSettingsDto {
   @IsOptional()
@@ -28,4 +37,66 @@ export class UpdateWorkspaceSettingsDto {
   @IsOptional()
   @IsString()
   outOfHoursMessage?: string | null;
+
+  @IsOptional()
+  @IsString()
+  smtpHost?: string | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  smtpPort?: number | null;
+
+  @IsOptional()
+  @IsBoolean()
+  smtpSecure?: boolean;
+
+  @IsOptional()
+  @IsString()
+  smtpUser?: string | null;
+
+  @IsOptional()
+  @IsString()
+  smtpPassword?: string | null;
+
+  @IsOptional()
+  @IsString()
+  smtpFromName?: string | null;
+
+  @IsOptional()
+  @IsEmail()
+  smtpFromEmail?: string | null;
+}
+
+export class TestWorkspaceSmtpDto {
+  @IsOptional()
+  @IsString()
+  smtpHost?: string | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  smtpPort?: number | null;
+
+  @IsOptional()
+  @IsBoolean()
+  smtpSecure?: boolean;
+
+  @IsOptional()
+  @IsString()
+  smtpUser?: string | null;
+
+  @IsOptional()
+  @IsString()
+  smtpPassword?: string | null;
+
+  @IsOptional()
+  @IsString()
+  smtpFromName?: string | null;
+
+  @IsOptional()
+  @IsEmail()
+  smtpFromEmail?: string | null;
 }

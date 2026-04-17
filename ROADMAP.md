@@ -411,14 +411,14 @@ Meta: preparar o produto para operação maior, integrações e diferenciação 
 
 - [x] Política de senha
 - [x] Forçar troca de senha no primeiro login de verdade
-- [ ] Recuperação de senha por SMPT 
+- [x] Recuperação de senha por SMPT 
 - [x] Sessões ativas por usuário
 - [x] Revogação de sessões
-- [ ] 2FA opcional
+- [x] 2FA opcional
   
 ### 7.2.1 — SMTP Email
 
-- [ ] Cadastrar SMTP para workspace
+- [x] Cadastrar SMTP para workspace
 - [ ] 
  
 

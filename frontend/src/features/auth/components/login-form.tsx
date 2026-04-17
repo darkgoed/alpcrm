@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 const loginSchema = z.object({
   email: z.string().email('Informe um e-mail válido.'),
   password: z.string().min(1, 'Informe sua senha.'),
+  twoFactorCode: z.string().optional(),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -26,7 +27,12 @@ function getErrorMessage(error: unknown) {
     const response = error.response;
     if (typeof response === 'object' && response !== null && 'data' in response) {
       const data = response.data;
-      if (typeof data === 'object' && data !== null && 'message' in data && typeof data.message === 'string') {
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        'message' in data &&
+        typeof data.message === 'string'
+      ) {
         return data.message;
       }
     }
@@ -35,15 +41,36 @@ function getErrorMessage(error: unknown) {
   return 'Não foi possível entrar. Tente novamente.';
 }
 
+function getErrorCode(error: unknown) {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const response = error.response;
+    if (typeof response === 'object' && response !== null && 'data' in response) {
+      const data = response.data;
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        'code' in data &&
+        typeof data.code === 'string'
+      ) {
+        return data.code;
+      }
+    }
+  }
+
+  return null;
+}
+
 export function LoginForm() {
   const { login } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [showTwoFactor, setShowTwoFactor] = useState(false);
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
       password: '',
+      twoFactorCode: '',
     },
   });
 
@@ -51,9 +78,17 @@ export function LoginForm() {
     setError(null);
 
     try {
-      const result = await login(values.email, values.password);
+      const result = await login(
+        values.email,
+        values.password,
+        values.twoFactorCode,
+      );
       router.push(result.mustChangePassword ? '/change-password' : '/');
     } catch (submitError) {
+      const code = getErrorCode(submitError);
+      if (code === 'TWO_FACTOR_REQUIRED' || code === 'TWO_FACTOR_INVALID') {
+        setShowTwoFactor(true);
+      }
       setError(getErrorMessage(submitError));
     }
   }
@@ -83,9 +118,36 @@ export function LoginForm() {
                     </div>
                   </FormControl>
                   <FormMessage />
+                  <div className="text-right">
+                    <Link href="/forgot-password" className="text-xs font-medium text-primary hover:text-primary/80">
+                      Esqueci minha senha
+                    </Link>
+                  </div>
                 </FormItem>
               )}
             />
+
+            {showTwoFactor ? (
+              <FormField
+                control={form.control}
+                name="twoFactorCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Código 2FA</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="000000"
+                        autoComplete="one-time-code"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : null}
 
             <FormField
               control={form.control}

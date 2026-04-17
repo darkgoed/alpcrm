@@ -12,7 +12,11 @@ interface AuthState {
 }
 
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<{ mustChangePassword: boolean }>;
+  login: (
+    email: string,
+    password: string,
+    twoFactorCode?: string,
+  ) => Promise<{ mustChangePassword: boolean }>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   clearMustChangePassword: () => void;
@@ -69,8 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const login = async (email: string, password: string) => {
-    const { data } = await api.post<AuthResponse>('/auth/login', { email, password });
+  const login = async (email: string, password: string, twoFactorCode?: string) => {
+    const { data } = await api.post<AuthResponse>('/auth/login', {
+      email,
+      password,
+      ...(twoFactorCode ? { twoFactorCode } : {}),
+    });
     saveAuth(data);
     return { mustChangePassword: Boolean(data.mustChangePassword) };
   };

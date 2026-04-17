@@ -8,7 +8,11 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { EncryptionService } from '../common/services/encryption.service';
-import { UpdateWorkspaceSettingsDto } from './dto/workspace-settings.dto';
+import { MailService } from '../common/services/mail.service';
+import {
+  TestWorkspaceSmtpDto,
+  UpdateWorkspaceSettingsDto,
+} from './dto/workspace-settings.dto';
 import {
   CreateFollowUpRuleDto,
   UpdateFollowUpRuleDto,
@@ -26,6 +30,7 @@ export class WorkspacesService {
     private prisma: PrismaService,
     private audit: AuditService,
     private encryption: EncryptionService,
+    private mail: MailService,
   ) {}
 
   private hasOwn(dto: object, key: string): boolean {
@@ -38,7 +43,24 @@ export class WorkspacesService {
     const settings = await this.prisma.workspaceSettings.findUnique({
       where: { workspaceId },
     });
-    return settings ?? { workspaceId, autoCloseHours: null };
+    return this.serializeSettings(
+      settings ?? {
+        workspaceId,
+        autoCloseHours: null,
+        timezone: 'America/Sao_Paulo',
+        language: 'pt_BR',
+        logoUrl: null,
+        businessHours: null,
+        outOfHoursMessage: null,
+        smtpHost: null,
+        smtpPort: null,
+        smtpSecure: false,
+        smtpUser: null,
+        smtpPass: null,
+        smtpFromName: null,
+        smtpFromEmail: null,
+      },
+    );
   }
 
   async updateSettings(workspaceId: string, dto: UpdateWorkspaceSettingsDto, actorId?: string) {
@@ -58,6 +80,29 @@ export class WorkspacesService {
       ...(this.hasOwn(dto, 'outOfHoursMessage')
         ? { outOfHoursMessage: dto.outOfHoursMessage ?? null }
         : {}),
+      ...(this.hasOwn(dto, 'smtpHost')
+        ? { smtpHost: dto.smtpHost?.trim() || null }
+        : {}),
+      ...(this.hasOwn(dto, 'smtpPort') ? { smtpPort: dto.smtpPort ?? null } : {}),
+      ...(this.hasOwn(dto, 'smtpSecure')
+        ? { smtpSecure: Boolean(dto.smtpSecure) }
+        : {}),
+      ...(this.hasOwn(dto, 'smtpUser')
+        ? { smtpUser: dto.smtpUser?.trim() || null }
+        : {}),
+      ...(this.hasOwn(dto, 'smtpPassword')
+        ? {
+            smtpPass: dto.smtpPassword?.trim()
+              ? this.encryption.encrypt(dto.smtpPassword.trim())
+              : null,
+          }
+        : {}),
+      ...(this.hasOwn(dto, 'smtpFromName')
+        ? { smtpFromName: dto.smtpFromName?.trim() || null }
+        : {}),
+      ...(this.hasOwn(dto, 'smtpFromEmail')
+        ? { smtpFromEmail: dto.smtpFromEmail?.trim() || null }
+        : {}),
     };
 
     const result = await this.prisma.workspaceSettings.upsert({
@@ -73,7 +118,39 @@ export class WorkspacesService {
       entityId: workspaceId,
       metadata: { fields: Object.keys(dto) },
     });
-    return result;
+    return this.serializeSettings(result);
+  }
+
+  async testSmtpConnection(workspaceId: string, dto: TestWorkspaceSmtpDto) {
+    const current = await this.prisma.workspaceSettings.findUnique({
+      where: { workspaceId },
+      select: {
+        smtpHost: true,
+        smtpPort: true,
+        smtpSecure: true,
+        smtpUser: true,
+        smtpPass: true,
+        smtpFromName: true,
+        smtpFromEmail: true,
+      },
+    });
+
+    const config = this.mail.normalizeConfig({
+      host: dto.smtpHost ?? current?.smtpHost ?? null,
+      port: dto.smtpPort ?? current?.smtpPort ?? null,
+      secure: dto.smtpSecure ?? current?.smtpSecure ?? false,
+      user: dto.smtpUser ?? current?.smtpUser ?? null,
+      pass:
+        dto.smtpPassword !== undefined
+          ? dto.smtpPassword
+          : current?.smtpPass
+            ? this.encryption.decrypt(current.smtpPass)
+            : null,
+      fromName: dto.smtpFromName ?? current?.smtpFromName ?? null,
+      fromEmail: dto.smtpFromEmail ?? current?.smtpFromEmail ?? null,
+    });
+
+    return this.mail.verifyWorkspaceSmtpConfig(config);
   }
 
   // ─── Regras de follow-up ─────────────────────────────────────────────────────
@@ -376,5 +453,42 @@ export class WorkspacesService {
     }
 
     return null;
+  }
+
+  private serializeSettings(settings: {
+    workspaceId: string;
+    autoCloseHours: number | null;
+    timezone: string;
+    language: string;
+    logoUrl: string | null;
+    businessHours: Prisma.JsonValue | null;
+    outOfHoursMessage: string | null;
+    smtpHost: string | null;
+    smtpPort: number | null;
+    smtpSecure: boolean;
+    smtpUser: string | null;
+    smtpPass: string | null;
+    smtpFromName: string | null;
+    smtpFromEmail: string | null;
+  }) {
+    return {
+      workspaceId: settings.workspaceId,
+      autoCloseHours: settings.autoCloseHours,
+      timezone: settings.timezone,
+      language: settings.language,
+      logoUrl: settings.logoUrl,
+      businessHours: settings.businessHours,
+      outOfHoursMessage: settings.outOfHoursMessage,
+      smtpHost: settings.smtpHost,
+      smtpPort: settings.smtpPort,
+      smtpSecure: settings.smtpSecure,
+      smtpUser: settings.smtpUser,
+      smtpFromName: settings.smtpFromName,
+      smtpFromEmail: settings.smtpFromEmail,
+      smtpConfigured: Boolean(
+        settings.smtpHost && settings.smtpPort && settings.smtpFromEmail,
+      ),
+      smtpPasswordConfigured: Boolean(settings.smtpPass),
+    };
   }
 }

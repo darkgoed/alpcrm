@@ -6,7 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { useWorkspaceSettings, updateSettings } from '@/hooks/useWorkspaceSettings';
+import {
+  testSmtpSettings,
+  updateSettings,
+  useWorkspaceSettings,
+} from '@/hooks/useWorkspaceSettings';
 
 const DAYS = [
   { key: 'mon', label: 'Segunda' },
@@ -33,7 +37,17 @@ export function WorkspaceSection() {
   const [businessHours, setBusinessHours] = useState<BusinessHours>(DEFAULT_HOURS);
   const [outOfHoursMessage, setOutOfHoursMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  const [testingSmtp, setTestingSmtp] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [smtpHost, setSmtpHost] = useState('');
+  const [smtpPort, setSmtpPort] = useState('587');
+  const [smtpSecure, setSmtpSecure] = useState(false);
+  const [smtpUser, setSmtpUser] = useState('');
+  const [smtpPassword, setSmtpPassword] = useState('');
+  const [smtpPasswordConfigured, setSmtpPasswordConfigured] = useState(false);
+  const [smtpFromName, setSmtpFromName] = useState('');
+  const [smtpFromEmail, setSmtpFromEmail] = useState('');
+  const [smtpMessage, setSmtpMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (settings) {
@@ -42,6 +56,14 @@ export function WorkspaceSection() {
       setLogoUrl((settings as any).logoUrl ?? '');
       setBusinessHours((settings as any).businessHours ?? DEFAULT_HOURS);
       setOutOfHoursMessage((settings as any).outOfHoursMessage ?? '');
+      setSmtpHost((settings as any).smtpHost ?? '');
+      setSmtpPort((settings as any).smtpPort ? String((settings as any).smtpPort) : '587');
+      setSmtpSecure(Boolean((settings as any).smtpSecure));
+      setSmtpUser((settings as any).smtpUser ?? '');
+      setSmtpPassword('');
+      setSmtpPasswordConfigured(Boolean((settings as any).smtpPasswordConfigured));
+      setSmtpFromName((settings as any).smtpFromName ?? '');
+      setSmtpFromEmail((settings as any).smtpFromEmail ?? '');
     }
   }, [settings]);
 
@@ -58,11 +80,56 @@ export function WorkspaceSection() {
         logoUrl: logoUrl || null,
         businessHours,
         outOfHoursMessage: outOfHoursMessage || null,
+        smtpHost: smtpHost || null,
+        smtpPort: smtpPort.trim() ? parseInt(smtpPort, 10) : null,
+        smtpSecure,
+        smtpUser: smtpUser || null,
+        ...(smtpPassword.trim() ? { smtpPassword } : {}),
+        smtpFromName: smtpFromName || null,
+        smtpFromEmail: smtpFromEmail || null,
       } as any);
       mutate();
+      if (smtpPassword.trim()) {
+        setSmtpPasswordConfigured(true);
+        setSmtpPassword('');
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } finally { setSaving(false); }
+  }
+
+  async function handleTestSmtp() {
+    setTestingSmtp(true);
+    setSmtpMessage(null);
+    try {
+      await testSmtpSettings({
+        smtpHost: smtpHost || null,
+        smtpPort: smtpPort.trim() ? parseInt(smtpPort, 10) : null,
+        smtpSecure,
+        smtpUser: smtpUser || null,
+        ...(smtpPassword.trim() ? { smtpPassword } : {}),
+        smtpFromName: smtpFromName || null,
+        smtpFromEmail: smtpFromEmail || null,
+      });
+      setSmtpMessage('Conexão SMTP validada com sucesso.');
+    } catch (error) {
+      const message =
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof error.response === 'object' &&
+        error.response !== null &&
+        'data' in error.response &&
+        typeof error.response.data === 'object' &&
+        error.response.data !== null &&
+        'message' in error.response.data &&
+        typeof error.response.data.message === 'string'
+          ? error.response.data.message
+          : 'Não foi possível validar o SMTP.';
+      setSmtpMessage(message);
+    } finally {
+      setTestingSmtp(false);
+    }
   }
 
   if (isLoading) return <Skeleton className="h-96 w-full rounded-lg" />;
@@ -114,6 +181,67 @@ export function WorkspaceSection() {
             value={logoUrl}
             onChange={(e) => setLogoUrl(e.target.value)}
           />
+        </div>
+      </section>
+
+      <Separator />
+
+      <section className="space-y-3">
+        <div>
+          <h3 className="text-sm font-medium">SMTP do Workspace</h3>
+          <p className="text-sm text-muted-foreground">
+            Usado para recuperação de senha e outros e-mails transacionais.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Host</label>
+            <Input value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} placeholder="smtp.seudominio.com" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Porta</label>
+            <Input value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} inputMode="numeric" placeholder="587" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Usuário</label>
+            <Input value={smtpUser} onChange={(e) => setSmtpUser(e.target.value)} placeholder="usuario" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Senha</label>
+            <Input
+              type="password"
+              value={smtpPassword}
+              onChange={(e) => setSmtpPassword(e.target.value)}
+              placeholder={smtpPasswordConfigured ? 'Senha já configurada' : 'Senha SMTP'}
+            />
+            {smtpPasswordConfigured && !smtpPassword ? (
+              <p className="text-[11px] text-muted-foreground">A senha atual será mantida se este campo ficar em branco.</p>
+            ) : null}
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Nome do remetente</label>
+            <Input value={smtpFromName} onChange={(e) => setSmtpFromName(e.target.value)} placeholder="CRM WhatsApp" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">E-mail remetente</label>
+            <Input value={smtpFromEmail} onChange={(e) => setSmtpFromEmail(e.target.value)} type="email" placeholder="noreply@empresa.com" />
+          </div>
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={smtpSecure}
+            onChange={(e) => setSmtpSecure(e.target.checked)}
+            className="rounded border-input accent-primary"
+          />
+          Usar conexão segura (SSL/TLS)
+        </label>
+        <div className="flex items-center gap-3">
+          <Button type="button" variant="outline" onClick={handleTestSmtp} disabled={testingSmtp}>
+            {testingSmtp ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+            Testar SMTP
+          </Button>
+          {smtpMessage ? <p className="text-xs text-muted-foreground">{smtpMessage}</p> : null}
         </div>
       </section>
 

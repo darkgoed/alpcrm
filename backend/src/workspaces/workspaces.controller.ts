@@ -17,7 +17,10 @@ import { RequireAnyPermissions } from '../common/decorators/permissions.decorato
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { WorkspacesService } from './workspaces.service';
-import { UpdateWorkspaceSettingsDto } from './dto/workspace-settings.dto';
+import {
+  TestWorkspaceSmtpDto,
+  UpdateWorkspaceSettingsDto,
+} from './dto/workspace-settings.dto';
 import {
   CreateFollowUpRuleDto,
   UpdateFollowUpRuleDto,
@@ -49,6 +52,15 @@ export class WorkspacesController {
     @Body() dto: UpdateWorkspaceSettingsDto,
   ) {
     return this.workspacesService.updateSettings(user.workspaceId, dto, user.userId);
+  }
+
+  @Post('settings/test-smtp')
+  @RequireAnyPermissions('manage_workspace_settings', 'manage_workspace')
+  testSmtpSettings(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: TestWorkspaceSmtpDto,
+  ) {
+    return this.workspacesService.testSmtpConnection(user.workspaceId, dto);
   }
 
   // ─── Regras de follow-up ──────────────────────────────────────────────────────

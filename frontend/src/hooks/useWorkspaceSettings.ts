@@ -17,6 +17,14 @@ export interface WorkspaceSettings {
   logoUrl: string | null;
   businessHours: BusinessHours | null;
   outOfHoursMessage: string | null;
+  smtpHost: string | null;
+  smtpPort: number | null;
+  smtpSecure: boolean;
+  smtpUser: string | null;
+  smtpFromName: string | null;
+  smtpFromEmail: string | null;
+  smtpConfigured: boolean;
+  smtpPasswordConfigured: boolean;
 }
 
 export interface FollowUpRule {
@@ -51,10 +59,32 @@ export async function updateSettings(
     logoUrl: string | null;
     businessHours: BusinessHours | null;
     outOfHoursMessage: string | null;
+    smtpHost: string | null;
+    smtpPort: number | null;
+    smtpSecure: boolean;
+    smtpUser: string | null;
+    smtpPassword: string | null;
+    smtpFromName: string | null;
+    smtpFromEmail: string | null;
   }>,
 ) {
   const r = await api.patch('/workspaces/settings', dto);
   return r.data as WorkspaceSettings;
+}
+
+export async function testSmtpSettings(
+  dto: Partial<{
+    smtpHost: string | null;
+    smtpPort: number | null;
+    smtpSecure: boolean;
+    smtpUser: string | null;
+    smtpPassword: string | null;
+    smtpFromName: string | null;
+    smtpFromEmail: string | null;
+  }>,
+) {
+  const r = await api.post('/workspaces/settings/test-smtp', dto);
+  return r.data as { success: true };
 }
 
 export async function createFollowUpRule(dto: { name: string; message: string; delayHours: number }) {
