@@ -66,3 +66,17 @@ export class TestWhatsappConnectionDto {
   @MinLength(10)
   token: string;
 }
+
+export class RotateWhatsappCredentialsDto {
+  @IsString()
+  @MinLength(10)
+  token: string;
+
+  @IsOptional()
+  @IsString()
+  appSecret?: string;
+
+  @IsOptional()
+  @IsString()
+  verifyToken?: string;
+}

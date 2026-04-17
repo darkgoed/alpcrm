@@ -24,6 +24,7 @@ import {
 } from './dto/follow-up-rule.dto';
 import {
   CreateWhatsappAccountDto,
+  RotateWhatsappCredentialsDto,
   TestWhatsappConnectionDto,
   UpdateWhatsappAccountDto,
 } from './dto/whatsapp-account.dto';

@@ -15,6 +15,7 @@ import {
 } from './dto/follow-up-rule.dto';
 import {
   CreateWhatsappAccountDto,
+  RotateWhatsappCredentialsDto,
   TestWhatsappConnectionDto,
   UpdateWhatsappAccountDto,
 } from './dto/whatsapp-account.dto';
@@ -208,6 +209,7 @@ export class WorkspacesService {
     workspaceId: string,
     id: string,
     dto: UpdateWhatsappAccountDto,
+    actorId?: string,
   ) {
     const account = await this.prisma.whatsappAccount.findFirst({
       where: { id, workspaceId },
@@ -222,7 +224,7 @@ export class WorkspacesService {
         : {}),
     };
 
-    return this.prisma.whatsappAccount.update({
+    const updated = await this.prisma.whatsappAccount.update({
       where: { id },
       data: encryptedData,
       select: {
@@ -235,6 +237,77 @@ export class WorkspacesService {
         isActive: true,
       },
     });
+
+    const rotatedFields = (
+      ['token', 'appSecret', 'verifyToken'] as const
+    ).filter((field) => dto[field] !== undefined);
+
+    if (rotatedFields.length > 0) {
+      this.audit.log({
+        workspaceId,
+        userId: actorId,
+        action: 'rotate_credentials',
+        entity: 'whatsapp_account',
+        entityId: id,
+        metadata: { fields: rotatedFields },
+      });
+    }
+
+    return updated;
+  }
+
+  async rotateWhatsappCredentials(
+    workspaceId: string,
+    id: string,
+    dto: RotateWhatsappCredentialsDto,
+    actorId?: string,
+  ) {
+    const account = await this.prisma.whatsappAccount.findFirst({
+      where: { id, workspaceId },
+    });
+    if (!account) throw new NotFoundException('Conta WhatsApp não encontrada');
+
+    // Validar o novo token contra a Meta antes de persistir
+    await this.testWhatsappConnection(workspaceId, {
+      phoneNumberId: account.metaAccountId,
+      token: dto.token,
+    });
+
+    const data: Record<string, unknown> = {
+      token: this.encryption.encrypt(dto.token),
+    };
+    if (dto.appSecret !== undefined) {
+      data.appSecret = dto.appSecret ? this.encryption.encrypt(dto.appSecret) : '';
+    }
+    if (dto.verifyToken !== undefined) {
+      data.verifyToken = dto.verifyToken;
+    }
+
+    const updated = await this.prisma.whatsappAccount.update({
+      where: { id },
+      data,
+      select: {
+        id: true,
+        name: true,
+        phoneNumber: true,
+        metaAccountId: true,
+        wabaId: true,
+        verifyToken: true,
+        isActive: true,
+      },
+    });
+
+    const fields = Object.keys(data);
+    this.audit.log({
+      workspaceId,
+      userId: actorId,
+      action: 'rotate_credentials',
+      entity: 'whatsapp_account',
+      entityId: id,
+      metadata: { fields, validated: true },
+    });
+
+    return updated;
   }
 
   async deleteWhatsappAccount(workspaceId: string, id: string) {
