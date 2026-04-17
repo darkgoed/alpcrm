@@ -56,6 +56,9 @@ model User {
   password           String
   isActive           Boolean  @default(true) @map("is_active")
   mustChangePassword Boolean  @default(false) @map("must_change_password")
+  twoFactorEnabled   Boolean  @default(false) @map("two_factor_enabled")
+  twoFactorSecret    String?  @map("two_factor_secret")
+  twoFactorPendingSecret String? @map("two_factor_pending_secret")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -67,6 +70,7 @@ model User {
   contactNotes   ContactNote[]  @relation("ContactNoteAuthor")
   auditLogs      AuditLog[]
   refreshTokens  RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
 
   @@unique([workspaceId, email])
   @@map("users")
@@ -580,6 +584,13 @@ model WorkspaceSettings {
   logoUrl             String? @map("logo_url")
   businessHours       Json?   @map("business_hours")         // {mon:{enabled,open,close}, ...}
   outOfHoursMessage   String? @map("out_of_hours_message")
+  smtpHost            String? @map("smtp_host")
+  smtpPort            Int?    @map("smtp_port")
+  smtpSecure          Boolean @default(false) @map("smtp_secure")
+  smtpUser            String? @map("smtp_user")
+  smtpPass            String? @map("smtp_pass")
+  smtpFromName        String? @map("smtp_from_name")
+  smtpFromEmail       String? @map("smtp_from_email")
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
@@ -683,6 +694,19 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }
 
 // ─────────────────────────────────────────────────────────

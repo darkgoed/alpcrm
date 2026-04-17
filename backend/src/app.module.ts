@@ -26,6 +26,7 @@ import { InteractiveTemplatesModule } from './interactive-templates/interactive-
 import { MetricsModule } from './metrics/metrics.module';
 import { AuditModule } from './audit/audit.module';
 import { EncryptionModule } from './common/services/encryption.module';
+import { MailModule } from './common/services/mail.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { EncryptionModule } from './common/services/encryption.module';
     PrismaModule,
     AuditModule,
     EncryptionModule,
+    MailModule,
     AuthModule,
     UsersModule,
     RolesModule,
