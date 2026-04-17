@@ -26,6 +26,7 @@ import { ContactImportService } from './contact-import.service';
 import { ContactBulkService } from './contact-bulk.service';
 import { ContactNotesService } from './contact-notes.service';
 import { ContactTagsService } from './contact-tags.service';
+import { ContactSegmentsService } from './contact-segments.service';
 import {
   CreateContactDto,
   UpdateContactDto,
@@ -45,6 +46,7 @@ export class ContactsController {
     private contactBulkService: ContactBulkService,
     private contactNotesService: ContactNotesService,
     private contactTagsService: ContactTagsService,
+    private contactSegmentsService: ContactSegmentsService,
   ) {}
 
   // ─── Contatos ─────────────────────────────────────────────────────────────────
@@ -200,7 +202,7 @@ export class ContactsController {
 
   @Get('/segments')
   listSegments(@CurrentUser() user: AuthenticatedUser) {
-    return this.contactsService.listSavedSegments(user.workspaceId);
+    return this.contactSegmentsService.listSavedSegments(user.workspaceId);
   }
 
   @Post('/segments')
@@ -208,7 +210,10 @@ export class ContactsController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateSavedSegmentDto,
   ) {
-    return this.contactsService.createSavedSegment(user.workspaceId, dto);
+    return this.contactSegmentsService.createSavedSegment(
+      user.workspaceId,
+      dto,
+    );
   }
 
   @Delete('/segments/:id')
@@ -217,7 +222,10 @@ export class ContactsController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ) {
-    return this.contactsService.deleteSavedSegment(user.workspaceId, id);
+    return this.contactSegmentsService.deleteSavedSegment(
+      user.workspaceId,
+      id,
+    );
   }
 
   @Post('/bulk/actions')
