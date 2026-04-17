@@ -1,0 +1,73 @@
+{
+  "app": {
+    "[project]/src/app/(dashboard)/automation/[id]/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/automation/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/contacts/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/conversations/[id]/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/conversations/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/crm/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/settings/agents/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/settings/audit/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/settings/interactive-templates/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/settings/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/settings/quick-replies/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/settings/roles/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/settings/security/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/settings/teams/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/settings/templates/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/settings/whatsapp/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/(dashboard)/settings/workspace/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/_not-found/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/change-password/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/login/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ],
+    "[project]/src/app/register/page": [
+      "static/media/a343f882a40d2cc9-s.p.0kho-wj7-y-w1.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pages": {},
+  "pagesUsingSizeAdjust": false
+}

@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[97367,["/_next/static/chunks/0vpmgq16a~_v-.js","/_next/static/chunks/08ix0v.c-tt4t.js","/_next/static/chunks/0275aot.cmujh.js"],"ViewportBoundary"]
+3:I[97367,["/_next/static/chunks/0vpmgq16a~_v-.js","/_next/static/chunks/08ix0v.c-tt4t.js","/_next/static/chunks/0275aot.cmujh.js"],"MetadataBoundary"]
+4:"$Sreact.suspense"
+5:I[27201,["/_next/static/chunks/0vpmgq16a~_v-.js","/_next/static/chunks/08ix0v.c-tt4t.js","/_next/static/chunks/0275aot.cmujh.js"],"IconMark"]
+0:{"rsc":["$","$1","h",{"children":[null,["$","$L2",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]}],["$","div",null,{"hidden":true,"children":["$","$L3",null,{"children":["$","$4",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"CRM WhatsApp"}],["$","meta","1",{"name":"description","content":"CRM WhatsApp multi-tenant com inbox, automação e operação comercial em tempo real."}],["$","link","2",{"rel":"icon","href":"/favicon.ico?favicon.0x3dzn~oxb6tn.ico","sizes":"256x256","type":"image/x-icon"}],["$","$L5","3",{}]]}]}]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"KDp5KZ4s2wBLq12IQA10X"}
