@@ -126,7 +126,10 @@ describe('AutoCloseProcessor', () => {
       autoCloseHours: 24,
     });
     (prisma.conversation.update as jest.Mock).mockResolvedValue({});
-    const systemMsg = { id: 'sys-1', content: '🔒 Conversa encerrada automaticamente por inatividade.' };
+    const systemMsg = {
+      id: 'sys-1',
+      content: '🔒 Conversa encerrada automaticamente por inatividade.',
+    };
     (prisma.message.create as jest.Mock).mockResolvedValue(systemMsg);
 
     await processor.process(buildJob());

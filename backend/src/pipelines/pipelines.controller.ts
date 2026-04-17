@@ -56,6 +56,7 @@ export class PipelinesController {
   }
 
   @Delete(':id')
+  @RequirePermissions('manage_pipelines')
   @HttpCode(HttpStatus.NO_CONTENT)
   deletePipeline(
     @CurrentUser() user: AuthenticatedUser,
@@ -100,6 +101,7 @@ export class PipelinesController {
   }
 
   @Delete(':id/stages/:stageId')
+  @RequirePermissions('manage_pipelines')
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteStage(
     @CurrentUser() user: AuthenticatedUser,

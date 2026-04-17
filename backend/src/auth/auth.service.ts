@@ -177,9 +177,7 @@ export class AuthService {
     if (!valid) throw new UnauthorizedException('Senha atual incorreta');
 
     if (currentPassword === newPassword) {
-      throw new BadRequestException(
-        'A nova senha deve ser diferente da atual',
-      );
+      throw new BadRequestException('A nova senha deve ser diferente da atual');
     }
 
     assertPasswordPolicy(newPassword);
@@ -293,10 +291,15 @@ export class AuthService {
       resetToken.expiresAt < new Date() ||
       !resetToken.user.isActive
     ) {
-      throw new BadRequestException('Token de recuperação inválido ou expirado');
+      throw new BadRequestException(
+        'Token de recuperação inválido ou expirado',
+      );
     }
 
-    const samePassword = await bcrypt.compare(newPassword, resetToken.user.password);
+    const samePassword = await bcrypt.compare(
+      newPassword,
+      resetToken.user.password,
+    );
     if (samePassword) {
       throw new BadRequestException(
         'A nova senha deve ser diferente da senha atual',

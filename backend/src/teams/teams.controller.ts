@@ -74,7 +74,12 @@ export class TeamsController {
     @Param('userId') userId: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.teamsService.addMember(id, userId, user.workspaceId, user.userId);
+    return this.teamsService.addMember(
+      id,
+      userId,
+      user.workspaceId,
+      user.userId,
+    );
   }
 
   @Delete(':id/members/:userId')
@@ -84,6 +89,11 @@ export class TeamsController {
     @Param('userId') userId: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.teamsService.removeMember(id, userId, user.workspaceId, user.userId);
+    return this.teamsService.removeMember(
+      id,
+      userId,
+      user.workspaceId,
+      user.userId,
+    );
   }
 }

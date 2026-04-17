@@ -50,7 +50,12 @@ export class RolesController {
     @Body() dto: UpdateRolePermissionsDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.rolesService.updatePermissions(id, user.workspaceId, dto, user.userId);
+    return this.rolesService.updatePermissions(
+      id,
+      user.workspaceId,
+      dto,
+      user.userId,
+    );
   }
 
   @Delete(':id')

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type DragEvent } from 'react';
-import { AlertCircle, Check, Pencil, Plus, Phone, Layers, MoreHorizontal, X } from 'lucide-react';
+import { AlertCircle, Check, Pencil, Plus, Phone, Layers, MoreHorizontal, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,8 @@ import {
   useKanban,
   createPipeline,
   createStage,
+  deletePipeline,
+  deleteStage,
   moveContact,
   updateStage,
   type KanbanStage,
@@ -157,6 +159,7 @@ function StageColumn({
   canManagePipelines,
   onMoved,
   onEditStage,
+  onDeleteStage,
   onCancelEditStage,
   onSaveStage,
   draggingContact,
@@ -173,6 +176,7 @@ function StageColumn({
   onEditingStageNameChange,
   onEditingStageColorChange,
   isSavingStage,
+  isDeletingStage,
 }: {
   stage: KanbanStage;
   allStages: KanbanStage[];
@@ -180,6 +184,7 @@ function StageColumn({
   canManagePipelines: boolean;
   onMoved: () => void;
   onEditStage: (stage: KanbanStage) => void;
+  onDeleteStage: (stage: KanbanStage) => void;
   onCancelEditStage: () => void;
   onSaveStage: (stageId: string) => void;
   draggingContact: DraggingContact | null;
@@ -196,6 +201,7 @@ function StageColumn({
   onEditingStageNameChange: (value: string) => void;
   onEditingStageColorChange: (value: string) => void;
   isSavingStage: boolean;
+  isDeletingStage: boolean;
 }) {
   const canDropHere = Boolean(draggingContact && draggingContact.stageId !== stage.id);
   const isDropTarget = canDropHere && dropStageId === stage.id;
@@ -269,16 +275,30 @@ function StageColumn({
               <Badge variant="secondary" className="text-[11px]">{stage.contactPipelines.length}</Badge>
             </div>
             {canManagePipelines ? (
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="size-7"
-                onClick={() => onEditStage(stage)}
-                title="Editar stage"
-              >
-                <Pencil className="size-3.5" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="size-7"
+                  onClick={() => onEditStage(stage)}
+                  title="Editar stage"
+                  disabled={isDeletingStage}
+                >
+                  <Pencil className="size-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="size-7 text-destructive hover:text-destructive"
+                  onClick={() => onDeleteStage(stage)}
+                  title="Excluir stage"
+                  disabled={isDeletingStage}
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </div>
             ) : null}
           </>
         )}
@@ -337,6 +357,8 @@ export function KanbanPage() {
   const [editingStageName, setEditingStageName] = useState('');
   const [editingStageColor, setEditingStageColor] = useState('#6366f1');
   const [savingStage, setSavingStage] = useState(false);
+  const [deletingStageId, setDeletingStageId] = useState<string | null>(null);
+  const [deletingPipelineId, setDeletingPipelineId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899'];
 
@@ -398,6 +420,57 @@ export function KanbanPage() {
     }
   }
 
+  async function handleDeleteStage(stage: KanbanStage) {
+    if (!canManagePipelines || !activePipelineId) return;
+
+    const hasContacts = stage.contactPipelines.length > 0;
+    const confirmed = window.confirm(
+      hasContacts
+        ? `Excluir o stage "${stage.name}"? Isso falhara enquanto houver contatos nele.`
+        : `Excluir o stage "${stage.name}"?`,
+    );
+    if (!confirmed) return;
+
+    setErrorMessage(null);
+    setDeletingStageId(stage.id);
+    try {
+      await deleteStage(activePipelineId, stage.id);
+      await mutateKanban();
+      if (editingStageId === stage.id) {
+        stopEditingStage();
+      }
+    } catch (error: any) {
+      setErrorMessage(error?.response?.data?.message ?? 'Nao foi possivel excluir o stage.');
+    } finally {
+      setDeletingStageId(null);
+    }
+  }
+
+  async function handleDeletePipeline() {
+    if (!canManagePipelines || !activePipelineId) return;
+
+    const activePipeline = pipelines.find((pipeline) => pipeline.id === activePipelineId);
+    if (!activePipeline) return;
+    const confirmed = window.confirm(
+      `Excluir o pipeline "${activePipeline.name}"? Os vinculos dos contatos com este pipeline serao removidos.`,
+    );
+    if (!confirmed) return;
+
+    setErrorMessage(null);
+    setDeletingPipelineId(activePipelineId);
+    try {
+      await deletePipeline(activePipelineId);
+      const remainingPipelines = pipelines.filter((pipeline) => pipeline.id !== activePipelineId);
+      setSelectedPipelineId(remainingPipelines[0]?.id ?? null);
+      stopEditingStage();
+      await mutatePipelines();
+    } catch (error: any) {
+      setErrorMessage(error?.response?.data?.message ?? 'Nao foi possivel excluir o pipeline.');
+    } finally {
+      setDeletingPipelineId(null);
+    }
+  }
+
   function handleDragStart(contactId: string, stageId: string) {
     setDraggingContact({ contactId, stageId });
     setDropStageId(null);
@@ -448,6 +521,17 @@ export function KanbanPage() {
           {canManagePipelines ? (
             <Button size="sm" variant="outline" onClick={() => setShowNewPipeline((v) => !v)}>
               <Plus className="size-4" /> Pipeline
+            </Button>
+          ) : null}
+          {canManagePipelines && activePipelineId ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => void handleDeletePipeline()}
+              disabled={deletingPipelineId === activePipelineId}
+            >
+              <Trash2 className="size-4" /> Excluir pipeline
             </Button>
           ) : null}
         </div>
@@ -513,6 +597,7 @@ export function KanbanPage() {
                 canManagePipelines={canManagePipelines}
                 onMoved={() => void mutateKanban()}
                 onEditStage={startEditingStage}
+                onDeleteStage={(stageItem) => void handleDeleteStage(stageItem)}
                 onCancelEditStage={stopEditingStage}
                 onSaveStage={(stageId) => void handleSaveStage(stageId)}
                 draggingContact={draggingContact}
@@ -529,6 +614,7 @@ export function KanbanPage() {
                 onEditingStageNameChange={setEditingStageName}
                 onEditingStageColorChange={setEditingStageColor}
                 isSavingStage={savingStage}
+                isDeletingStage={deletingStageId === stage.id}
               />
             ))}
 

@@ -105,11 +105,43 @@ export class PipelinesService {
   }
 
   async deleteStage(workspaceId: string, pipelineId: string, stageId: string) {
-    const stage = await this.prisma.stage.findFirst({
-      where: { id: stageId, pipelineId, pipeline: { workspaceId } },
-    });
+    const [pipeline, stage, contactsInStage] = await Promise.all([
+      this.prisma.pipeline.findFirst({
+        where: { id: pipelineId, workspaceId },
+        include: { stages: { select: { id: true, order: true } } },
+      }),
+      this.prisma.stage.findFirst({
+        where: { id: stageId, pipelineId, pipeline: { workspaceId } },
+      }),
+      this.prisma.contactPipeline.count({
+        where: { pipelineId, stageId },
+      }),
+    ]);
+
+    if (!pipeline) throw new NotFoundException('Pipeline não encontrado');
     if (!stage) throw new NotFoundException('Stage não encontrado');
-    await this.prisma.stage.delete({ where: { id: stageId } });
+    if (pipeline.stages.length <= 1) {
+      throw new BadRequestException(
+        'Nao e possivel excluir o unico stage do pipeline.',
+      );
+    }
+    if (contactsInStage > 0) {
+      throw new BadRequestException(
+        'Mova os contatos deste stage antes de exclui-lo.',
+      );
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.stage.delete({ where: { id: stageId } }),
+      ...pipeline.stages
+        .filter((item) => item.id !== stageId && item.order > stage.order)
+        .map((item) =>
+          this.prisma.stage.update({
+            where: { id: item.id },
+            data: { order: item.order - 1 },
+          }),
+        ),
+    ]);
   }
 
   async reorderStages(

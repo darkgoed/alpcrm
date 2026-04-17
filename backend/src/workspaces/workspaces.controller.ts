@@ -51,7 +51,11 @@ export class WorkspacesController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateWorkspaceSettingsDto,
   ) {
-    return this.workspacesService.updateSettings(user.workspaceId, dto, user.userId);
+    return this.workspacesService.updateSettings(
+      user.workspaceId,
+      dto,
+      user.userId,
+    );
   }
 
   @Post('settings/test-smtp')

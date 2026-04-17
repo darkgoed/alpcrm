@@ -225,10 +225,7 @@ export class ContactsController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ) {
-    return this.contactSegmentsService.deleteSavedSegment(
-      user.workspaceId,
-      id,
-    );
+    return this.contactSegmentsService.deleteSavedSegment(user.workspaceId, id);
   }
 
   @Post('/bulk/actions')

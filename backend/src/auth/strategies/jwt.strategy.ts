@@ -33,13 +33,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       ) => {
         try {
           const tokenParts = rawJwtToken.split('.');
-          const headerJson = Buffer.from(tokenParts[0] ?? '', 'base64url').toString('utf8');
+          const headerJson = Buffer.from(
+            tokenParts[0] ?? '',
+            'base64url',
+          ).toString('utf8');
           const header = JSON.parse(headerJson) as { kid?: string };
           const headerKid = header.kid?.trim();
 
           const secret = headerKid
             ? jwtRotation.secretByKid.get(headerKid)
-            : jwtRotation.legacyFallbackSecret ?? jwtRotation.currentSecret;
+            : (jwtRotation.legacyFallbackSecret ?? jwtRotation.currentSecret);
 
           if (!secret) {
             throw new Error(

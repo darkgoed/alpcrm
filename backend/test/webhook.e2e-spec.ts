@@ -64,13 +64,15 @@ async function createApp(nodeEnv: 'development' | 'production' | 'test') {
       {
         provide: WhatsappService,
         useValue: {
-          verifyWebhook: jest.fn((mode: string, token: string, challenge: string) => {
-            if (mode === 'subscribe' && token === TEST_VERIFY_TOKEN) {
-              return challenge;
-            }
-            const { NotFoundException } = require('@nestjs/common');
-            throw new NotFoundException('Token de verificação inválido');
-          }),
+          verifyWebhook: jest.fn(
+            (mode: string, token: string, challenge: string) => {
+              if (mode === 'subscribe' && token === TEST_VERIFY_TOKEN) {
+                return challenge;
+              }
+              const { NotFoundException } = require('@nestjs/common');
+              throw new NotFoundException('Token de verificação inválido');
+            },
+          ),
           processWebhook: jest.fn().mockResolvedValue(undefined),
         },
       },
@@ -118,9 +120,7 @@ async function createApp(nodeEnv: 'development' | 'production' | 'test') {
     }),
   );
 
-  app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, transform: true }),
-  );
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   await app.init();
   return app;

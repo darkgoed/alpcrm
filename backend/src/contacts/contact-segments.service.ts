@@ -5,10 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  ContactFilterDto,
-  CreateSavedSegmentDto,
-} from './dto/contact.dto';
+import { ContactFilterDto, CreateSavedSegmentDto } from './dto/contact.dto';
 
 @Injectable()
 export class ContactSegmentsService {

@@ -8,7 +8,9 @@ export interface PasswordPolicyViolation {
   message: string;
 }
 
-export function checkPasswordPolicy(password: string): PasswordPolicyViolation[] {
+export function checkPasswordPolicy(
+  password: string,
+): PasswordPolicyViolation[] {
   const violations: PasswordPolicyViolation[] = [];
 
   if (typeof password !== 'string' || password.length < PASSWORD_MIN_LENGTH) {
@@ -66,8 +68,9 @@ export function generateCompliantPassword(length = 12): string {
   const pick = (chars: string) => chars[randomInt(0, chars.length)];
 
   const required = [pick(lowers), pick(uppers), pick(digits)];
-  const rest = Array.from({ length: Math.max(length, PASSWORD_MIN_LENGTH) - required.length }, () =>
-    pick(all),
+  const rest = Array.from(
+    { length: Math.max(length, PASSWORD_MIN_LENGTH) - required.length },
+    () => pick(all),
   );
   const raw = [...required, ...rest];
 

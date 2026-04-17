@@ -77,7 +77,12 @@ export class TeamsService {
 
   // ─── Atualizar nome da equipe ────────────────────────────────────────────────
 
-  async update(id: string, workspaceId: string, dto: UpdateTeamDto, actorId?: string) {
+  async update(
+    id: string,
+    workspaceId: string,
+    dto: UpdateTeamDto,
+    actorId?: string,
+  ) {
     await this.assertExists(id, workspaceId);
     const result = await this.prisma.team.update({
       where: { id },
@@ -112,7 +117,12 @@ export class TeamsService {
 
   // ─── Adicionar membro ────────────────────────────────────────────────────────
 
-  async addMember(teamId: string, userId: string, workspaceId: string, actorId?: string) {
+  async addMember(
+    teamId: string,
+    userId: string,
+    workspaceId: string,
+    actorId?: string,
+  ) {
     await this.assertExists(teamId, workspaceId);
 
     const user = await this.prisma.user.findFirst({
@@ -141,7 +151,12 @@ export class TeamsService {
 
   // ─── Remover membro ──────────────────────────────────────────────────────────
 
-  async removeMember(teamId: string, userId: string, workspaceId: string, actorId?: string) {
+  async removeMember(
+    teamId: string,
+    userId: string,
+    workspaceId: string,
+    actorId?: string,
+  ) {
     await this.assertExists(teamId, workspaceId);
     await this.prisma.teamUser.deleteMany({ where: { teamId, userId } });
     this.audit.log({

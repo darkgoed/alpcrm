@@ -63,7 +63,11 @@ export class WorkspacesService {
     );
   }
 
-  async updateSettings(workspaceId: string, dto: UpdateWorkspaceSettingsDto, actorId?: string) {
+  async updateSettings(
+    workspaceId: string,
+    dto: UpdateWorkspaceSettingsDto,
+    actorId?: string,
+  ) {
     const data = {
       ...(this.hasOwn(dto, 'autoCloseHours')
         ? { autoCloseHours: dto.autoCloseHours ?? null }
@@ -83,7 +87,9 @@ export class WorkspacesService {
       ...(this.hasOwn(dto, 'smtpHost')
         ? { smtpHost: dto.smtpHost?.trim() || null }
         : {}),
-      ...(this.hasOwn(dto, 'smtpPort') ? { smtpPort: dto.smtpPort ?? null } : {}),
+      ...(this.hasOwn(dto, 'smtpPort')
+        ? { smtpPort: dto.smtpPort ?? null }
+        : {}),
       ...(this.hasOwn(dto, 'smtpSecure')
         ? { smtpSecure: Boolean(dto.smtpSecure) }
         : {}),
@@ -295,9 +301,15 @@ export class WorkspacesService {
 
     const encryptedData = {
       ...dto,
-      ...(dto.token !== undefined ? { token: this.encryption.encrypt(dto.token) } : {}),
+      ...(dto.token !== undefined
+        ? { token: this.encryption.encrypt(dto.token) }
+        : {}),
       ...(dto.appSecret !== undefined
-        ? { appSecret: dto.appSecret ? this.encryption.encrypt(dto.appSecret) : '' }
+        ? {
+            appSecret: dto.appSecret
+              ? this.encryption.encrypt(dto.appSecret)
+              : '',
+          }
         : {}),
     };
 
@@ -354,7 +366,9 @@ export class WorkspacesService {
       token: this.encryption.encrypt(dto.token),
     };
     if (dto.appSecret !== undefined) {
-      data.appSecret = dto.appSecret ? this.encryption.encrypt(dto.appSecret) : '';
+      data.appSecret = dto.appSecret
+        ? this.encryption.encrypt(dto.appSecret)
+        : '';
     }
     if (dto.verifyToken !== undefined) {
       data.verifyToken = dto.verifyToken;

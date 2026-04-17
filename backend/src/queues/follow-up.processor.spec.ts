@@ -11,7 +11,9 @@ const CONTACT_ID = 'contact-1';
 const RULE_ID = 'rule-1';
 const SCHEDULED_AT = new Date(Date.now() - 30 * 60 * 1000).toISOString(); // 30 min ago
 
-function buildJob(overrides: Partial<FollowUpJobData> = {}): Job<FollowUpJobData> {
+function buildJob(
+  overrides: Partial<FollowUpJobData> = {},
+): Job<FollowUpJobData> {
   return {
     data: {
       conversationId: CONVERSATION_ID,
@@ -101,7 +103,9 @@ describe('FollowUpProcessor', () => {
       buildConversation(),
     );
     // Contact message exists after scheduledAt
-    (prisma.message.findFirst as jest.Mock).mockResolvedValue({ id: 'recent-msg' });
+    (prisma.message.findFirst as jest.Mock).mockResolvedValue({
+      id: 'recent-msg',
+    });
 
     await processor.process(buildJob());
 
@@ -176,7 +180,10 @@ describe('FollowUpProcessor', () => {
     // No business hours restriction
     (prisma.workspaceSettings.findUnique as jest.Mock).mockResolvedValue(null);
 
-    const savedMsg = { id: 'msg-fu-1', content: 'Podemos ajudar com algo mais?' };
+    const savedMsg = {
+      id: 'msg-fu-1',
+      content: 'Podemos ajudar com algo mais?',
+    };
     (prisma.message.create as jest.Mock).mockResolvedValue(savedMsg);
     (prisma.conversation.update as jest.Mock).mockResolvedValue({});
 
@@ -238,6 +245,8 @@ describe('FollowUpProcessor', () => {
       new Error('Meta API error'),
     );
 
-    await expect(processor.process(buildJob())).rejects.toThrow('Meta API error');
+    await expect(processor.process(buildJob())).rejects.toThrow(
+      'Meta API error',
+    );
   });
 });

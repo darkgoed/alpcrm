@@ -348,7 +348,12 @@ describe('FlowExecutorService', () => {
         buildState({ isActive: false }),
       );
 
-      await service.executeNodeById(NODE_ID, CONVERSATION_ID, CONTACT_ID, FLOW_ID);
+      await service.executeNodeById(
+        NODE_ID,
+        CONVERSATION_ID,
+        CONTACT_ID,
+        FLOW_ID,
+      );
 
       expect(runner.run).not.toHaveBeenCalled();
     });
@@ -356,7 +361,12 @@ describe('FlowExecutorService', () => {
     it('skips execution when flow state does not exist', async () => {
       (prisma.contactFlowState.findUnique as jest.Mock).mockResolvedValue(null);
 
-      await service.executeNodeById(NODE_ID, CONVERSATION_ID, CONTACT_ID, FLOW_ID);
+      await service.executeNodeById(
+        NODE_ID,
+        CONVERSATION_ID,
+        CONTACT_ID,
+        FLOW_ID,
+      );
 
       expect(runner.run).not.toHaveBeenCalled();
     });
@@ -374,7 +384,12 @@ describe('FlowExecutorService', () => {
       (prisma.contactFlowState.update as jest.Mock).mockResolvedValue({});
       (prisma.flowExecutionLog.create as jest.Mock).mockResolvedValue({});
 
-      await service.executeNodeById(NODE_ID, CONVERSATION_ID, CONTACT_ID, FLOW_ID);
+      await service.executeNodeById(
+        NODE_ID,
+        CONVERSATION_ID,
+        CONTACT_ID,
+        FLOW_ID,
+      );
 
       expect(runner.run).toHaveBeenCalledWith(
         expect.objectContaining({ nodeId: NODE_ID, contactId: CONTACT_ID }),
@@ -388,7 +403,12 @@ describe('FlowExecutorService', () => {
     it('does nothing when state is not found', async () => {
       (prisma.contactFlowState.findUnique as jest.Mock).mockResolvedValue(null);
 
-      await service.handleReplyTimeout(CONTACT_ID, FLOW_ID, CONVERSATION_ID, NODE_ID);
+      await service.handleReplyTimeout(
+        CONTACT_ID,
+        FLOW_ID,
+        CONVERSATION_ID,
+        NODE_ID,
+      );
 
       expect(prisma.contactFlowState.update).not.toHaveBeenCalled();
     });
@@ -398,7 +418,12 @@ describe('FlowExecutorService', () => {
         buildState({ waitingForReply: false }),
       );
 
-      await service.handleReplyTimeout(CONTACT_ID, FLOW_ID, CONVERSATION_ID, NODE_ID);
+      await service.handleReplyTimeout(
+        CONTACT_ID,
+        FLOW_ID,
+        CONVERSATION_ID,
+        NODE_ID,
+      );
 
       expect(prisma.contactFlowState.update).not.toHaveBeenCalled();
     });
@@ -408,7 +433,12 @@ describe('FlowExecutorService', () => {
         buildState({ isActive: false, waitingForReply: true }),
       );
 
-      await service.handleReplyTimeout(CONTACT_ID, FLOW_ID, CONVERSATION_ID, NODE_ID);
+      await service.handleReplyTimeout(
+        CONTACT_ID,
+        FLOW_ID,
+        CONVERSATION_ID,
+        NODE_ID,
+      );
 
       expect(prisma.contactFlowState.update).not.toHaveBeenCalled();
     });
@@ -428,7 +458,12 @@ describe('FlowExecutorService', () => {
       (runner.run as jest.Mock).mockResolvedValue({ kind: 'done' });
       (prisma.conversation.update as jest.Mock).mockResolvedValue({});
 
-      await service.handleReplyTimeout(CONTACT_ID, FLOW_ID, CONVERSATION_ID, NODE_ID);
+      await service.handleReplyTimeout(
+        CONTACT_ID,
+        FLOW_ID,
+        CONVERSATION_ID,
+        NODE_ID,
+      );
 
       expect(runner.resolveEdgeTarget).toHaveBeenCalledWith(NODE_ID, 'timeout');
       expect(prisma.contactFlowState.update).toHaveBeenCalledWith(
@@ -447,7 +482,12 @@ describe('FlowExecutorService', () => {
       (prisma.flowExecutionLog.create as jest.Mock).mockResolvedValue({});
       (prisma.conversation.update as jest.Mock).mockResolvedValue({});
 
-      await service.handleReplyTimeout(CONTACT_ID, FLOW_ID, CONVERSATION_ID, NODE_ID);
+      await service.handleReplyTimeout(
+        CONTACT_ID,
+        FLOW_ID,
+        CONVERSATION_ID,
+        NODE_ID,
+      );
 
       // Should call completeFlow: contactFlowState.update with isActive=false
       expect(prisma.contactFlowState.update).toHaveBeenCalledWith(
@@ -464,7 +504,12 @@ describe('FlowExecutorService', () => {
     it('does nothing when no flows are waiting for reply', async () => {
       (prisma.contactFlowState.findMany as jest.Mock).mockResolvedValue([]);
 
-      await service.resumeWaitingFlows(CONVERSATION_ID, CONTACT_ID, 'hello', null);
+      await service.resumeWaitingFlows(
+        CONVERSATION_ID,
+        CONTACT_ID,
+        'hello',
+        null,
+      );
 
       expect(runner.resolveEdgeTarget).not.toHaveBeenCalled();
     });
@@ -474,7 +519,12 @@ describe('FlowExecutorService', () => {
         buildState({ waitingForReply: true, currentNodeId: null }),
       ]);
 
-      await service.resumeWaitingFlows(CONVERSATION_ID, CONTACT_ID, 'hello', null);
+      await service.resumeWaitingFlows(
+        CONVERSATION_ID,
+        CONTACT_ID,
+        'hello',
+        null,
+      );
 
       expect(scheduler.cancelReplyTimeout).not.toHaveBeenCalled();
     });
@@ -493,7 +543,10 @@ describe('FlowExecutorService', () => {
       (prisma.contactFlowState.update as jest.Mock).mockResolvedValue({});
       // After update, executeFromNode
       (prisma.flowNode.findUnique as jest.Mock)
-        .mockResolvedValueOnce({ id: NODE_ID, config: { variableName: 'userReply' } })
+        .mockResolvedValueOnce({
+          id: NODE_ID,
+          config: { variableName: 'userReply' },
+        })
         .mockResolvedValue({ id: NEXT_NODE, type: 'send_message' });
       (runner.run as jest.Mock).mockResolvedValue({ kind: 'done' });
       (prisma.contactFlowState.findUnique as jest.Mock).mockResolvedValue(
@@ -502,7 +555,12 @@ describe('FlowExecutorService', () => {
       (prisma.conversation.update as jest.Mock).mockResolvedValue({});
       (prisma.flowExecutionLog.create as jest.Mock).mockResolvedValue({});
 
-      await service.resumeWaitingFlows(CONVERSATION_ID, CONTACT_ID, 'sim', null);
+      await service.resumeWaitingFlows(
+        CONVERSATION_ID,
+        CONTACT_ID,
+        'sim',
+        null,
+      );
 
       expect(scheduler.cancelReplyTimeout).toHaveBeenCalledWith(
         CONTACT_ID,

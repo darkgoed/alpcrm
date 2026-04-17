@@ -16,10 +16,7 @@ import { RefreshDto } from './dto/refresh.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import {
-  DisableTwoFactorDto,
-  EnableTwoFactorDto,
-} from './dto/two-factor.dto';
+import { DisableTwoFactorDto, EnableTwoFactorDto } from './dto/two-factor.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from './strategies/jwt.strategy';
@@ -104,10 +101,7 @@ export class AuthController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: DisableTwoFactorDto,
   ) {
-    return this.authService.disableTwoFactor(
-      user.userId,
-      dto.current_password,
-    );
+    return this.authService.disableTwoFactor(user.userId, dto.current_password);
   }
 
   @Get('sessions')

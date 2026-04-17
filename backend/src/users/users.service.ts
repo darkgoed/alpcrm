@@ -116,7 +116,12 @@ export class UsersService {
 
   // ─── Atualizar usuário ───────────────────────────────────────────────────────
 
-  async update(id: string, workspaceId: string, dto: UpdateUserDto, actorId?: string) {
+  async update(
+    id: string,
+    workspaceId: string,
+    dto: UpdateUserDto,
+    actorId?: string,
+  ) {
     await this.assertExists(id, workspaceId);
     const result = await this.prisma.user.update({
       where: { id },
@@ -155,7 +160,12 @@ export class UsersService {
 
   // ─── Atribuir role ao usuário ────────────────────────────────────────────────
 
-  async assignRole(userId: string, roleId: string, workspaceId: string, actorId?: string) {
+  async assignRole(
+    userId: string,
+    roleId: string,
+    workspaceId: string,
+    actorId?: string,
+  ) {
     await this.assertExists(userId, workspaceId);
 
     const role = await this.prisma.role.findFirst({
@@ -184,7 +194,12 @@ export class UsersService {
 
   // ─── Remover role do usuário ─────────────────────────────────────────────────
 
-  async removeRole(userId: string, roleId: string, workspaceId: string, actorId?: string) {
+  async removeRole(
+    userId: string,
+    roleId: string,
+    workspaceId: string,
+    actorId?: string,
+  ) {
     await this.assertExists(userId, workspaceId);
     await this.prisma.userRole.deleteMany({ where: { userId, roleId } });
     this.audit.log({

@@ -115,14 +115,22 @@ export class ConversationsService {
       action: 'assign',
       entity: 'conversation',
       entityId: id,
-      metadata: { assignedUserId: dto.userId ?? null, teamId: dto.teamId ?? null },
+      metadata: {
+        assignedUserId: dto.userId ?? null,
+        teamId: dto.teamId ?? null,
+      },
     });
     return result;
   }
 
   // ─── Fechar conversa ────────────────────────────────────────────────────────
 
-  async close(id: string, workspaceId: string, permissions: string[] = [], actorId?: string) {
+  async close(
+    id: string,
+    workspaceId: string,
+    permissions: string[] = [],
+    actorId?: string,
+  ) {
     this.assertPermission(['close_conversation'], permissions);
     const conversation = await this.assertExists(id, workspaceId);
 
@@ -157,7 +165,12 @@ export class ConversationsService {
 
   // ─── Reabrir conversa ───────────────────────────────────────────────────────
 
-  async reopen(id: string, workspaceId: string, permissions: string[] = [], actorId?: string) {
+  async reopen(
+    id: string,
+    workspaceId: string,
+    permissions: string[] = [],
+    actorId?: string,
+  ) {
     this.assertPermission(['close_conversation'], permissions);
     await this.assertExists(id, workspaceId);
     const result = await this.prisma.conversation.update({

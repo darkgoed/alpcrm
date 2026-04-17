@@ -75,7 +75,12 @@ export class UsersController {
     @Param('roleId') roleId: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.usersService.assignRole(id, roleId, user.workspaceId, user.userId);
+    return this.usersService.assignRole(
+      id,
+      roleId,
+      user.workspaceId,
+      user.userId,
+    );
   }
 
   @Delete(':id/roles/:roleId')
@@ -85,6 +90,11 @@ export class UsersController {
     @Param('roleId') roleId: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.usersService.removeRole(id, roleId, user.workspaceId, user.userId);
+    return this.usersService.removeRole(
+      id,
+      roleId,
+      user.workspaceId,
+      user.userId,
+    );
   }
 }

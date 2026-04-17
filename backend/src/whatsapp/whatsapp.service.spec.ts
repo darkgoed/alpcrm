@@ -185,16 +185,16 @@ describe('WhatsappService', () => {
   describe('verifyWebhook()', () => {
     it('returns challenge when mode is subscribe and token matches', () => {
       (config.get as jest.Mock).mockReturnValue('my_token');
-      expect(service.verifyWebhook('subscribe', 'my_token', 'challenge_abc')).toBe(
-        'challenge_abc',
-      );
+      expect(
+        service.verifyWebhook('subscribe', 'my_token', 'challenge_abc'),
+      ).toBe('challenge_abc');
     });
 
     it('uses default verify token when env var is not set', () => {
       (config.get as jest.Mock).mockReturnValue('crm_verify_token');
-      expect(
-        service.verifyWebhook('subscribe', 'crm_verify_token', 'ch'),
-      ).toBe('ch');
+      expect(service.verifyWebhook('subscribe', 'crm_verify_token', 'ch')).toBe(
+        'ch',
+      );
     });
 
     it('throws NotFoundException when token does not match', () => {
@@ -206,9 +206,9 @@ describe('WhatsappService', () => {
 
     it('throws NotFoundException when mode is not subscribe', () => {
       (config.get as jest.Mock).mockReturnValue('token');
-      expect(() =>
-        service.verifyWebhook('unsubscribe', 'token', 'ch'),
-      ).toThrow(NotFoundException);
+      expect(() => service.verifyWebhook('unsubscribe', 'token', 'ch')).toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -288,7 +288,9 @@ describe('WhatsappService', () => {
   describe('processWebhook() — message deduplication', () => {
     it('skips message creation when externalId already exists', async () => {
       (prisma.webhookReceipt.create as jest.Mock).mockResolvedValue({});
-      (prisma.whatsappAccount.findFirst as jest.Mock).mockResolvedValue(ACCOUNT);
+      (prisma.whatsappAccount.findFirst as jest.Mock).mockResolvedValue(
+        ACCOUNT,
+      );
       (prisma.contact.upsert as jest.Mock).mockResolvedValue(CONTACT);
       (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(
         CONVERSATION,
@@ -311,7 +313,9 @@ describe('WhatsappService', () => {
   describe('processWebhook() — happy path', () => {
     beforeEach(() => {
       (prisma.webhookReceipt.create as jest.Mock).mockResolvedValue({});
-      (prisma.whatsappAccount.findFirst as jest.Mock).mockResolvedValue(ACCOUNT);
+      (prisma.whatsappAccount.findFirst as jest.Mock).mockResolvedValue(
+        ACCOUNT,
+      );
       (prisma.contact.upsert as jest.Mock).mockResolvedValue(CONTACT);
       // No open conversation, no closed conversation
       (prisma.conversation.findFirst as jest.Mock).mockResolvedValue(null);
@@ -325,7 +329,9 @@ describe('WhatsappService', () => {
       );
       (prisma.conversation.update as jest.Mock).mockResolvedValue(CONVERSATION);
       // No out-of-hours settings
-      (prisma.workspaceSettings.findUnique as jest.Mock).mockResolvedValue(null);
+      (prisma.workspaceSettings.findUnique as jest.Mock).mockResolvedValue(
+        null,
+      );
     });
 
     it('persists the message and emits new_message event', async () => {
@@ -412,7 +418,10 @@ describe('WhatsappService', () => {
       (prisma.message.update as jest.Mock).mockResolvedValue({});
 
       const onMessage = jest.fn();
-      await service.processWebhook(buildStatusPayload('ext-1', 'read'), onMessage);
+      await service.processWebhook(
+        buildStatusPayload('ext-1', 'read'),
+        onMessage,
+      );
 
       expect(prisma.message.update).toHaveBeenCalledWith(
         expect.objectContaining({ data: { status: 'read' } }),

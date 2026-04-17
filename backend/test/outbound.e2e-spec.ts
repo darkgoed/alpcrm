@@ -119,7 +119,12 @@ describe('POST /api/messages', () => {
 
   it('returns 401 when JWT is signed with wrong secret', async () => {
     const badToken = jwt.sign(
-      { sub: USER_ID, email: 'x@x.com', workspaceId: WORKSPACE_ID, permissions: ['respond_conversation'] },
+      {
+        sub: USER_ID,
+        email: 'x@x.com',
+        workspaceId: WORKSPACE_ID,
+        permissions: ['respond_conversation'],
+      },
       'wrong_secret',
       { expiresIn: '1h' },
     );
@@ -237,7 +242,9 @@ describe('GET /api/messages', () => {
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('api');
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
 
     await app.init();
   });
