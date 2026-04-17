@@ -23,4 +23,10 @@ Config/Equipes:
 Fazer essa configuração funcionar, o botão de criar equipe não esta criando.
 
 Config/Roles:
-Fazer as roles serem 
+Fazer as roles serem encolhidas e somente visualizadas se clicar na seta(menu) da role, para aparecer as permissões
+
+Config/Agentes:
+Fazer a configuração de agentes funcionarem, não consigo criar agente
+Todo agente criado com senha em branco deve aparecer um padrão tipo "nome@crm" e TODO agente criado em branco ou com senha criada, DEVE alterar a senha no seu primeiro acesso!
+
+Criar um configs de chat para "role" especifico permitido, pode acessar.
