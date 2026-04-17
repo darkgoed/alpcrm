@@ -43,6 +43,64 @@ Remover o "Importar CSV" do menu "contacts" e trazer p "Config/Chat" onde poder 
 Ideias para o futuro{
 Criar franquia de mensagens, ex: limite de mensagens para um workspace setado é 30mil por mês, se passar, começa a cobrar(obs: não quero utilizar pagamento interno, como gateways...), entao a franquia de mensagens seria para métricas ao dono/dev do saas! Mas com aviso na tela do "administrador" do workspace q esta utilizando a plataforma!
 Criar um "Config/(Storage/Armazenamento)" onde é possivel ver TODOS os arquivos que foram enviados e recebidos, tendo rastreio do (nome do arquivo, contato, data/hora, tipo do arquivo(imagem, video, arquivos, audios, figurinhas)) ai deveria ter um filtro, onde eu posso filtrar por todos os tipos mencionados selecionar SOMENTE os filtrados e excluir!
+
 Dashboard/Visão geral: 
 Monitoramento de (Agentes, Equipes e Pipelines/Stages)
+AGENTES
+
+Visão individual por atendente.
+Cada card representa um agente com:
+Status (online/offline).
+Sessões/contatos ativos.
+Filas ou tags em que atua.
+Exibição dos atendimentos em andamento por agente.
+Indicadores rápidos:
+Tempo de atendimento.
+Última interação.
+Alertas (ex: contato parado).
+Permite identificar carga de trabalho e produtividade por pessoa.
+
+EQUIPES
+
+Agrupamento de agentes por setor (ex: Comercial, Suporte).
+Cada coluna representa uma equipe.
+Dentro da equipe:
+Lista de atendimentos ativos.
+Responsável atual (agente).
+Métricas por equipe:
+Volume de atendimentos.
+Tempo médio.
+Distribuição de carga.
+Facilita visão macro e balanceamento entre equipes.
+
+FASES
+
+Organização por status do atendimento (pipeline).
+Exemplo de fases:
+Navegando
+Em espera
+Em atendimento
+Cada coluna representa uma etapa do fluxo.
+Cards (contatos) se movem entre fases.
+Indicadores:
+Tempo em cada fase.
+Quantidade por etapa.
+Foco em fluxo operacional e gargalos.
+
+RESUMO OPERACIONAL DO DASHBOARD
+
+Contadores globais (topo):
+Total de atendimentos.
+Automáticos vs humanos.
+Em espera.
+Visual em colunas (kanban).
+Atualização em tempo real.
+Objetivo:
+Monitorar operação.
+Identificar sobrecarga.
+Detectar atrasos e filas.
+
+Relatórios:
+Ja que temos a auditoria, poderiamos fazer um relatorio aos "administradores" que utilizam a plataforma, para ter métricas e dados de quantas conversas tem, 
+
 }
