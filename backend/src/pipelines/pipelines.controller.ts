@@ -47,6 +47,7 @@ export class PipelinesController {
   }
 
   @Patch(':id')
+  @RequirePermissions('manage_pipelines')
   updatePipeline(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
@@ -116,6 +117,7 @@ export class PipelinesController {
   }
 
   @Patch(':id/stages/reorder')
+  @RequirePermissions('manage_pipelines')
   reorderStages(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') pipelineId: string,

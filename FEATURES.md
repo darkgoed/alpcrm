@@ -30,7 +30,7 @@ Objetivo: deixar o CRM visual mais operacional para equipes comerciais e de acom
 - `[x]` Editar stage com nome e cor
 - `[x]` Excluir stage
 - `[x]` Excluir pipeline completo
-- `[ ]` Refinar governanca visual do modulo de pipeline
+- `[x]` Refinar governanca visual do modulo de pipeline
 
 ## Fase 2 - Dashboard e Visao Gerencial
 

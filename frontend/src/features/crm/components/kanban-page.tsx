@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, type DragEvent } from 'react';
-import { AlertCircle, Check, Pencil, Plus, Phone, Layers, MoreHorizontal, Trash2, X } from 'lucide-react';
+import { AlertCircle, Check, Pencil, Plus, Phone, Layers, MoreHorizontal, Shield, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   usePipelines,
   useKanban,
@@ -343,6 +343,7 @@ export function KanbanPage() {
   const { pipelines, mutate: mutatePipelines, isLoading: loadingPipelines } = usePipelines();
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
   const activePipelineId = selectedPipelineId ?? pipelines[0]?.id ?? null;
+  const activePipeline = pipelines.find((pipeline) => pipeline.id === activePipelineId) ?? null;
   const { kanban, mutate: mutateKanban, isLoading: loadingKanban } = useKanban(activePipelineId);
 
   const [showNewPipeline, setShowNewPipeline] = useState(false);
@@ -361,6 +362,8 @@ export function KanbanPage() {
   const [deletingPipelineId, setDeletingPipelineId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899'];
+  const totalContacts =
+    kanban?.stages.reduce((sum, stage) => sum + stage.contactPipelines.length, 0) ?? 0;
 
   function resetDragState() {
     setDraggingContact(null);
@@ -449,7 +452,6 @@ export function KanbanPage() {
   async function handleDeletePipeline() {
     if (!canManagePipelines || !activePipelineId) return;
 
-    const activePipeline = pipelines.find((pipeline) => pipeline.id === activePipelineId);
     if (!activePipeline) return;
     const confirmed = window.confirm(
       `Excluir o pipeline "${activePipeline.name}"? Os vinculos dos contatos com este pipeline serao removidos.`,
