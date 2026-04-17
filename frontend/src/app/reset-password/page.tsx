@@ -1,12 +1,13 @@
-'use client';
-
-import { useSearchParams } from 'next/navigation';
 import { AuthShell } from '@/features/auth/components/auth-shell';
 import { ResetPasswordForm } from '@/features/auth/components/reset-password-form';
 
-export default function ResetPasswordPage() {
-  const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+export default async function ResetPasswordPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ token?: string }>;
+}) {
+  const params = await searchParams;
+  const token = params.token ?? null;
 
   return (
     <AuthShell
