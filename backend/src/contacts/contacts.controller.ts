@@ -158,7 +158,7 @@ export class ContactsController {
     @Param('id') id: string,
     @Body() dto: AddTagDto,
   ) {
-    return this.contactsService.addTag(user.workspaceId, id, dto.tagId);
+    return this.contactTagsService.addTag(user.workspaceId, id, dto.tagId);
   }
 
   @Delete(':id/tags/:tagId')
@@ -168,14 +168,14 @@ export class ContactsController {
     @Param('id') id: string,
     @Param('tagId') tagId: string,
   ) {
-    return this.contactsService.removeTag(user.workspaceId, id, tagId);
+    return this.contactTagsService.removeTag(user.workspaceId, id, tagId);
   }
 
   // ─── Tags do workspace ────────────────────────────────────────────────────────
 
   @Get('/tags/list')
   listTags(@CurrentUser() user: AuthenticatedUser) {
-    return this.contactsService.listTags(user.workspaceId);
+    return this.contactTagsService.listTags(user.workspaceId);
   }
 
   @Post('/tags/create')
@@ -185,7 +185,7 @@ export class ContactsController {
     @Body('name') name: string,
     @Body('color') color?: string,
   ) {
-    return this.contactsService.createTag(user.workspaceId, name, color);
+    return this.contactTagsService.createTag(user.workspaceId, name, color);
   }
 
   @Delete('/tags/:tagId/delete')
@@ -195,7 +195,7 @@ export class ContactsController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('tagId') tagId: string,
   ) {
-    return this.contactsService.deleteTag(user.workspaceId, tagId);
+    return this.contactTagsService.deleteTag(user.workspaceId, tagId);
   }
 
   @Get('/segments')
