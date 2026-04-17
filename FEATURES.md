@@ -63,7 +63,7 @@ OBS: Variaveis ou uso de `` citadas nos modulos, são exemplos, utilize oq for m
 * **Hierarquia de Roles:** Implementar visualização em **Accordion** (recolhível). As permissões de cada Role só aparecem ao clicar na seta de expansão.
 * **Dicionário de Variáveis:** Adicionar legenda técnica em **Respostas Rápidas** e **Config/Chat** listando todas as variáveis disponíveis (ex: `{{contact_name}}`, `{{protocol}}`).
 
-#
+### FASE 7 e 8 DEVE ME PERGUNTAR SE PODE EXECUTAR, ANTES DE FAZER ALGO SOBRE ESSAS FASES!
 
 ## 7. Relatórios & Auditoria
 *Extração de dados para gestão estratégica.*
