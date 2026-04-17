@@ -412,8 +412,8 @@ Meta: preparar o produto para operação maior, integrações e diferenciação 
 - [x] Política de senha
 - [x] Forçar troca de senha no primeiro login de verdade
 - [ ] Recuperação de senha por SMPT 
-- [ ] Sessões ativas por usuário
-- [ ] Revogação de sessões
+- [x] Sessões ativas por usuário
+- [x] Revogação de sessões
 - [ ] 2FA opcional
   
 ### 7.2.1 — SMTP Email
