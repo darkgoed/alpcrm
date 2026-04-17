@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "e7590444561ff9d7",
+        "id": "289c1b4d69b68ff1",
         "type": "tabs",
         "children": [
           {
-            "id": "b4a4c5b93527b7b5",
+            "id": "20708da4a56bb70f",
             "type": "leaf",
             "state": {
               "type": "graph",
@@ -176,19 +176,19 @@
       "bases:Criar nova base": false
     }
   },
-  "active": "b4a4c5b93527b7b5",
+  "active": "20708da4a56bb70f",
   "lastOpenFiles": [
-    "backend/src/contacts/~syncthing~contacts.module.ts.tmp",
-    "backend/src/contacts/~syncthing~contacts.controller.ts.tmp",
-    "backend/src/contacts/~syncthing~contacts.service.ts.tmp",
-    "backend/src/contacts/contact-segments.service.ts",
-    "backend/src/contacts/~syncthing~contact-segments.service.ts.tmp",
-    "backend/src/contacts/contact-tags.service.ts",
-    "backend/src/contacts/~syncthing~contact-tags.service.ts.tmp",
-    "backend/src/contacts/contact-notes.service.ts",
-    "backend/src/contacts/~syncthing~contact-notes.service.ts.tmp",
-    "backend/src/contacts/contact-bulk.service.ts",
-    "backend/src/contacts/~syncthing~contact-bulk.service.ts.tmp",
+    "graphify-out/~syncthing~.graphify_labels.json.tmp",
+    "graphify-out/~syncthing~GRAPH_REPORT.md.tmp",
+    "graphify-out/~syncthing~graph.html.tmp",
+    "graphify-out/~syncthing~.graphify_analysis.json.tmp",
+    "graphify-out/~syncthing~graph.json.tmp",
+    "backend/graphify-out/cache/bc9d7e860e952c8dfa46b8ed0525e9668df99c5d07e99cadf99663451824e30d.json",
+    "backend/graphify-out/cache/2d51a79f019b27015d44f2f81ff1acc2edf485c700f27e5a97ac0bf8b21a940f.json",
+    "backend/graphify-out/cache/4493b68804399115433e6c12c50952c491d499e527af8aa04fcd11d34d0064ed.json",
+    "backend/graphify-out/cache/bbca7d149a65ec47f55e7cf4c2aada6cf9deb7a97254cad7ba335a675c2efeb2.json",
+    "backend/graphify-out/cache/f602cefecf6751dae65eceef33d4b0f83fb21be5e7113f1854b91237c1f7095c.json",
+    "backend/graphify-out/cache/11dc65b2b3cdb9735923c6f48bba0005af3f19f08544a44aa463010b47df24e8.json",
     "clippings/Whatsapp Cloud API/WhatsApp Business API - WhatsApp Account Number API.md",
     "clippings/Whatsapp Cloud API/Códigos de erro  Documentação do desenvolvedor.md",
     "clippings/Whatsapp Cloud API/WhatsApp Business Account - Assigned Users Management API.md",

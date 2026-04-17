@@ -6,6 +6,7 @@ import { ContactBulkService } from './contact-bulk.service';
 import { ContactNotesService } from './contact-notes.service';
 import { ContactTagsService } from './contact-tags.service';
 import { ContactSegmentsService } from './contact-segments.service';
+import { ContactMergeService } from './contact-merge.service';
 import { ContactsController } from './contacts.controller';
 import { ContactImportProcessor } from './contact-import.processor';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -25,6 +26,7 @@ import { AutomationModule } from '../automation/automation.module';
     ContactNotesService,
     ContactTagsService,
     ContactSegmentsService,
+    ContactMergeService,
     ContactImportProcessor,
   ],
   controllers: [ContactsController],

@@ -27,6 +27,7 @@ import { ContactBulkService } from './contact-bulk.service';
 import { ContactNotesService } from './contact-notes.service';
 import { ContactTagsService } from './contact-tags.service';
 import { ContactSegmentsService } from './contact-segments.service';
+import { ContactMergeService } from './contact-merge.service';
 import {
   CreateContactDto,
   UpdateContactDto,
@@ -47,6 +48,7 @@ export class ContactsController {
     private contactNotesService: ContactNotesService,
     private contactTagsService: ContactTagsService,
     private contactSegmentsService: ContactSegmentsService,
+    private contactMergeService: ContactMergeService,
   ) {}
 
   // ─── Contatos ─────────────────────────────────────────────────────────────────
@@ -111,16 +113,17 @@ export class ContactsController {
 
   @Post(':id/merge')
   @RequirePermissions('manage_contacts')
-  merge(
+  async merge(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: MergeContactDto,
   ) {
-    return this.contactsService.merge(
+    const { targetId } = await this.contactMergeService.merge(
       user.workspaceId,
       id,
       dto.targetContactId,
     );
+    return this.contactsService.findOne(user.workspaceId, targetId);
   }
 
   // ─── Importação CSV ───────────────────────────────────────────────────────────
