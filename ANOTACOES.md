@@ -14,5 +14,13 @@ No local de alterar senha, se for alterado pela configuração, deve ter botão 
 
 Config/Workspace: 
 Erro ao enviar teste SMTP: (08ix0v.c-tt4t.js:2  POST https://crm.alpdash.com.br/api/workspaces/settings/test-smtp 500 (Internal Server Error))
-SMTP não tem botão de salvar
+No placeholder do "usuario" smtp, deve ser email@dominio
 
+Config/Respostas rapidas:
+Deve ter escrito em uma legenda, todas as variaveis q fazem sentido para uma mensagem, ex: {{contact_name}}...
+
+Config/Equipes:
+Fazer essa configuração funcionar, o botão de criar equipe não esta criando.
+
+Config/Roles:
+Fazer as roles serem 
