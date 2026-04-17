@@ -275,7 +275,7 @@ Meta: corrigir riscos de acesso indevido, configuração insegura e entrada fals
 - [x] Nunca expor token da Meta no frontend
 - [x] Mover "testar conexão WhatsApp" para endpoint backend
 - [x] Definir política de criptografia para tokens armazenados
-- [ ] Adicionar rotação de credenciais de conta WhatsApp
+- [x] Adicionar rotação de credenciais de conta WhatsApp
 
 Critério de saída da fase:
 
@@ -384,7 +384,7 @@ Meta: operar incidentes e evoluir o produto com segurança.
 - [x] Pipeline com build backend
 - [x] Pipeline com build frontend
 - [x] Bloqueio de merge em falha
-- [ ] Estratégia de deploy com rollback
+- [x] Estratégia de deploy com rollback
 
 Critério de saída da fase:
 

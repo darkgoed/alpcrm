@@ -125,6 +125,22 @@ export class WorkspacesController {
       user.workspaceId,
       id,
       dto,
+      user.userId,
+    );
+  }
+
+  @Post('whatsapp-accounts/:id/rotate-credentials')
+  @RequireAnyPermissions('manage_whatsapp_accounts', 'manage_workspace')
+  rotateWhatsappCredentials(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: RotateWhatsappCredentialsDto,
+  ) {
+    return this.workspacesService.rotateWhatsappCredentials(
+      user.workspaceId,
+      id,
+      dto,
+      user.userId,
     );
   }
 

@@ -2,6 +2,8 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -12,6 +14,7 @@ import { AuditService } from '../audit/audit.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { readJwtSecretRotationConfig } from './jwt-secret.util';
+import { assertPasswordPolicy } from '../common/utils/password-policy.util';
 
 const REFRESH_TOKEN_TTL_DAYS = 7;
 
@@ -30,6 +33,7 @@ export class AuthService {
     });
     if (existing) throw new ConflictException('Workspace slug já está em uso');
 
+    assertPasswordPolicy(dto.password);
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     const allPermissions = await this.prisma.permission.findMany();
@@ -120,12 +124,58 @@ export class AuthService {
       entityId: authenticatedUser.id,
     });
 
-    return this.issueTokenPair(
+    const tokens = await this.issueTokenPair(
       authenticatedUser.id,
       authenticatedUser.email,
       authenticatedUser.workspaceId,
       permissions,
     );
+    return {
+      ...tokens,
+      mustChangePassword: authenticatedUser.mustChangePassword,
+    };
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+
+    const valid = await bcrypt.compare(currentPassword, user.password);
+    if (!valid) throw new UnauthorizedException('Senha atual incorreta');
+
+    if (currentPassword === newPassword) {
+      throw new BadRequestException(
+        'A nova senha deve ser diferente da atual',
+      );
+    }
+
+    assertPasswordPolicy(newPassword);
+
+    const password = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password, mustChangePassword: false },
+    });
+
+    // Revoga todos os refresh tokens — força re-login nos outros dispositivos
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
+    this.audit.log({
+      workspaceId: user.workspaceId,
+      userId,
+      action: 'change_password',
+      entity: 'user',
+      entityId: userId,
+    });
+
+    return { success: true };
   }
 
   async refresh(refreshTokenValue: string) {

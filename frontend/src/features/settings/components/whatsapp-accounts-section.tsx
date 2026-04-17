@@ -8,6 +8,7 @@ import {
   Copy,
   Pencil,
   ExternalLink,
+  KeyRound,
   Loader2,
   Plus,
   Trash2,
@@ -23,10 +24,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   useWhatsappAccounts,
   createWhatsappAccount,
   updateWhatsappAccount,
   deleteWhatsappAccount,
+  rotateWhatsappCredentials,
   testWhatsappConnection,
   type WhatsappAccount,
 } from '@/hooks/useWhatsappAccounts';
@@ -229,9 +239,129 @@ function NewAccountForm({ onCreated }: { onCreated: () => void }) {
   );
 }
 
+// ─── Modal de rotação de credenciais ──────────────────────────────────────────
+
+function RotateCredentialsDialog({
+  account,
+  open,
+  onOpenChange,
+  onRotated,
+}: {
+  account: WhatsappAccount;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onRotated: () => void;
+}) {
+  const [token, setToken] = useState('');
+  const [appSecret, setAppSecret] = useState('');
+  const [verifyToken, setVerifyToken] = useState(account.verifyToken);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function reset() {
+    setToken('');
+    setAppSecret('');
+    setVerifyToken(account.verifyToken);
+    setError(null);
+  }
+
+  async function handleRotate() {
+    if (!token.trim()) {
+      setError('Informe o novo Access Token');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await rotateWhatsappCredentials(account.id, {
+        token,
+        ...(appSecret.trim() ? { appSecret } : {}),
+        ...(verifyToken !== account.verifyToken ? { verifyToken } : {}),
+      });
+      onRotated();
+      onOpenChange(false);
+      reset();
+    } catch (e: any) {
+      setError(
+        e?.response?.data?.message ??
+          'Não foi possível rotacionar as credenciais. Verifique o token informado.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        onOpenChange(o);
+        if (!o) reset();
+      }}
+    >
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Rotacionar credenciais</DialogTitle>
+          <DialogDescription>
+            O novo token será validado na Meta antes de substituir o atual. A operação é
+            registrada no audit log do workspace.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Novo Access Token *</label>
+            <Input
+              type="password"
+              placeholder="EAA..."
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Novo App Secret (opcional)</label>
+            <Input
+              type="password"
+              placeholder="Deixe em branco para manter o atual"
+              value={appSecret}
+              onChange={(e) => setAppSecret(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Verify Token</label>
+            <div className="flex items-center gap-2">
+              <Input value={verifyToken} onChange={(e) => setVerifyToken(e.target.value)} />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setVerifyToken(generateVerifyToken())}
+              >
+                Gerar novo
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {error && <p className="text-xs text-destructive">{error}</p>}
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleRotate} disabled={saving}>
+            {saving ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
+            {saving ? 'Rotacionando...' : 'Rotacionar credenciais'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Card de conta existente ──────────────────────────────────────────────────
 
 function AccountCard({ account, onChanged }: { account: WhatsappAccount; onChanged: () => void }) {
+  const [rotateOpen, setRotateOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<AccountForm>({
@@ -378,6 +508,12 @@ function AccountCard({ account, onChanged }: { account: WhatsappAccount; onChang
 
   return (
     <div className="rounded-xl border border-border/70 bg-background">
+      <RotateCredentialsDialog
+        account={account}
+        open={rotateOpen}
+        onOpenChange={setRotateOpen}
+        onRotated={onChanged}
+      />
       <div className="flex items-center gap-3 px-4 py-3">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
           {account.isActive
@@ -400,6 +536,15 @@ function AccountCard({ account, onChanged }: { account: WhatsappAccount; onChang
             title="Editar conta"
           >
             <Pencil className="size-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-8"
+            onClick={() => setRotateOpen(true)}
+            title="Rotacionar credenciais"
+          >
+            <KeyRound className="size-4" />
           </Button>
           <Button
             size="icon"

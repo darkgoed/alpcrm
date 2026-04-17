@@ -4,11 +4,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { InviteUserDto } from './dto/invite-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import {
+  assertPasswordPolicy,
+  generateCompliantPassword,
+} from '../common/utils/password-policy.util';
 
 // Campos retornados — nunca expõe o hash da senha
 const USER_SELECT = {
@@ -67,7 +70,8 @@ export class UsersService {
       throw new ConflictException('E-mail já cadastrado neste workspace');
 
     // Gera senha temporária se não fornecida; retorna plain text uma única vez
-    const rawPassword = dto.password ?? crypto.randomBytes(8).toString('hex');
+    const rawPassword = dto.password ?? generateCompliantPassword(12);
+    assertPasswordPolicy(rawPassword);
     const password = await bcrypt.hash(rawPassword, 10);
 
     const user = await this.prisma.user.create({

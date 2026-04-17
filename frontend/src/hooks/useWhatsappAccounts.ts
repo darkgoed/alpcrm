@@ -52,6 +52,15 @@ export async function deleteWhatsappAccount(id: string) {
   await api.delete(`/workspaces/whatsapp-accounts/${id}`);
 }
 
+export async function rotateWhatsappCredentials(id: string, payload: {
+  token: string;
+  appSecret?: string;
+  verifyToken?: string;
+}) {
+  const { data } = await api.post(`/workspaces/whatsapp-accounts/${id}/rotate-credentials`, payload);
+  return data as WhatsappAccount;
+}
+
 export async function testWhatsappConnection(phoneNumberId: string, token: string) {
   const { data } = await api.post('/workspaces/whatsapp-accounts/test-connection', {
     phoneNumberId,
