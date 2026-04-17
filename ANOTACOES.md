@@ -4,8 +4,9 @@ fazer o contato no pipelines crm kanban ser possivel "arrastar" podendo transita
 Dashboard/Visão geral:
 Aprimorar visualização e permitir scroll, tem itens saindo da tela/viewport
 
-Equipe/Time:
+Contatos:
 
+Config/(Equipe/Time):
 Botão de criação de equipes funcionar
 
 Config/Segurança(senhas):
@@ -32,3 +33,5 @@ Todo agente criado com senha em branco deve aparecer um padrão tipo "nome@crm" 
 Criar um "Config/Chat" para "role" especifico permitido poder acessar. Deve conter:
 Checkbox de assinatura de operador em cada mensagem no chat?
 Text Input: Mensagem que é enviado para o "lead/contato" quando operador for atribuido, ex: "Bem vindo ao "..." me chamo "nome" e sou eu que vou te atender!" deve conter na legenda, as variaveis para serem utilizadas, ex: {{contact_name}}...
+Remover o "Nova Tag" do menu "contacts" e trazer p "Config/Chat" onde pode ser criado tags
+Remover o "Importar CSV" do menu "contacts" e trazer p "Config/Chat" onde poder ser importado se necessario
