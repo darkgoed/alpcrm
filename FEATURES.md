@@ -25,8 +25,8 @@ Objetivo: deixar o CRM visual mais operacional para equipes comerciais e de acom
 
 - `[x]` Implementar drag-and-drop de cards entre stages
 - `[x]` Permitir transicao bidirecional entre colunas
-- `[ ]` Restringir criacao de pipeline por role/permissao
-- `[ ]` Restringir criacao de stage por role/permissao
+- `[x]` Restringir criacao de pipeline por role/permissao
+- `[x]` Restringir criacao de stage por role/permissao
 - `[ ]` Editar stage com nome e cor
 - `[ ]` Excluir stage
 - `[ ]` Excluir pipeline completo

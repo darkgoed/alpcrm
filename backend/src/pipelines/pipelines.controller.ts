@@ -11,6 +11,8 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PipelinesService } from './pipelines.service';
 import {
@@ -23,7 +25,7 @@ import {
 } from './dto/pipeline.dto';
 import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('pipelines')
 export class PipelinesController {
   constructor(private pipelinesService: PipelinesService) {}
@@ -36,6 +38,7 @@ export class PipelinesController {
   }
 
   @Post()
+  @RequirePermissions('manage_pipelines')
   createPipeline(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreatePipelineDto,
@@ -71,6 +74,7 @@ export class PipelinesController {
   // ─── Stages ───────────────────────────────────────────────────────────────────
 
   @Post(':id/stages')
+  @RequirePermissions('manage_pipelines')
   createStage(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') pipelineId: string,

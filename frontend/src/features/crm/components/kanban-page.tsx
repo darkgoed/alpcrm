@@ -16,6 +16,7 @@ import {
   type KanbanStage,
   type Contact,
 } from '@/hooks/useContacts';
+import { useAuth } from '@/contexts/AuthContext';
 
 type DraggingContact = {
   contactId: string;
@@ -242,6 +243,8 @@ function StageColumn({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function KanbanPage() {
+  const { hasPermission } = useAuth();
+  const canManagePipelines = hasPermission('manage_pipelines');
   const { pipelines, mutate: mutatePipelines, isLoading: loadingPipelines } = usePipelines();
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
   const activePipelineId = selectedPipelineId ?? pipelines[0]?.id ?? null;
@@ -264,7 +267,7 @@ export function KanbanPage() {
 
   async function handleCreatePipeline(e: React.FormEvent) {
     e.preventDefault();
-    if (!newPipelineName) return;
+    if (!canManagePipelines || !newPipelineName) return;
     const pipeline = await createPipeline(newPipelineName);
     await mutatePipelines();
     setSelectedPipelineId(pipeline.id);
@@ -274,7 +277,7 @@ export function KanbanPage() {
 
   async function handleCreateStage(e: React.FormEvent) {
     e.preventDefault();
-    if (!newStageName || !activePipelineId) return;
+    if (!canManagePipelines || !newStageName || !activePipelineId) return;
     await createStage(activePipelineId, { name: newStageName, color: newStageColor });
     await mutateKanban();
     setNewStageName('');
@@ -328,14 +331,16 @@ export function KanbanPage() {
               {p.name}
             </button>
           ))}
-          <Button size="sm" variant="outline" onClick={() => setShowNewPipeline((v) => !v)}>
-            <Plus className="size-4" /> Pipeline
-          </Button>
+          {canManagePipelines ? (
+            <Button size="sm" variant="outline" onClick={() => setShowNewPipeline((v) => !v)}>
+              <Plus className="size-4" /> Pipeline
+            </Button>
+          ) : null}
         </div>
       </div>
 
       {/* New pipeline form */}
-      {showNewPipeline && (
+      {canManagePipelines && showNewPipeline && (
         <div className="border-b border-border/70 px-6 py-3">
           <form onSubmit={handleCreatePipeline} className="flex items-center gap-2 max-w-sm">
             <Input
@@ -398,41 +403,43 @@ export function KanbanPage() {
             ))}
 
             {/* Adicionar stage */}
-            <div className="w-64 shrink-0">
-              {showNewStage ? (
-                <form onSubmit={handleCreateStage} className="rounded-2xl border border-dashed border-border bg-muted/30 p-3 space-y-2">
-                  <Input
-                    placeholder="Nome do stage"
-                    value={newStageName}
-                    onChange={(e) => setNewStageName(e.target.value)}
-                    className="h-8"
-                    autoFocus
-                  />
-                  <div className="flex gap-1 flex-wrap">
-                    {COLORS.map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => setNewStageColor(c)}
-                        className="size-5 rounded-full border-2 transition-transform hover:scale-110"
-                        style={{ background: c, borderColor: newStageColor === c ? '#000' : 'transparent' }}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button type="submit" size="sm" className="h-7 text-xs" disabled={!newStageName}>Criar</Button>
-                    <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setShowNewStage(false)}>Cancelar</Button>
-                  </div>
-                </form>
-              ) : (
-                <button
-                  onClick={() => setShowNewStage(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-muted/20 py-4 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                >
-                  <Plus className="size-4" /> Novo stage
-                </button>
-              )}
-            </div>
+            {canManagePipelines ? (
+              <div className="w-64 shrink-0">
+                {showNewStage ? (
+                  <form onSubmit={handleCreateStage} className="rounded-2xl border border-dashed border-border bg-muted/30 p-3 space-y-2">
+                    <Input
+                      placeholder="Nome do stage"
+                      value={newStageName}
+                      onChange={(e) => setNewStageName(e.target.value)}
+                      className="h-8"
+                      autoFocus
+                    />
+                    <div className="flex gap-1 flex-wrap">
+                      {COLORS.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setNewStageColor(c)}
+                          className="size-5 rounded-full border-2 transition-transform hover:scale-110"
+                          style={{ background: c, borderColor: newStageColor === c ? '#000' : 'transparent' }}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="submit" size="sm" className="h-7 text-xs" disabled={!newStageName}>Criar</Button>
+                      <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setShowNewStage(false)}>Cancelar</Button>
+                    </div>
+                  </form>
+                ) : (
+                  <button
+                    onClick={() => setShowNewStage(true)}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-muted/20 py-4 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                  >
+                    <Plus className="size-4" /> Novo stage
+                  </button>
+                )}
+              </div>
+            ) : null}
           </div>
         )}
       </div>
