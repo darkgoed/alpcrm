@@ -42,7 +42,7 @@ Remover o "Importar CSV" do menu "contacts" e trazer p "Config/Chat" onde poder 
 
 Ideias para o futuro{
 Criar franquia de mensagens, ex: limite de mensagens para um workspace setado é 30mil por mês, se passar, começa a cobrar(obs: não quero utilizar pagamento interno, como gateways...), entao a franquia de mensagens seria para métricas ao dono/dev do saas! Mas com aviso na tela do "administrador" do workspace q esta utilizando a plataforma!
-Criar um "Config/(Storage/Armazenamento)" onde é possivel ver TODOS os arquivos que foram enviados e recebidos, tendo rastreio do (nome do arquivo, contato, data/hora, tipo do arquivo(imagem, video, arquivos, audios, figurinhas)) ai deveria ter um filtro, onde eu posso filtrar por todos os tipos mencionados selecionar SOMENTE os filtrados e excluir!
+Criar um "Config/(Storage/Armazenamento)" onde é possivel ver TODOS os arquivos que foram enviados e recebidos, tendo rastreio do (nome do arquivo, contato, data/hora, tipo do arquivo(imagem, video, arquivos, audios, figurinhas)) ai deveria ter um filtro, onde eu posso filtrar por todos os tipos mencionados selecionar SOMENTE os filtrados e excluir! Tambem ter algo tipo assim: "Apagar arquivos antigos? (checkbox) logo em seguida algo como: quantos meses de arquivo deseja apagar automatico? (selectbox)
 
 Dashboard/Visão geral: 
 Monitoramento de (Agentes, Equipes e Pipelines/Stages)
@@ -101,6 +101,5 @@ Identificar sobrecarga.
 Detectar atrasos e filas.
 
 Relatórios:
-Ja que temos a auditoria, poderiamos fazer um relatorio aos "administradores" que utilizam a plataforma, para ter métricas e dados de quantas conversas tem, 
-
+Ja que temos a auditoria, poderiamos fazer um relatorio aos "administradores" que utilizam a plataforma, para ter métricas e dados de quantas conversas/mensagens tem, conversa entre agentes(origem e destino), então seria uma extração/relatorios do "GERAL" do sistema, quase igual auditoria! 
 }
