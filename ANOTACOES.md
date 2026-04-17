@@ -29,4 +29,6 @@ Config/Agentes:
 Fazer a configuração de agentes funcionarem, não consigo criar agente
 Todo agente criado com senha em branco deve aparecer um padrão tipo "nome@crm" e TODO agente criado em branco ou com senha criada, DEVE alterar a senha no seu primeiro acesso!
 
-Criar um configs de chat para "role" especifico permitido, pode acessar.
+Criar um "Config/Chat" para "role" especifico permitido poder acessar. Deve conter:
+Checkbox de assinatura de operador em cada mensagem no chat?
+Text Input: Mensagem que é enviado para o "lead/contato" quando operador for atribuido, ex: "Bem vindo ao "..." me chamo "nome" e sou eu que vou te atender!" deve conter na legenda, as variaveis para serem utilizadas, ex: {{contact_name}}...
