@@ -1,11 +1,11 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import { ContactsService } from './contacts.service';
+import { ContactImportService } from './contact-import.service';
 import { CONTACT_IMPORT_QUEUE } from '../queues/queues.constants';
 
 @Processor(CONTACT_IMPORT_QUEUE)
 export class ContactImportProcessor extends WorkerHost {
-  constructor(private contactsService: ContactsService) {
+  constructor(private contactImportService: ContactImportService) {
     super();
   }
 
@@ -14,6 +14,6 @@ export class ContactImportProcessor extends WorkerHost {
       workspaceId: string;
       rows: Array<{ phone: string; name?: string; email?: string }>;
     };
-    await this.contactsService.bulkCreate(workspaceId, rows);
+    await this.contactImportService.bulkCreate(workspaceId, rows);
   }
 }

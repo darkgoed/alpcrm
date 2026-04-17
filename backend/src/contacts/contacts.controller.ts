@@ -22,6 +22,7 @@ import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { ContactsService } from './contacts.service';
+import { ContactImportService } from './contact-import.service';
 import {
   CreateContactDto,
   UpdateContactDto,
@@ -35,7 +36,10 @@ import {
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('contacts')
 export class ContactsController {
-  constructor(private contactsService: ContactsService) {}
+  constructor(
+    private contactsService: ContactsService,
+    private contactImportService: ContactImportService,
+  ) {}
 
   // ─── Contatos ─────────────────────────────────────────────────────────────────
 
@@ -121,7 +125,10 @@ export class ContactsController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file?.buffer) throw new BadRequestException('Arquivo CSV obrigatório');
-    return this.contactsService.previewImport(user.workspaceId, file.buffer);
+    return this.contactImportService.previewImport(
+      user.workspaceId,
+      file.buffer,
+    );
   }
 
   @Post('import/confirm')
@@ -131,7 +138,10 @@ export class ContactsController {
     @Body()
     dto: { rows: Array<{ phone: string; name?: string; email?: string }> },
   ) {
-    return this.contactsService.queueImport(user.workspaceId, dto.rows ?? []);
+    return this.contactImportService.queueImport(
+      user.workspaceId,
+      dto.rows ?? [],
+    );
   }
 
   // ─── Tags por contato ─────────────────────────────────────────────────────────
