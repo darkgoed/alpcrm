@@ -1,1 +1,85 @@
-1. Módulo: Pipelines (CRM Kanban)Foco em usabilidade e controle de permissões.Funcionalidade de Movimentação: Implementar a biblioteca de Drag-and-Drop (ex: dnd-kit ou react-beautiful-dnd) para permitir que os cards de contatos transitem entre colunas (stages) livremente ($stage \leftrightarrow stage$).Gestão de Estrutura:Permissões (Roles): Bloquear a criação de novas colunas ou novos pipelines. O botão "Adicionar Stage" ou "Novo Pipeline" só deve aparecer se a role do usuário tiver o atributo manage_pipelines: true.Edição e Exclusão: Implementar o menu de contexto (três pontinhos) em cada Stage para permitir renomear ou excluir, também protegido pela permissão de administrador.2. Módulo: Dashboard e Visão Geral (Monitoramento Real-time)Foco em dados analíticos puros, sem interação direta com chat.Restrição de Acesso: Camada de segurança para que apenas roles administrativas visualizem.Privacidade Operacional: Remover completamente qualquer botão ou link de "Abrir Inbox" ou "Ver Conversa". O foco aqui é métrica, não operação.Métricas Financeiras/API: Adicionar um card específico de "Consumo de API" mostrando o custo acumulado ou quantidade de requisições disparadas.Monitoramento Detalhado (Três Pilares):Agentes: Card individual por atendente com Status (Online/Offline/Pausa), contagem de sessões ativas, filas/tags atribuídas, tempo médio de atendimento (TMA) e alerta de "contato parado" (idleness).Equipes: Colunas por setor (Comercial, Suporte). Exibir volume de atendimentos por equipe e distribuição de carga entre os membros.Fases (Flow): Visualização do fluxo operacional (Navegando, Em Espera, Em Atendimento). Mostrar o tempo médio que um contato fica em cada fase para detectar gargalos.Resumo Operacional: Topo do dash com contadores globais: Total de atendimentos, % de automação (Bot) vs Humano, e fila de espera.3. Módulo: Configurações de Segurança e AgentesFoco em automação de acesso e padronização.Fluxo de Senha:Ajuste de UI: Ao clicar em "Alterar Senha" nas configurações, a tela deve possuir um botão "Voltar" claro. Esta tela deve ser um modal ou página de edição simples, diferente da tela de "Primeiro Acesso/Redefinição" que é uma página de login limpa.Regra de Primeiro Acesso: Todo agente criado (com senha em branco ou definida) deve ter uma flag no banco de dados must_change_password: true. No primeiro login, o sistema bloqueia o uso e exige a troca.Padrão de Senha: Se o campo senha for deixado vazio na criação, o sistema gera automaticamente nome_do_agente@crm.Segurança (2FA): Ao gerar o QR Code de autenticação em dois fatores, o parâmetro issuer no payload do código deve ser configurado como AlpCRM para que apareça identificado no app do usuário (Google Authenticator/Authy).4. Módulo: Configurações de Workspace e SMTPFoco em correção de infraestrutura e UX.Correção SMTP: Investigar o erro 500 (Internal Server Error) no endpoint /api/workspaces/settings/test-smtp. (Provável erro de autenticação ou falta de timeout tratado no backend).Placeholder Educativo: No campo de usuário SMTP, mudar o texto de exemplo para email@dominio.com.br para evitar erros de preenchimento.Gestão de Equipes: Corrigir o erro de trigger no botão "Criar Equipe" (verificar se a função de submit está vinculada corretamente ao endpoint da API).5. Novo Módulo: Config/Chat (Configurações de Atendimento)Este módulo centraliza regras de negócio do chat que estavam espalhadas.Acesso: Disponível apenas para roles específicas.Regras de Mensagem:Assinatura: Checkbox "Ativar assinatura do operador". Se ativo, o sistema concatena o nome do agente ao final de cada mensagem enviada.Mensagem de Atribuição: Input de texto para definir a frase automática quando um operador assume o ticket.Legenda de Variáveis: Em todos os campos de texto (Respostas rápidas e Mensagem de atribuição), exibir uma legenda fixa com as variáveis aceitas: {{contact_name}}, {{protocol_number}}, {{agent_name}}, etc.Migração de Funções (Cleanup de Contatos):Mover a criação de Tags do menu "Contatos" para cá.Mover a ferramenta de Importar CSV de contatos para cá.Remover botões de salvar/importar da tela de contatos para deixar a listagem mais limpa.6. Módulo: Config/Roles (Hierarquia)Foco em organização visual.UI de Permissões: Implementar um componente de Accordion/Collapse. As permissões de cada Role ficam escondidas por padrão. O admin clica na seta ao lado do nome da Role para expandir e editar as permissões específicas, evitando uma página excessivamente longa.7. Módulo: Relatórios e AuditoriaFoco em extração de dados históricos.Extração Geral: Criar uma área de relatórios (exportação em CSV/PDF) que espelhe a auditoria, mas focada em métricas de performance: total de mensagens por período, fluxo de origem/destino entre agentes e histórico de transferências.8. Ideias de Futuro (Escalabilidade e SaaS)Foco em monetização e gestão de recursos.Franquia de Mensagens:Criar um limitador lógico (ex: 30.000 mensagens/mês).O sistema não bloqueia pagamentos, mas gera um alerta visual no dashboard do administrador do Workspace avisando sobre o excedente.Área de métricas para o Dono do SaaS visualizar o consumo de cada cliente.Config/Storage (Gestão de Dados):Painel central para visualizar todos os arquivos (imagens, áudios, documentos).Filtros: Por tipo, data ou contato.Limpeza Automática: Selectbox para definir o tempo de retenção (ex: "Apagar arquivos com mais de 6 meses automaticamente").Ação em Massa: Selecionar múltiplos arquivos filtrados e realizar a exclusão permanente para liberar espaço no servidor.
+# 🚀 Roadmap de Desenvolvimento: AlpCRM
+
+Este artefato detalha a reestruturação das funcionalidades, correções críticas e o planejamento de novas capacidades para a plataforma.
+
+OBS: Variaveis ou uso de `` citadas nos modulos, são exemplos, utilize oq for melhor para o nosso projeto!
+
+---
+
+## 1. Módulo: Pipelines (Kanban)
+*Melhoria na interatividade e controle de governança.*
+
+* **Interatividade Stage-to-Stage:**
+    * Implementar funcionalidade de **Drag-and-Drop** (arrastar e soltar) para os cards de contato.
+    * Permitir transição bidirecional entre colunas ($Stage \leftrightarrow Stage$).
+* **Gestão de Estrutura:**
+    * **Permissão por Role:** Apenas usuários com `role` específica podem visualizar os botões de "Adicionar Stage" ou "Criar Pipeline".
+    * **CRUD de Stages:** Implementar opções de **Editar** (nome/cor) e **Excluir** estágios e pipelines completos.
+
+## 2. Módulo: Dashboard & Visão Geral
+*Foco em BI (Business Intelligence) e monitoramento administrativo.*
+
+* **Controle de Acesso:** Visualização restrita a `roles` de administração/análise.
+* **Privacidade Operacional:** Remoção de qualquer funcionalidade de "Abrir/Ver Inbox" para manter o foco em dados, não em atendimento.
+* **Novos Indicadores & Gráficos:**
+    * **Consumo Financeiro:** Visualização de gastos com API (monitoramento de custos).
+    * **Contadores Globais:** Total de atendimentos, proporção Bot vs. Humano e fila de espera em tempo real.
+* **Monitoramento Real-time (Três Pilares):**
+    1.  **AGENTES:** Cards individuais com Status (online/offline), sessões ativas, filas/tags, TMA (Tempo Médio de Atendimento) e alertas de inatividade.
+    2.  **EQUIPES:** Agrupamento por setor (Comercial, Suporte, etc.) com volume de atendimentos e distribuição de carga entre membros.
+    3.  **FASES:** Visualização do fluxo operacional (Navegando $\rightarrow$ Espera $\rightarrow$ Atendimento) com identificação de gargalos e tempo de permanência em cada etapa.
+
+## 3. Módulo: Configurações de Segurança & Agentes
+*Padronização de acessos e correção de fluxos de criação.*
+
+* **Criação de Agentes & Equipes:**
+    * **Bug Fix:** Corrigir erro de submissão no botão "Criar Equipe" e "Criar Agente".
+    * **Senha Padrão:** Agentes criados com campo de senha vazio recebem automaticamente o padrão `nome@crm`.
+    * **First Login Policy:** Todo agente (com senha padrão ou manual) **deve** ser redirecionado para alteração de senha no primeiro acesso.
+* **Segurança (2FA & Senhas):**
+    * **UI de Troca:** No menu de configurações, a tela de alteração de senha deve incluir um botão **"Voltar"** e possuir layout de formulário interno (diferente da tela de recuperação externa).
+    * **Branding 2FA:** Configurar o `Issuer Name` no QR Code para que apareça automaticamente como **"AlpCRM"** nos aplicativos de autenticação.
+
+## 4. Módulo: Configurações de Workspace & SMTP
+*Infraestrutura e usabilidade técnica.*
+
+* **Correção SMTP:**
+    * **Bug Fix:** Resolver erro `500 (Internal Server Error)` no endpoint `POST /api/workspaces/settings/test-smtp`.
+    * **UX:** Atualizar o placeholder do campo "Usuário" para o formato `email@dominio.com.br`.
+
+## 5. Novo Módulo: Config/Chat
+*Centralização de regras de negócio e limpeza da interface de contatos.*
+
+* **Regras de Atendimento:**
+    * **Assinatura:** Checkbox para ativar/desativar assinatura do operador em cada mensagem enviada.
+    * **Mensagem de Boas-Vindas:** Input para configurar a mensagem automática de atribuição (ex: *"Olá {{contact_name}}, me chamo {{agent_name}} e vou te atender"*).
+* **Migração de Funções (Cleanup):**
+    * Remover "Nova Tag" e "Importar CSV" do menu lateral de **Contacts**.
+    * Centralizar essas funções dentro de **Config/Chat**. O menu de contatos passa a ser apenas para consulta e gestão simples.
+
+## 6. UX: Gestão de Roles & Respostas Rápidas
+*Organização visual e suporte ao usuário.*
+
+* **Hierarquia de Roles:** Implementar visualização em **Accordion** (recolhível). As permissões de cada Role só aparecem ao clicar na seta de expansão.
+* **Dicionário de Variáveis:** Adicionar legenda técnica em **Respostas Rápidas** e **Config/Chat** listando todas as variáveis disponíveis (ex: `{{contact_name}}`, `{{protocol}}`).
+
+#
+
+## 7. Relatórios & Auditoria
+*Extração de dados para gestão estratégica.*
+
+* **Relatório Geral:** Ferramenta de extração (CSV/PDF) baseada nos dados de auditoria.
+* **Métricas de Conversa:** Dados de volume, fluxo origem/destino e interações entre agentes para análise de produtividade.
+
+## 8. Visão de Futuro (SaaS & Escalabilidade)
+*Novas frentes de monetização e gestão de recursos.*
+
+* **Franquia de Mensagens:**
+    * Implementação de limites por Workspace (ex: 30k/mês).
+    * Sistema de alertas visuais para o administrador quando o limite for atingido (foco em métricas internas, sem gateway de pagamento nativo).
+* **Config/Storage (Gestão de Armazenamento):**
+    * Painel centralizador de arquivos (Imagens, Vídeos, Áudios, Documentos).
+    * **Filtros Avançados:** Busca por tipo de arquivo, contato ou data.
+    * **Políticas de Retenção:** Checkbox para "Apagar arquivos antigos" com seletor de meses para automação da limpeza.
+
+---
