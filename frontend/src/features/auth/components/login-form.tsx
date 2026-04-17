@@ -51,8 +51,8 @@ export function LoginForm() {
     setError(null);
 
     try {
-      await login(values.email, values.password);
-      router.push('/');
+      const result = await login(values.email, values.password);
+      router.push(result.mustChangePassword ? '/change-password' : '/');
     } catch (submitError) {
       setError(getErrorMessage(submitError));
     }

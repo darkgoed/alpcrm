@@ -105,7 +105,7 @@ export class UsersService {
 
   async resetPassword(id: string, workspaceId: string) {
     await this.assertExists(id, workspaceId);
-    const rawPassword = crypto.randomBytes(8).toString('hex');
+    const rawPassword = generateCompliantPassword(12);
     const password = await bcrypt.hash(rawPassword, 10);
     await this.prisma.user.update({
       where: { id },

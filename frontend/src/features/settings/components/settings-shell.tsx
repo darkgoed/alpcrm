@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bot, FileText, Settings2, Wifi, Users, Shield, UsersRound, MessageSquareQuote, Building2, ClipboardList, SquareMousePointer } from 'lucide-react';
+import { Bot, FileText, Settings2, Wifi, Users, Shield, UsersRound, MessageSquareQuote, Building2, ClipboardList, SquareMousePointer, KeyRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -54,6 +54,11 @@ const settingsNav = [
     label: 'Workspace',
     icon: Building2,
     permissions: ['manage_workspace_settings', 'manage_workspace'],
+  },
+  {
+    href: '/settings/security',
+    label: 'Segurança',
+    icon: KeyRound,
   },
   {
     href: '/settings/audit',

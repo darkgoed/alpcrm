@@ -2,6 +2,9 @@ import {
   Controller,
   Post,
   Body,
+  Delete,
+  Get,
+  Param,
   HttpCode,
   HttpStatus,
   UseGuards,
@@ -53,6 +56,35 @@ export class AuthController {
       user.userId,
       dto.current_password,
       dto.new_password,
+    );
+  }
+
+  @Get('sessions')
+  @UseGuards(JwtAuthGuard)
+  listSessions(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.listSessions(user.userId);
+  }
+
+  @Delete('sessions/:id')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  revokeSession(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
+    return this.authService.revokeSession(user.userId, id);
+  }
+
+  @Delete('sessions')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  revokeAllSessions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: { except_refresh_token?: string },
+  ) {
+    return this.authService.revokeAllSessions(
+      user.userId,
+      dto?.except_refresh_token ?? null,
     );
   }
 }

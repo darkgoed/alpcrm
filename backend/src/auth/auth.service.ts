@@ -236,6 +236,81 @@ export class AuthService {
     });
   }
 
+  async listSessions(userId: string) {
+    const sessions = await this.prisma.refreshToken.findMany({
+      where: {
+        userId,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        createdAt: true,
+        expiresAt: true,
+      },
+    });
+    return sessions;
+  }
+
+  async revokeSession(userId: string, sessionId: string) {
+    const session = await this.prisma.refreshToken.findFirst({
+      where: { id: sessionId, userId },
+    });
+    if (!session) throw new NotFoundException('Sessão não encontrada');
+    if (session.revokedAt) return { success: true };
+
+    await this.prisma.refreshToken.update({
+      where: { id: session.id },
+      data: { revokedAt: new Date() },
+    });
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user) {
+      this.audit.log({
+        workspaceId: user.workspaceId,
+        userId,
+        action: 'revoke_session',
+        entity: 'refresh_token',
+        entityId: session.id,
+      });
+    }
+
+    return { success: true };
+  }
+
+  async revokeAllSessions(userId: string, exceptRefreshToken?: string | null) {
+    const toExclude = exceptRefreshToken
+      ? await this.prisma.refreshToken.findUnique({
+          where: { token: exceptRefreshToken },
+          select: { id: true, userId: true },
+        })
+      : null;
+
+    const where: Record<string, unknown> = { userId, revokedAt: null };
+    if (toExclude && toExclude.userId === userId) {
+      where.id = { not: toExclude.id };
+    }
+
+    const result = await this.prisma.refreshToken.updateMany({
+      where,
+      data: { revokedAt: new Date() },
+    });
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user && result.count > 0) {
+      this.audit.log({
+        workspaceId: user.workspaceId,
+        userId,
+        action: 'revoke_all_sessions',
+        entity: 'user',
+        entityId: userId,
+        metadata: { revoked: result.count },
+      });
+    }
+    return { revoked: result.count };
+  }
+
   private async issueTokenPair(
     userId: string,
     email: string,

@@ -106,7 +106,7 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
 // ─── Layout ────────────────────────────────────────────────────────────────────
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { token, isLoading } = useAuth();
+  const { token, isLoading, mustChangePassword } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -116,10 +116,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useBrowserNotifications(activeConvId);
 
   useEffect(() => {
-    if (!isLoading && !token) {
+    if (isLoading) return;
+    if (!token) {
       router.replace('/login');
+      return;
     }
-  }, [token, isLoading, router]);
+    if (mustChangePassword) {
+      router.replace('/change-password');
+    }
+  }, [token, isLoading, mustChangePassword, router]);
 
   if (isLoading || !token) {
     return (

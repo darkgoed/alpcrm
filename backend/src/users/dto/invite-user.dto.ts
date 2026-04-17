@@ -14,8 +14,9 @@ export class InviteUserDto {
   email: string;
 
   @IsString()
-  @MinLength(6)
-  password: string;
+  @MinLength(8)
+  @IsOptional()
+  password?: string;
 
   @IsUUID()
   @IsOptional()

@@ -146,6 +146,8 @@ export interface Conversation {
 
 export interface AuthResponse {
   access_token: string;
+  refresh_token?: string;
   workspaceId: string;
   permissions: string[];
+  mustChangePassword?: boolean;
 }

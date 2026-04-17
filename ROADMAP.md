@@ -409,8 +409,8 @@ Meta: preparar o produto para operação maior, integrações e diferenciação 
 
 ### 7.2 — Segurança corporativa
 
-- [ ] Política de senha
-- [ ] Forçar troca de senha no primeiro login de verdade
+- [x] Política de senha
+- [x] Forçar troca de senha no primeiro login de verdade
 - [ ] Recuperação de senha por SMPT 
 - [ ] Sessões ativas por usuário
 - [ ] Revogação de sessões
