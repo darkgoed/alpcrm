@@ -18,13 +18,13 @@ Ele existe separado de `ROADMAP.md` porque o `ROADMAP.md` cobre evolucao tecnica
 
 ## Fase 1 - Pipelines e Kanban Comercial
 
-Status: `[ ]`
+Status: `[~]`
 Prioridade: `Alta`
 
 Objetivo: deixar o CRM visual mais operacional para equipes comerciais e de acompanhamento.
 
-- `[ ]` Implementar drag-and-drop de cards entre stages
-- `[ ]` Permitir transicao bidirecional entre colunas
+- `[x]` Implementar drag-and-drop de cards entre stages
+- `[x]` Permitir transicao bidirecional entre colunas
 - `[ ]` Restringir criacao de pipeline por role/permissao
 - `[ ]` Restringir criacao de stage por role/permissao
 - `[ ]` Editar stage com nome e cor
