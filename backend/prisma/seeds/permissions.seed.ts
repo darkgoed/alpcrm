@@ -87,6 +87,12 @@ export const SYSTEM_PERMISSIONS = [
     key: 'manage_workspace',
     description: 'Acesso amplo às configurações do workspace',
   },
+
+  // Dashboard
+  {
+    key: 'view_dashboard',
+    description: 'Visualizar painel gerencial com métricas da operação',
+  },
 ];
 
 async function main() {

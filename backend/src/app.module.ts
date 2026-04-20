@@ -24,6 +24,7 @@ import { TemplatesModule } from './templates/templates.module';
 import { QuickRepliesModule } from './quick-replies/quick-replies.module';
 import { InteractiveTemplatesModule } from './interactive-templates/interactive-templates.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { AuditModule } from './audit/audit.module';
 import { EncryptionModule } from './common/services/encryption.module';
 import { MailModule } from './common/services/mail.module';
@@ -53,6 +54,7 @@ import { MailModule } from './common/services/mail.module';
     QuickRepliesModule,
     InteractiveTemplatesModule,
     MetricsModule,
+    DashboardModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

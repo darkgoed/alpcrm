@@ -43,6 +43,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     Map<string, Set<string>>
   >();
   private readonly socketConversations = new Map<string, Set<string>>();
+  private readonly workspacePresence = new Map<string, Map<string, Set<string>>>();
 
   constructor(
     private jwt: JwtService,
@@ -75,6 +76,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // Entrar na sala do workspace automaticamente
       void client.join(`workspace:${payload.workspaceId}`);
+      this.addWorkspacePresence(payload.workspaceId, payload.sub, client.id);
+      this.emitWorkspacePresence(payload.workspaceId);
       this.logger.log(
         `Cliente conectado: ${client.id} (workspace: ${payload.workspaceId})`,
       );
@@ -85,6 +88,14 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(client: EventsSocket) {
     this.removeSocketFromPresence(client);
+    if (client.data.workspaceId && client.data.userId) {
+      this.removeWorkspacePresence(
+        client.data.workspaceId,
+        client.data.userId,
+        client.id,
+      );
+      this.emitWorkspacePresence(client.data.workspaceId);
+    }
     this.logger.log(`Cliente desconectado: ${client.id}`);
   }
 
@@ -152,6 +163,45 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!conversationUsers) return [];
 
     return Array.from(conversationUsers.keys());
+  }
+
+  getOnlineUserIds(workspaceId: string): string[] {
+    const workspaceUsers = this.workspacePresence.get(workspaceId);
+    if (!workspaceUsers) return [];
+    return Array.from(workspaceUsers.keys());
+  }
+
+  private addWorkspacePresence(
+    workspaceId: string,
+    userId: string,
+    socketId: string,
+  ) {
+    const workspaceUsers =
+      this.workspacePresence.get(workspaceId) ?? new Map<string, Set<string>>();
+    const userSockets = workspaceUsers.get(userId) ?? new Set<string>();
+    userSockets.add(socketId);
+    workspaceUsers.set(userId, userSockets);
+    this.workspacePresence.set(workspaceId, workspaceUsers);
+  }
+
+  private removeWorkspacePresence(
+    workspaceId: string,
+    userId: string,
+    socketId: string,
+  ) {
+    const workspaceUsers = this.workspacePresence.get(workspaceId);
+    if (!workspaceUsers) return;
+    const userSockets = workspaceUsers.get(userId);
+    if (!userSockets) return;
+    userSockets.delete(socketId);
+    if (userSockets.size === 0) workspaceUsers.delete(userId);
+    if (workspaceUsers.size === 0) this.workspacePresence.delete(workspaceId);
+  }
+
+  private emitWorkspacePresence(workspaceId: string) {
+    this.emitToWorkspace(workspaceId, 'workspace_presence', {
+      onlineUserIds: this.getOnlineUserIds(workspaceId),
+    });
   }
 
   private addPresence(
